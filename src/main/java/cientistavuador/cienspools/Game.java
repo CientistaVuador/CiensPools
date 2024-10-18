@@ -53,7 +53,7 @@ public class Game {
     private final FreeCamera camera = new FreeCamera();
     
     private Game() {
-
+        
     }
 
     public void start() {
@@ -69,7 +69,6 @@ public class Game {
     public void loop() {
         this.camera.updateMovement();
         this.camera.updateUBO();
-
         AabRender.renderQueue(this.camera);
         LineRender.renderQueue(this.camera);
         DebugRenderer.render();
@@ -77,7 +76,7 @@ public class Game {
         Main.WINDOW_TITLE += " (DrawCalls: " + Main.NUMBER_OF_DRAWCALLS + ", Vertices: " + Main.NUMBER_OF_VERTICES + ")";
         Main.WINDOW_TITLE += " (x:" + String.format("%,.2f", this.camera.getPosition().x()) + ",y:" + String.format("%,.2f", this.camera.getPosition().y()) + ",z:" + String.format("%,.2f", this.camera.getPosition().z()) + ")";
         Main.WINDOW_TITLE += " (dx:" + String.format("%,.2f", this.camera.getFront().x()) + ",dy:" + String.format("%,.2f", this.camera.getFront().y()) + ",dz:" + String.format("%,.2f", this.camera.getFront().z()) + ")";
-        Main.WINDOW_TITLE += " (p:" + String.format("%,.2f", this.camera.getRotation().x()) + ",y:" + String.format("%,.2f", this.camera.getRotation().y()) + ",r:" + String.format("%,.2f", this.camera.getRotation().z()) + ")";
+        Main.WINDOW_TITLE += " (pt:" + String.format("%,.2f", this.camera.getRotation().x()) + ",yw:" + String.format("%,.2f", this.camera.getRotation().y()) + ",rl:" + String.format("%,.2f", this.camera.getRotation().z()) + ")";
     }
 
     public void mouseCursorMoved(double x, double y) {
