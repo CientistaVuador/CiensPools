@@ -1,0 +1,6 @@
+A Special thanks to:
+
+https://github.com/nothings/stb
+https://cc0-textures.com/
+https://github.com/stephengold/Libbulletjme
+https://ambientcg.com/
