@@ -339,6 +339,22 @@ public class NProgram {
             uniform bool reflectionsDebug;
             uniform bool hdrOutput;
             
+            //water
+            uniform float waterCounter;
+            uniform sampler2DArray waterFrames;
+            
+            vec3 sampleWaterNormal(vec3 normal, vec2 uv, float water) {
+                vec4 waterColor = texture(waterFrames, vec3(uv, waterCounter * float(textureSize(waterFrames, 0).z)));
+                float nx = (((waterColor.r + waterColor.g + waterColor.b) / 3.0) * 2.0) - 1.0;
+                float ny = (waterColor.a * 2.0) - 1.0;
+                vec3 waterNormal = vec3(
+                    nx,
+                    ny,
+                    sqrt(abs(1.0 - (nx * nx) - (ny * ny)))
+                );
+                return normalize(mix(normal, waterNormal, water));
+            }
+            
             //material textures
             uniform sampler2DArray materialTextures;
             
@@ -707,7 +723,7 @@ public class NProgram {
                 mat3 TBN = inVertex.TBN;
                 float nx = (hrmnx[3] * 2.0) - 1.0;
                 float ny = (eregebny[3] * 2.0) - 1.0;
-                vec3 normal = normalize(TBN * vec3(nx, ny, sqrt(abs(1.0 - (nx * nx) - (ny * ny)))));
+                vec3 normal = normalize(TBN * sampleWaterNormal(vec3(nx, ny, sqrt(abs(1.0 - (nx * nx) - (ny * ny)))), textureUv, 0.0));
                 
                 vec4 color = material.diffuseColor * rgba;
                 float roughness = hrmnx[1];
@@ -829,7 +845,9 @@ public class NProgram {
     public static final String UNIFORM_REFLECTIONS_ENABLED = "reflectionsEnabled";
     public static final String UNIFORM_HDR_OUTPUT = "hdrOutput";
     public static final String UNIFORM_REFLECTIONS_DEBUG = "reflectionsDebug";
-
+    public static final String UNIFORM_WATER_COUNTER = "waterCounter";
+    public static final String UNIFORM_WATER_FRAMES = "waterFrames";
+    
     public static void sendMaterial(BetterUniformSetter uniforms, NProgramMaterial material) {
         if (material == null) {
             material = NULL_MATERIAL;

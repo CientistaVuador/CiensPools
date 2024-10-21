@@ -6,8 +6,8 @@
         <maven.compiler.target>17</maven.compiler.target>
         <exec.mainClass>cientistavuador.cienspools.MainWrapper</exec.mainClass>
         <lwjgl.version>3.3.4</lwjgl.version>
-	<joml.version>1.10.7</joml.version>
-	<joml-primitives.version>1.10.0</joml-primitives.version>
+        <joml.version>1.10.7</joml.version>
+        <joml-primitives.version>1.10.0</joml-primitives.version>
     </properties>
     
     <name>CiensPools</name>
@@ -39,6 +39,7 @@
                     <include>**/*.n3dm</include>
                     <include>**/*.cbm</include>
                     <include>**/*.lit</include>
+                    <include>**/*.xsd</include>
                 </includes>
             </resource>
         </resources>
@@ -125,17 +126,17 @@
             <artifactId>lwjgl-stb</artifactId>
         </dependency>
         <dependency>
-		<groupId>org.lwjgl</groupId>
-		<artifactId>lwjgl-zstd</artifactId>
-	</dependency>
+            <groupId>org.lwjgl</groupId>
+            <artifactId>lwjgl-zstd</artifactId>
+        </dependency>
         <dependency>
-		<groupId>org.lwjgl</groupId>
-		<artifactId>lwjgl-msdfgen</artifactId>
-	</dependency>
+            <groupId>org.lwjgl</groupId>
+            <artifactId>lwjgl-msdfgen</artifactId>
+        </dependency>
         <dependency>
-		<groupId>org.lwjgl</groupId>
-		<artifactId>lwjgl-tinyexr</artifactId>
-	</dependency>
+            <groupId>org.lwjgl</groupId>
+            <artifactId>lwjgl-tinyexr</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.joml</groupId>
             <artifactId>joml</artifactId>

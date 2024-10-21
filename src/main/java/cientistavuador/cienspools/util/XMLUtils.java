@@ -26,11 +26,100 @@
  */
 package cientistavuador.cienspools.util;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.validation.Schema;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
+import org.xml.sax.ErrorHandler;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
+import org.xml.sax.SAXParseException;
+
 /**
  *
  * @author Cien
  */
 public class XMLUtils {
+
+    public static final ErrorHandler ERROR_HANDLER = new ErrorHandler() {
+        @Override
+        public void warning(SAXParseException exception) throws SAXException {
+            throw exception;
+        }
+
+        @Override
+        public void error(SAXParseException exception) throws SAXException {
+            throw exception;
+        }
+
+        @Override
+        public void fatalError(SAXParseException exception) throws SAXException {
+            throw exception;
+        }
+    };
+
+    public static Document parseXML(InputSource source, Schema schema) 
+            throws ParserConfigurationException, SAXException, IOException
+    {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newDefaultInstance();
+        factory.setNamespaceAware(true);
+        factory.setSchema(schema);
+        factory.setCoalescing(true);
+        
+        DocumentBuilder builder = factory.newDocumentBuilder();
+        builder.setErrorHandler(ERROR_HANDLER);
+        Document doc = builder.parse(source);
+        Element rootElement = doc.getDocumentElement();
+        rootElement.normalize();
+        
+        return doc;
+    }
+    
+    public static Element getFirstElementByName(Element parent, String name) {
+        NodeList children = parent.getElementsByTagName(name);
+        for (int i = 0; i < children.getLength(); i++) {
+            Element e = (Element) children.item(i);
+            if (e.getParentNode() == parent && e.getTagName().equals(name)) {
+                return e;
+            }
+        }
+        return null;
+    }
+    
+    public static String getFirstElementTextContentByName(Element parent, String name) {
+        Element top = getFirstElementByName(parent, name);
+        if (top == null) {
+            return null;
+        }
+        return top.getTextContent();
+    }
+    
+    public static List<String> getChildrenAsTextContent(Element parent) {
+        List<String> list = new ArrayList<>();
+        NodeList children = parent.getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) {
+            list.add(children.item(i).getTextContent());
+        }
+        return list;
+    }
+    
+    public static Map<String, String> getChildrenAsKeyValue(Element parent, String keyAttributeName) {
+        Map<String, String> map = new LinkedHashMap<>();
+        NodeList children = parent.getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) {
+            Element child = (Element) children.item(i);
+            map.put(child.getAttribute(keyAttributeName), child.getTextContent());
+        }
+        return map;
+    }
     
     public static String escapeText(String text) {
         return XMLUtils.escapeText(text, true);
@@ -58,11 +147,10 @@ public class XMLUtils {
                     }
                 }
             }
-            if (Character.isISOControl(codePoint) 
+            if (Character.isISOControl(codePoint)
                     && codePoint != '\n'
-                    && codePoint != '\r' 
-                    && codePoint != '\t'
-                    ) {
+                    && codePoint != '\r'
+                    && codePoint != '\t') {
                 throw new IllegalArgumentException("Invalid ISO Control character at index " + i);
             }
             switch (codePoint) {

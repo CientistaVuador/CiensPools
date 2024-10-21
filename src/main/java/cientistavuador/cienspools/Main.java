@@ -33,6 +33,7 @@ import cientistavuador.cienspools.geometry.Geometries;
 import cientistavuador.cienspools.newrendering.NProgram;
 import cientistavuador.cienspools.newrendering.NSkybox;
 import cientistavuador.cienspools.popups.LoadingPopup;
+import cientistavuador.cienspools.resourcepack.ResourcePacks;
 import cientistavuador.cienspools.sound.Sounds;
 import cientistavuador.cienspools.text.GLFonts;
 import cientistavuador.cienspools.texture.Textures;
@@ -44,6 +45,7 @@ import cientistavuador.cienspools.util.ConvexPolygonRenderer;
 import cientistavuador.cienspools.util.Cursors;
 import cientistavuador.cienspools.util.DebugRenderer;
 import cientistavuador.cienspools.util.GPUOcclusion;
+import cientistavuador.cienspools.water.Water;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
@@ -498,8 +500,11 @@ public class Main {
         
         Main.checkGLError();
         
-        DebugRenderer.init();
         TextureCompressor.init();
+        
+        Water.init();
+        ResourcePacks.init();
+        DebugRenderer.init();
         GLFonts.init();
         Textures.init();
         Geometries.init();
@@ -691,6 +696,8 @@ public class Main {
                 WINDOW_WIDTH = windowWidth.get();
                 WINDOW_HEIGHT = windowHeight.get();
             }
+            
+            Water.update(TPF);
             
             glfwPollEvents();
             glViewport(0, 0, Main.WIDTH, Main.HEIGHT);

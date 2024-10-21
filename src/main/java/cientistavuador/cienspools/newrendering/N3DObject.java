@@ -32,6 +32,8 @@ import cientistavuador.cienspools.camera.Camera;
 import cientistavuador.cienspools.util.ObjectCleaner;
 import cientistavuador.cienspools.util.raycast.BVH;
 import cientistavuador.cienspools.util.raycast.LocalRayResult;
+import com.jme3.bullet.objects.PhysicsRigidBody;
+import com.jme3.math.TransformDp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -81,6 +83,7 @@ public class N3DObject {
     private long nextAmbientCubeUpdate = System.currentTimeMillis() + 10;
 
     private final AmbientCube ambientCube = new AmbientCube();
+    private PhysicsRigidBody rigidBody = null;
 
     public N3DObject(String name, N3DModel n3DModel) {
         this.name = name;
@@ -125,6 +128,14 @@ public class N3DObject {
 
     public Matrix4f getTransformation() {
         return transformation;
+    }
+
+    public PhysicsRigidBody getRigidBody() {
+        return rigidBody;
+    }
+
+    public void setRigidBody(PhysicsRigidBody rigidBody) {
+        this.rigidBody = rigidBody;
     }
 
     public boolean isBillboardEnabled() {
@@ -176,7 +187,7 @@ public class N3DObject {
         return this.queryObject.object;
     }
 
-    public void calculateModelMatrix(Matrix4f outputModelMatrix, Camera camera) {
+    public Matrix4f calculateModelMatrix(Matrix4f outputModelMatrix, Camera camera) {
         double camX = 0.0;
         double camY = 0.0;
         double camZ = 0.0;
@@ -194,14 +205,33 @@ public class N3DObject {
                         (float) (getPosition().y() - camY),
                         (float) (getPosition().z() - camZ)
                 )
-                .rotate(getRotation())
-                .scale(getScale());
+                .rotate(getRotation());
+        if (this.rigidBody != null) {
+            TransformDp transformDp = this.rigidBody.getTransformDp(null);
+
+            outputModelMatrix
+                    .translate(
+                            (float) ((transformDp.getTranslation().x * Main.FROM_PHYSICS_ENGINE_UNITS)),
+                            (float) ((transformDp.getTranslation().y * Main.FROM_PHYSICS_ENGINE_UNITS)),
+                            (float) ((transformDp.getTranslation().z * Main.FROM_PHYSICS_ENGINE_UNITS))
+                    )
+                    .rotate(new Quaternionf(
+                            (float) transformDp.getRotation().x,
+                            (float) transformDp.getRotation().y,
+                            (float) transformDp.getRotation().z,
+                            (float) transformDp.getRotation().w
+                    ))
+                    ;
+        }
+        outputModelMatrix.scale(getScale());
 
         if (camera != null && isBillboardEnabled()) {
             outputModelMatrix.mul(camera.getInverseView());
         }
 
         getTransformation().mul(outputModelMatrix, outputModelMatrix);
+
+        return outputModelMatrix;
     }
 
     public void transformAabb(Matrix4fc modelMatrix, Vector3f outMin, Vector3f outMax) {
@@ -254,7 +284,7 @@ public class N3DObject {
             this.ambientCube.zero();
             return;
         }
-        
+
         if (System.currentTimeMillis() < this.nextAmbientCubeUpdate) {
             long start = this.currentAmbientCubeUpdate;
             long end = this.nextAmbientCubeUpdate;
@@ -265,20 +295,20 @@ public class N3DObject {
             this.ambientCube.setLerp(this.ambientCubeA, this.ambientCubeB, factor);
             return;
         }
-        
+
         for (int i = 0; i < AmbientCube.SIDES; i++) {
             this.ambientCubeA.setSide(i, this.ambientCubeB.getSide(i));
         }
-        
+
         this.map.sampleStaticAmbientCube(pX, pY, pZ, this.ambientCubeB);
-        
+
         int nextTime = 100 + ThreadLocalRandom.current().nextInt(100 + 1);
         long time = System.currentTimeMillis();
 
         this.currentAmbientCubeUpdate = time;
         this.nextAmbientCubeUpdate = time + nextTime;
     }
-    
+
     public List<NRayResult> testRay(
             double pX, double pY, double pZ,
             float dX, float dY, float dZ

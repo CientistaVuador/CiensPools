@@ -26,6 +26,7 @@
           <include>**/*.n3dm</include>
           <include>**/*.cbm</include>
           <include>**/*.lit</include>
+          <include>**/*.xsd</include>
         </includes>
       </resource>
     </resources>

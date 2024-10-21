@@ -26,6 +26,11 @@
  */
 package cientistavuador.cienspools.newrendering;
 
+import cientistavuador.cienspools.Main;
+import cientistavuador.cienspools.util.MeshUtils;
+import com.jme3.bullet.collision.shapes.HullCollisionShape;
+import com.jme3.bullet.util.DebugShapeFactory;
+import java.nio.FloatBuffer;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -67,9 +72,11 @@ public class N3DModel {
     private final Vector3f animatedAabbMax = new Vector3f();
     private final Vector3f animatedAabbCenter = new Vector3f();
     private boolean animatedAabbGenerated = false;
-
+    
     private final int indicesCount;
     private final int verticesCount;
+    
+    private HullCollisionShape hullCollisionShape;
 
     public N3DModel(
             String name,
@@ -456,5 +463,23 @@ public class N3DModel {
             m.manualFree();
         }
     }
-
+    
+    public HullCollisionShape getHullCollisionShape() {
+        if (this.hullCollisionShape != null) {
+            return this.hullCollisionShape;
+        }
+        float[][] vertices = new float[this.geometries.length][];
+        int[][] indices = new int[this.geometries.length][];
+        Matrix4fc[] matrices = new Matrix4fc[this.geometries.length];
+        for (int i = 0; i < this.geometries.length; i++) {
+            NGeometry geo = this.geometries[i];
+            vertices[i] = geo.getMesh().getVertices();
+            indices[i] = geo.getMesh().getIndices();
+            matrices[i] = geo.getParent().getToRootSpace();
+        }
+        this.hullCollisionShape = MeshUtils.createHullCollisionShapeFromMeshes(
+                vertices, indices, matrices, NMesh.VERTEX_SIZE, NMesh.OFFSET_POSITION_XYZ);
+        return this.hullCollisionShape;
+    }
+    
 }

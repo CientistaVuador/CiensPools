@@ -31,6 +31,7 @@ import cientistavuador.cienspools.Main;
 import cientistavuador.cienspools.camera.Camera;
 import cientistavuador.cienspools.util.BetterUniformSetter;
 import cientistavuador.cienspools.util.GPUOcclusion;
+import cientistavuador.cienspools.water.Water;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -587,7 +588,7 @@ public class N3DObjectRenderer {
         glUseProgram(variant.getProgram());
 
         NProgram.sendBoneMatrix(variant, IDENTITY, -1);
-
+        
         variant
                 .uniformMatrix4fv(NProgram.UNIFORM_PROJECTION, camera.getProjection())
                 .uniformMatrix4fv(NProgram.UNIFORM_VIEW, camera.getView())
@@ -596,12 +597,17 @@ public class N3DObjectRenderer {
                 .uniform1i(NProgram.UNIFORM_PARALLAX_ENABLED, (PARALLAX_ENABLED ? 1 : 0))
                 .uniform1i(NProgram.UNIFORM_REFLECTIONS_ENABLED, (REFLECTIONS_ENABLED ? 1 : 0))
                 .uniform1i(NProgram.UNIFORM_REFLECTIONS_SUPPORTED, (REFLECTIONS_ENABLED ? 1 : 0))
-                .uniform1i(NProgram.UNIFORM_MATERIAL_TEXTURES, 0)
-                .uniform1i(NProgram.UNIFORM_LIGHTMAPS, 1)
-                .uniform1i(NProgram.UNIFORM_REFLECTION_CUBEMAP_0, 2)
-                .uniform1i(NProgram.UNIFORM_REFLECTION_CUBEMAP_1, 3)
-                .uniform1i(NProgram.UNIFORM_REFLECTION_CUBEMAP_2, 4)
-                .uniform1i(NProgram.UNIFORM_REFLECTION_CUBEMAP_3, 5);
+                .uniform1f(NProgram.UNIFORM_WATER_COUNTER, Water.WATER_COUNTER)
+                .uniform1i(NProgram.UNIFORM_WATER_FRAMES, 0)
+                .uniform1i(NProgram.UNIFORM_MATERIAL_TEXTURES, 1)
+                .uniform1i(NProgram.UNIFORM_LIGHTMAPS, 2)
+                .uniform1i(NProgram.UNIFORM_REFLECTION_CUBEMAP_0, 3)
+                .uniform1i(NProgram.UNIFORM_REFLECTION_CUBEMAP_1, 4)
+                .uniform1i(NProgram.UNIFORM_REFLECTION_CUBEMAP_2, 5)
+                .uniform1i(NProgram.UNIFORM_REFLECTION_CUBEMAP_3, 6);
+        
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D_ARRAY, Water.TEXTURE);
         
         render(variant, camera, toRender);
 
@@ -691,7 +697,7 @@ public class N3DObjectRenderer {
             if (!textures.equals(lastTextures)) {
                 int texturesId = textures.textures();
 
-                glActiveTexture(GL_TEXTURE0);
+                glActiveTexture(GL_TEXTURE1);
                 glBindTexture(GL_TEXTURE_2D_ARRAY, texturesId);
 
                 variant.uniform1i(
@@ -705,7 +711,7 @@ public class N3DObjectRenderer {
             if (lastLightmaps != lightmaps) {
                 int maps = lightmaps.lightmaps();
 
-                glActiveTexture(GL_TEXTURE1);
+                glActiveTexture(GL_TEXTURE2);
                 glBindTexture(GL_TEXTURE_2D_ARRAY, maps);
 
                 for (int i = 0; i < lightmaps.getNumberOfLightmaps(); i++) {
@@ -733,7 +739,7 @@ public class N3DObjectRenderer {
                     }
                     
                     if (cubemapObj != lastCubemapObj) {
-                        glActiveTexture(GL_TEXTURE2 + i);
+                        glActiveTexture(GL_TEXTURE3 + i);
                         glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapObj);
                     }
                     

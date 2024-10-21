@@ -50,8 +50,8 @@ public class PlayerController {
     public static final float CROUCH_SPEED = 1.35f;
     public static final float CLIFF_SPEED = 2f;
 
-    public static final float JUMP_SPEED = 8.5f;
-    public static final float CROUCH_JUMP_SPEED = 6f;
+    public static final float JUMP_SPEED = 6.5f;
+    public static final float CROUCH_JUMP_SPEED = JUMP_SPEED;
 
     public static final float OUT_OF_GROUND_SPEED_FACTOR = 0.5f;
 

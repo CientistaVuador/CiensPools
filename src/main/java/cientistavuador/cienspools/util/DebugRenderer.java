@@ -40,8 +40,6 @@ import org.joml.Matrix4fc;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
 import static org.lwjgl.opengl.GL33C.*;
-import org.lwjgl.opengl.GL44C;
-import org.lwjgl.opengl.GL45C;
 import static org.lwjgl.system.MemoryUtil.*;
 
 /**
@@ -50,6 +48,9 @@ import static org.lwjgl.system.MemoryUtil.*;
  */
 public class DebugRenderer {
 
+    public static boolean LINE_MODE = true;
+    public static boolean FACE_CULLING = false;
+    
     public static void init() {
         
     }
@@ -324,9 +325,21 @@ public class DebugRenderer {
             glBindBuffer(GL_ARRAY_BUFFER, 0);
             
             glUseProgram(SHADER_PROGRAM);
+            if (!FACE_CULLING) {
+                glDisable(GL_CULL_FACE);
+            }
+            if (LINE_MODE) {
+                glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+            }
             glBindVertexArray(vaoA);
             glDrawArrays(GL_TRIANGLES, 0, size / VERTEX_SIZE);
             glBindVertexArray(0);
+            if (LINE_MODE) {
+                glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+            }
+            if (!FACE_CULLING) {
+                glEnable(GL_CULL_FACE);
+            }
             glUseProgram(0);
             
             Main.NUMBER_OF_DRAWCALLS++;

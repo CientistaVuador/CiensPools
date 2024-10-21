@@ -27,7 +27,6 @@
 package cientistavuador.cienspools.newrendering;
 
 import cientistavuador.cienspools.Main;
-import cientistavuador.cienspools.debug.DebugCounter;
 import cientistavuador.cienspools.util.DXT5TextureStore;
 import cientistavuador.cienspools.util.DXT5TextureStore.DXT5Texture;
 import cientistavuador.cienspools.util.M8Image;
