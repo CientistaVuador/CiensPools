@@ -58,6 +58,8 @@ import cientistavuador.cienspools.util.bakedlighting.AmbientCubeDebug;
 import cientistavuador.cienspools.util.bakedlighting.Lightmapper;
 import cientistavuador.cienspools.util.bakedlighting.Scene;
 import com.jme3.bullet.PhysicsSpace;
+import com.jme3.bullet.collision.shapes.CompoundCollisionShape;
+import com.jme3.bullet.collision.shapes.HullCollisionShape;
 import com.jme3.bullet.objects.PhysicsRigidBody;
 import com.jme3.math.Vector3f;
 import com.simsilica.mathd.Vec3d;
@@ -69,7 +71,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
-import org.joml.Matrix4f;
 import static org.lwjgl.glfw.GLFW.*;
 
 /**
@@ -196,6 +197,7 @@ public class Game {
 
         this.physicsSpace.setGravity(new com.jme3.math.Vector3f(0f, -9.8f * Main.TO_PHYSICS_ENGINE_UNITS, 0f));
         this.physicsSpace.addCollisionObject(new PhysicsRigidBody(this.map.getMeshCollision(), 0f));
+        this.physicsSpace.setAccuracy(1f / 480f);
     }
 
     private Game() {
@@ -321,15 +323,33 @@ public class Game {
         if (key == GLFW_KEY_B && action == GLFW_PRESS) {
             N3DObject boomBox = new N3DObject("boomBox", this.boomBoxModel);
             boomBox.setMap(this.map);
-            boomBox.getScale().set(20f);
-            this.boomBoxModel.getHullCollisionShape().setScale(20f);
+            boomBox.getScale().set(40f);
+            this.boomBoxModel.getHullCollisionShape().setScale(40f);
             this.boomBoxes.add(boomBox);
             
-            PhysicsRigidBody rigidBody = new PhysicsRigidBody(this.boomBoxModel.getHullCollisionShape(), 1f);
+            HullCollisionShape hull = this.boomBoxModel.getHullCollisionShape();
+            Vector3f offset = new Vector3f(
+                    0 * Main.TO_PHYSICS_ENGINE_UNITS,
+                    0 * Main.TO_PHYSICS_ENGINE_UNITS,
+                    0 * Main.TO_PHYSICS_ENGINE_UNITS
+            );
+            CompoundCollisionShape compound = new CompoundCollisionShape();
+            compound.addChildShape(hull, offset);
+            
+            boomBox.getPosition().set(
+                    offset.x * Main.FROM_PHYSICS_ENGINE_UNITS,
+                    offset.y * Main.FROM_PHYSICS_ENGINE_UNITS,
+                    offset.z * Main.FROM_PHYSICS_ENGINE_UNITS
+            );
+            
+            PhysicsRigidBody rigidBody = new PhysicsRigidBody(
+                    compound,
+                    5f
+            );
             rigidBody.applyCentralImpulse(new Vector3f(
-                    this.camera.getFront().x() * 5f * Main.TO_PHYSICS_ENGINE_UNITS,
-                    this.camera.getFront().y() * 5f * Main.TO_PHYSICS_ENGINE_UNITS,
-                    this.camera.getFront().z() * 5f * Main.TO_PHYSICS_ENGINE_UNITS
+                    this.camera.getFront().x() * 5f * Main.TO_PHYSICS_ENGINE_UNITS * rigidBody.getMass(),
+                    this.camera.getFront().y() * 5f * Main.TO_PHYSICS_ENGINE_UNITS * rigidBody.getMass(),
+                    this.camera.getFront().z() * 5f * Main.TO_PHYSICS_ENGINE_UNITS * rigidBody.getMass()
             ));
             rigidBody.setPhysicsLocationDp(new Vec3d(
                     this.camera.getPosition().x() * Main.TO_PHYSICS_ENGINE_UNITS,

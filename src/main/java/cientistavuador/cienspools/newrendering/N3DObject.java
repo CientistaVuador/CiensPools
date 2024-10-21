@@ -34,6 +34,8 @@ import cientistavuador.cienspools.util.raycast.BVH;
 import cientistavuador.cienspools.util.raycast.LocalRayResult;
 import com.jme3.bullet.objects.PhysicsRigidBody;
 import com.jme3.math.TransformDp;
+import com.simsilica.mathd.Quatd;
+import com.simsilica.mathd.Vec3d;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -62,8 +64,8 @@ public class N3DObject {
     private final Vector3d position = new Vector3d(0.0, 0.0, 0.0);
     private final Quaternionf rotation = new Quaternionf();
     private final Vector3f scale = new Vector3f(1f, 1f, 1f);
-    private final Matrix4f transformation = new Matrix4f();
-
+    private final Matrix4d transformation = new Matrix4d();
+    
     private boolean billboardEnabled = false;
 
     private boolean fresnelOutlineEnabled = false;
@@ -126,7 +128,7 @@ public class N3DObject {
         return scale;
     }
 
-    public Matrix4f getTransformation() {
+    public Matrix4d getTransformation() {
         return transformation;
     }
 
@@ -197,40 +199,44 @@ public class N3DObject {
             camY = camera.getPosition().y();
             camZ = camera.getPosition().z();
         }
-
-        outputModelMatrix
-                .identity()
-                .translate(
-                        (float) (getPosition().x() - camX),
-                        (float) (getPosition().y() - camY),
-                        (float) (getPosition().z() - camZ)
-                )
-                .rotate(getRotation());
+        
+        Matrix4d model = new Matrix4d()
+                .translate(getPosition())
+                .rotate(getRotation())
+                .scale(getScale().x(), getScale().y(), getScale().z())
+                ;
+        
         if (this.rigidBody != null) {
             TransformDp transformDp = this.rigidBody.getTransformDp(null);
-
-            outputModelMatrix
+            
+            Vec3d t = transformDp.getTranslation();
+            Quatd r = transformDp.getRotation();
+            
+            Matrix4d rigidBodyModel = new Matrix4d()
                     .translate(
-                            (float) ((transformDp.getTranslation().x * Main.FROM_PHYSICS_ENGINE_UNITS)),
-                            (float) ((transformDp.getTranslation().y * Main.FROM_PHYSICS_ENGINE_UNITS)),
-                            (float) ((transformDp.getTranslation().z * Main.FROM_PHYSICS_ENGINE_UNITS))
+                            t.x * Main.FROM_PHYSICS_ENGINE_UNITS,
+                            t.y * Main.FROM_PHYSICS_ENGINE_UNITS,
+                            t.z * Main.FROM_PHYSICS_ENGINE_UNITS
                     )
-                    .rotate(new Quaternionf(
-                            (float) transformDp.getRotation().x,
-                            (float) transformDp.getRotation().y,
-                            (float) transformDp.getRotation().z,
-                            (float) transformDp.getRotation().w
-                    ))
+                    .rotate(new Quaternionf(r.x, r.y, r.z, r.w))
                     ;
+            
+            rigidBodyModel.mul(model, model);
         }
-        outputModelMatrix.scale(getScale());
-
+        
+        getTransformation().mul(model, model);
+        
+        Matrix4d cameraTranslation = new Matrix4d()
+                .translate(-camX, -camY, -camZ)
+                ;
+        cameraTranslation.mul(model, model);
+        
+        outputModelMatrix.set(model);
+        
         if (camera != null && isBillboardEnabled()) {
             outputModelMatrix.mul(camera.getInverseView());
         }
-
-        getTransformation().mul(outputModelMatrix, outputModelMatrix);
-
+        
         return outputModelMatrix;
     }
 
