@@ -29,6 +29,9 @@ package cientistavuador.cienspools.util;
 import cientistavuador.cienspools.Main;
 import com.jme3.bullet.PhysicsSpace;
 import com.jme3.bullet.collision.shapes.CollisionShape;
+import com.jme3.bullet.collision.shapes.GImpactCollisionShape;
+import com.jme3.bullet.collision.shapes.MeshCollisionShape;
+import com.jme3.bullet.collision.shapes.SphereCollisionShape;
 import com.jme3.bullet.objects.PhysicsRigidBody;
 import com.jme3.bullet.util.DebugShapeFactory;
 import com.jme3.math.Quaternion;
@@ -41,6 +44,7 @@ import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
 import org.joml.Quaternionf;
 import org.joml.Vector3dc;
+import org.joml.Vector3fc;
 
 /**
  *
@@ -48,6 +52,25 @@ import org.joml.Vector3dc;
  */
 public class PhysicsSpaceDebugger {
 
+    public static final Vector3fc ACTIVE_COLOR = new org.joml.Vector3f(0f, 1f, 0f);
+    public static final Vector3fc INACTIVE_COLOR = new org.joml.Vector3f(1f, 0f, 0f);
+    public static final Vector3fc KINEMATIC_COLOR = new org.joml.Vector3f(1f, 1f, 0f);
+    public static final Vector3fc STATIC_COLOR = new org.joml.Vector3f(1f, 1f, 1f);
+    public static final Vector3fc CENTER_OF_MASS_COLOR = new org.joml.Vector3f(1f, 0.5f, 0f);
+    
+    private static final float[] sphereTriangles;
+    
+    static {
+        SphereCollisionShape sphere = new SphereCollisionShape(1f);
+        FloatBuffer trianglesBuffer = DebugShapeFactory
+                .getDebugTriangles(sphere, DebugShapeFactory.lowResolution)
+                .flip();
+        sphereTriangles = new float[trianglesBuffer.limit()];
+        trianglesBuffer.get(sphereTriangles);
+    }
+    
+    private static final Matrix4fc IDENTITY = new Matrix4f();
+    
     private final PhysicsSpace physicsSpace;
     private final WeakHashMap<CollisionShape, Pair<float[], Vector3f>> collisionShapeTriangles = new WeakHashMap<>();
 
@@ -87,6 +110,10 @@ public class PhysicsSpaceDebugger {
         }
         for (PhysicsRigidBody body : list) {
             CollisionShape shape = body.getCollisionShape();
+            if (shape instanceof MeshCollisionShape || shape instanceof GImpactCollisionShape) {
+                continue;
+            }
+            
             Pair<float[], Vector3f> pair = getTriangles(shape);
 
             float[] triangles = pair.getA();
@@ -114,8 +141,30 @@ public class PhysicsSpaceDebugger {
                                     * Main.FROM_PHYSICS_ENGINE_UNITS
                     );
             
+            float r = ACTIVE_COLOR.x();
+            float g = ACTIVE_COLOR.y();
+            float b = ACTIVE_COLOR.z();
+            
+            if (body.isKinematic()) {
+                r = KINEMATIC_COLOR.x();
+                g = KINEMATIC_COLOR.y();
+                b = KINEMATIC_COLOR.z();
+            } else {
+                if (body.getMass() == 0f) {
+                    r = STATIC_COLOR.x();
+                    g = STATIC_COLOR.y();
+                    b = STATIC_COLOR.z();
+                } else {
+                    if (!body.isActive()) {
+                        r = INACTIVE_COLOR.x();
+                        g = INACTIVE_COLOR.y();
+                        b = INACTIVE_COLOR.z();
+                    }
+                }
+            }
+            
             DebugRenderer.VertexStream stream = DebugRenderer.begin(
-                    projection, view, model, 1f, 1f, 1f);
+                    projection, view, model, r, g, b);
             for (int i = 0; i < triangles.length; i += 3) {
                 stream.push(
                         triangles[i + 0],
@@ -124,6 +173,25 @@ public class PhysicsSpaceDebugger {
                 );
             }
             stream.end();
+            
+            DebugRenderer.VertexStream massCenterStream = DebugRenderer
+                    .begin(projection, view, IDENTITY, 
+                            CENTER_OF_MASS_COLOR.x(), CENTER_OF_MASS_COLOR.y(), CENTER_OF_MASS_COLOR.z());
+            for (int i = 0; i < sphereTriangles.length; i += 3) {
+                float radius = body.getCcdSweptSphereRadius();
+                if (radius == 0f && body.getCcdMotionThreshold() == 0f) {
+                    radius = 0.05f * Main.TO_PHYSICS_ENGINE_UNITS;
+                }
+                massCenterStream.push(
+                        (sphereTriangles[i + 0] * radius * Main.FROM_PHYSICS_ENGINE_UNITS) 
+                                + ((float) ((location.x * Main.FROM_PHYSICS_ENGINE_UNITS) - camPosition.x())),
+                        (sphereTriangles[i + 1] * radius * Main.FROM_PHYSICS_ENGINE_UNITS) 
+                                + ((float) ((location.y * Main.FROM_PHYSICS_ENGINE_UNITS) - camPosition.y())),
+                        (sphereTriangles[i + 2] * radius * Main.FROM_PHYSICS_ENGINE_UNITS)
+                                + ((float) ((location.z * Main.FROM_PHYSICS_ENGINE_UNITS) - camPosition.z()))
+                );
+            }
+            massCenterStream.end();
         }
     }
 

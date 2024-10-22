@@ -37,13 +37,14 @@ public abstract class NLight {
     
     private final String name;
     
+    private boolean dynamic = true;
+    private String groupName = "";
+    
+    private float size = 0.05f;
+    
     private final Vector3f diffuse = new Vector3f(1f);
     private final Vector3f specular = new Vector3f(1f);
     private final Vector3f ambient = new Vector3f(0.05f);
-    
-    private float lightSize = 0.02f;
-    private boolean dynamic = true;
-    private String groupName = "";
     
     public NLight(String name) {
         if (name == null) {
@@ -56,36 +57,6 @@ public abstract class NLight {
         return name;
     }
     
-    public Vector3f getDiffuse() {
-        return diffuse;
-    }
-
-    public Vector3f getSpecular() {
-        return specular;
-    }
-
-    public Vector3f getAmbient() {
-        return ambient;
-    }
-    
-    public void setDiffuseSpecularAmbient(float r, float g, float b) {
-        this.diffuse.set(r, g, b);
-        this.specular.set(r, g, b);
-        this.ambient.set(r, g, b).mul(0.05f);
-    }
-    
-    public void setDiffuseSpecularAmbient(float value) {
-        setDiffuseSpecularAmbient(value, value, value);
-    }
-
-    public float getLightSize() {
-        return lightSize;
-    }
-
-    public void setLightSize(float lightSize) {
-        this.lightSize = lightSize;
-    }
-
     public boolean isDynamic() {
         return dynamic;
     }
@@ -105,6 +76,36 @@ public abstract class NLight {
         this.groupName = groupName;
     }
     
+    public float getSize() {
+        return size;
+    }
+
+    public void setSize(float size) {
+        this.size = size;
+    }
+    
+    public Vector3f getDiffuse() {
+        return diffuse;
+    }
+
+    public Vector3f getSpecular() {
+        return specular;
+    }
+
+    public Vector3f getAmbient() {
+        return ambient;
+    }
+    
+    public void setDiffuseSpecularAmbient(float r, float g, float b) {
+        this.diffuse.set(r, g, b).mul(5f);
+        this.specular.set(r, g, b);
+        this.ambient.set(r, g, b).mul(0.05f);
+    }
+    
+    public void setDiffuseSpecularAmbient(float value) {
+        setDiffuseSpecularAmbient(value, value, value);
+    }
+    
     public static class NDirectionalLight extends NLight {
         
         private final Vector3f direction = new Vector3f(0f, -1f, -0.5f).normalize();
@@ -116,12 +117,13 @@ public abstract class NLight {
         public Vector3f getDirection() {
             return direction;
         }
-        
+
     }
     
     public static class NPointLight extends NLight {
         
         private final Vector3d position = new Vector3d();
+        private float range = 10f;
         
         public NPointLight(String name) {
             super(name);
@@ -131,11 +133,20 @@ public abstract class NLight {
             return position;
         }
         
+        public float getRange() {
+            return range;
+        }
+
+        public void setRange(float range) {
+            this.range = range;
+        }
+        
     }
     
     public static class NSpotLight extends NLight {
         private final Vector3d position = new Vector3d();
         private final Vector3f direction = new Vector3f();
+        private float range = 10f;
         
         private float innerCone = (float) Math.cos(Math.toRadians(25f));
         private float outerCone = (float) Math.cos(Math.toRadians(65f));
@@ -150,6 +161,14 @@ public abstract class NLight {
 
         public Vector3f getDirection() {
             return direction;
+        }
+        
+        public float getRange() {
+            return range;
+        }
+
+        public void setRange(float range) {
+            this.range = range;
         }
         
         public float getInnerCone() {

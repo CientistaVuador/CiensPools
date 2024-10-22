@@ -198,6 +198,7 @@ public class Game {
         this.physicsSpace.setGravity(new com.jme3.math.Vector3f(0f, -9.8f * Main.TO_PHYSICS_ENGINE_UNITS, 0f));
         this.physicsSpace.addCollisionObject(new PhysicsRigidBody(this.map.getMeshCollision(), 0f));
         this.physicsSpace.setAccuracy(1f / 480f);
+        this.physicsSpace.setMaxSubSteps(16);
     }
 
     private Game() {
@@ -221,7 +222,7 @@ public class Game {
         for (int i = 0; i < this.cubemaps.getNumberOfCubemaps(); i++) {
             this.cubemaps.getCubemap(i).cubemap();
         }
-
+        
         System.gc();
     }
 
@@ -356,6 +357,8 @@ public class Game {
                     this.camera.getPosition().y() * Main.TO_PHYSICS_ENGINE_UNITS,
                     this.camera.getPosition().z() * Main.TO_PHYSICS_ENGINE_UNITS
             ));
+            rigidBody.setProtectGravity(true);
+            rigidBody.setGravity(new Vector3f(0f, -3f, 0f));
             boomBox.setRigidBody(rigidBody);
             this.physicsSpace.addCollisionObject(rigidBody);
         }
@@ -408,12 +411,14 @@ public class Game {
                                     groups.add(light.getGroupName());
                                 }
                             }
-
+                            
+                            int originalSize = newMap.getOriginalLightmapSize();
                             int size = newMap.getLightmapSize();
                             long requiredMemory = Lightmapper.approximatedMemoryUsage(size, this.scene.getSamplingMode().numSamples(), groups.size());
 
                             ContinuePopup.show(p,
-                                    "Lightmap Size: " + size + "x" + size + "\n"
+                                    "Original Lightmap Size: " + originalSize + "x" + originalSize + "\n"
+                                    + "Lightmap Size: " + size + "x" + size + "\n"
                                     + "Required Memory: " + StringUtils.formatMemory(requiredMemory) + "\n"
                                     + "\n"
                                     + "Do you want to continue?",

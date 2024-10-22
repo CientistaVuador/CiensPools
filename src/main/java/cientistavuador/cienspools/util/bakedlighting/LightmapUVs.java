@@ -97,16 +97,23 @@ public class LightmapUVs {
 
     public static class GeneratorOutput {
 
+        private final int originalLightmapSize;
         private final int lightmapSize;
         private final float[] uvs;
         private final LightmapperQuad[] quads;
 
-        public GeneratorOutput(int lightmapSize, float[] uvs, LightmapperQuad[] quads) {
+        public GeneratorOutput(
+                int originalLightmapSize, int lightmapSize, float[] uvs, LightmapperQuad[] quads) {
+            this.originalLightmapSize = originalLightmapSize;
             this.lightmapSize = lightmapSize;
             this.uvs = uvs;
             this.quads = quads;
         }
-
+        
+        public int getOriginalLightmapSize() {
+            return originalLightmapSize;
+        }
+        
         public int getLightmapSize() {
             return lightmapSize;
         }
@@ -1057,11 +1064,12 @@ public class LightmapUVs {
     }
 
     private GeneratorOutput output() {
-        int lightmapSize = 0;
+        int originalSize = 0;
         for (LightmapperQuad q : this.lightmapperQuads) {
-            lightmapSize = Math.max(lightmapSize, Math.max(q.x + q.width, q.y + q.height));
+            originalSize = Math.max(originalSize, Math.max(q.x + q.width, q.y + q.height));
         }
-
+        int lightmapSize = (int) Math.pow(2.0, Math.ceil(Math.log(originalSize) / Math.log(2.0)));
+        
         float[] uvs = new float[(this.vertices.length / VERTEX_SIZE) * 2];
 
         float invLightmapSize = 1f / lightmapSize;
@@ -1098,6 +1106,7 @@ public class LightmapUVs {
         }
 
         return new GeneratorOutput(
+                originalSize,
                 lightmapSize,
                 uvs,
                 this.lightmapperQuads.toArray(LightmapperQuad[]::new)

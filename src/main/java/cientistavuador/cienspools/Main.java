@@ -160,7 +160,9 @@ public class Main {
         System.out.println("Renderer: " + glGetString(GL_RENDERER));
         System.out.println("Version: " + glGetString(GL_VERSION));
         System.out.println("GLSL Version: " + glGetString(GL_SHADING_LANGUAGE_VERSION));
-
+        System.out.println("Max Texture Size: " + glGetInteger(GL_MAX_TEXTURE_SIZE));
+        System.out.println("Max Texture Array Layers: " + glGetInteger(GL_MAX_ARRAY_TEXTURE_LAYERS));
+        
         GL.setCapabilities(null);
         glfwMakeContextCurrent(0);
 
@@ -201,7 +203,7 @@ public class Main {
         }
     }
 
-    public static boolean THROW_GL_GLFW_ERRORS = true;
+    public static boolean THROW_GL_GLFW_ERRORS = false;
 
     public static void checkGLError() {
         int error = glGetError();
@@ -734,7 +736,7 @@ public class Main {
             }
 
             Main.FRAME++;
-
+            
             if (Main.EXIT_SIGNAL) {
                 glfwMakeContextCurrent(0);
                 glfwDestroyWindow(Main.WINDOW_POINTER);

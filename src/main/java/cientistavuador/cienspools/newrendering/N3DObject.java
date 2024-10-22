@@ -33,6 +33,7 @@ import cientistavuador.cienspools.util.ObjectCleaner;
 import cientistavuador.cienspools.util.raycast.BVH;
 import cientistavuador.cienspools.util.raycast.LocalRayResult;
 import com.jme3.bullet.objects.PhysicsRigidBody;
+import com.jme3.bullet.objects.infos.RigidBodyMotionState;
 import com.jme3.math.TransformDp;
 import com.simsilica.mathd.Quatd;
 import com.simsilica.mathd.Vec3d;
@@ -207,10 +208,10 @@ public class N3DObject {
                 ;
         
         if (this.rigidBody != null) {
-            TransformDp transformDp = this.rigidBody.getTransformDp(null);
+            RigidBodyMotionState motionState = this.rigidBody.getMotionState();
             
-            Vec3d t = transformDp.getTranslation();
-            Quatd r = transformDp.getRotation();
+            Vec3d t = motionState.getLocationDp(null);
+            Quatd r = motionState.getOrientationQuaternionDp(null);
             
             Matrix4d rigidBodyModel = new Matrix4d()
                     .translate(

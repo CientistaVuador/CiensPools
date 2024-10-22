@@ -40,8 +40,8 @@ import org.joml.Vector3fc;
  */
 public class NProgram {
     
-    public static final float FRESNEL_STRENGTH = 0.90f;
-    public static final float DIFFUSE_STRENGTH = 0.95f;
+    public static final float FRESNEL_BALANCE = 0.05f;
+    public static final float DIFFUSE_BALANCE = 0.50f;
     public static final float MAX_SHININESS = 2048f;
 
     public static final float LIGHT_ATTENUATION = 0.75f;
@@ -560,20 +560,27 @@ public class NProgram {
                 vec3 ambient;
             };
             
+            float fresnelFactor(vec3 viewDirection, vec3 normal) {
+                float fresnelDot = 1.0 - max(dot(-viewDirection, normal), 0.0);
+                return FRESNEL_BALANCE + ((1.0 - FRESNEL_BALANCE) * pow(fresnelDot, 5.0));
+            }
+            
             BlinnPhongMaterial convertPBRMaterialToBlinnPhong(
+                vec3 viewDirection, vec3 normal,
                 vec3 color, float metallic, float roughness, float ambientOcclusion
             ) {
                 float shininess = pow(MAX_SHININESS, 1.0 - roughness);
                 float specular = ((shininess + 2.0) * (shininess + 4.0)) / (8.0 * PI * (pow(2.0, -shininess * 0.5) + shininess));
+                float fresnel = fresnelFactor(viewDirection, normal);
                 return BlinnPhongMaterial(
                     shininess,
                     mix(
-                        color * DIFFUSE_STRENGTH,
+                        (color * DIFFUSE_BALANCE) / PI,
                         vec3(0.0),
                         metallic
                     ),
                     mix(
-                        vec3(max(specular - 0.3496155267919281, 0.0) * PI * (1.0 - DIFFUSE_STRENGTH)),
+                        vec3(max(specular - 0.3496155267919281, 0.0)) * (1.0 - DIFFUSE_BALANCE) * fresnel * PI,
                         vec3(specular) * color,
                         metallic
                     ),
@@ -673,7 +680,7 @@ public class NProgram {
                     furthestIndex = i;
                 }
                 if (furthestDistance >= 0.0) {
-                    float fresnel = ((1.0 - FRESNEL_STRENGTH) + pow(1.0 - max(dot(-viewDirection, normal), 0.0), 5.0) * FRESNEL_STRENGTH);
+                    float fresnel = fresnelFactor(viewDirection, normal);
                     vec3 reflectedColor = cubemapReflectionIndexed(furthestIndex, roughness, resultDirection);
                     return mix(
                                 reflectedColor * fresnel * pow(1.0 - roughness, 2.0),
@@ -746,7 +753,8 @@ public class NProgram {
                     finalColor.rgb += sampleLightmaps(inVertex.worldLightmapTexture, i, intensity).rgb * mix(color.rgb, vec3(0.0), metallic) * lightmapAo;
                 }
                 
-                BlinnPhongMaterial bpMaterial = convertPBRMaterialToBlinnPhong(color.rgb, metallic, roughness, 1.0);
+                BlinnPhongMaterial bpMaterial = convertPBRMaterialToBlinnPhong(
+                            viewDirection, normal, color.rgb, metallic, roughness, 1.0);
                 for (int i = 0; i < MAX_AMOUNT_OF_LIGHTS; i++) {
                     Light light = lights[i];
                     if (light.type == NULL_LIGHT_TYPE) {
@@ -808,8 +816,8 @@ public class NProgram {
         new ProgramCompiler.ShaderConstant("RGBE_BASE", E8Image.BASE),
         new ProgramCompiler.ShaderConstant("RGBE_MAX_EXPONENT", E8Image.MAX_EXPONENT),
         new ProgramCompiler.ShaderConstant("RGBE_BIAS", E8Image.BIAS),
-        new ProgramCompiler.ShaderConstant("FRESNEL_STRENGTH", FRESNEL_STRENGTH),
-        new ProgramCompiler.ShaderConstant("DIFFUSE_STRENGTH", DIFFUSE_STRENGTH),
+        new ProgramCompiler.ShaderConstant("FRESNEL_BALANCE", FRESNEL_BALANCE),
+        new ProgramCompiler.ShaderConstant("DIFFUSE_BALANCE", DIFFUSE_BALANCE),
         new ProgramCompiler.ShaderConstant("MAX_SHININESS", MAX_SHININESS)
     };
 

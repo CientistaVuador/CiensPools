@@ -70,7 +70,7 @@ public class NMap {
         if (light instanceof NLight.NDirectionalLight directional) {
             Scene.DirectionalLight sceneDirectional = new Scene.DirectionalLight();
             sceneDirectional.setGroupName(directional.getGroupName());
-            sceneDirectional.setLightSize(directional.getLightSize());
+            sceneDirectional.setLightSize(directional.getSize());
             sceneDirectional.setDiffuse(directional.getDiffuse());
             sceneDirectional.setAmbient(directional.getAmbient());
             sceneDirectional.setDirection(directional.getDirection());
@@ -79,7 +79,7 @@ public class NMap {
         if (light instanceof NLight.NPointLight point) {
             Scene.PointLight scenePoint = new Scene.PointLight();
             scenePoint.setGroupName(point.getGroupName());
-            scenePoint.setLightSize(point.getLightSize());
+            scenePoint.setLightSize(point.getSize());
             scenePoint.setDiffuse(point.getDiffuse());
             scenePoint.setPosition(
                     (float) point.getPosition().x(),
@@ -91,7 +91,7 @@ public class NMap {
         if (light instanceof NLight.NSpotLight spot) {
             Scene.SpotLight sceneSpot = new Scene.SpotLight();
             sceneSpot.setGroupName(spot.getGroupName());
-            sceneSpot.setLightSize(spot.getLightSize());
+            sceneSpot.setLightSize(spot.getSize());
             sceneSpot.setDiffuse(spot.getDiffuse());
             sceneSpot.setPosition(
                     (float) spot.getPosition().x(),
@@ -161,6 +161,7 @@ public class NMap {
 
     private final int lightmapMargin;
     private final float lightmapPixelToWorldRatio;
+    private final int originalLightmapSize;
     private final int lightmapSize;
     private final Rectanglei[] lightmapRectangles;
 
@@ -283,7 +284,8 @@ public class NMap {
                 transformedVertices, NMesh.VERTEX_SIZE, NMesh.OFFSET_POSITION_XYZ,
                 this.lightmapMargin, this.lightmapPixelToWorldRatio, 1f, 1f, 1f
         );
-
+        
+        this.originalLightmapSize = output.getOriginalLightmapSize();
         this.lightmapSize = output.getLightmapSize();
 
         LightmapUVs.LightmapperQuad[] quads = output.getQuads();
@@ -388,6 +390,10 @@ public class NMap {
 
     public float getLightmapPixelToWorldRatio() {
         return lightmapPixelToWorldRatio;
+    }
+
+    public int getOriginalLightmapSize() {
+        return originalLightmapSize;
     }
 
     public int getLightmapSize() {

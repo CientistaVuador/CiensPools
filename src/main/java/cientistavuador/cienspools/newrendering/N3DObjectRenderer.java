@@ -437,7 +437,7 @@ public class N3DObjectRenderer {
                                     lightDirection.set(lightPosition).sub(absCenterX, absCenterY, absCenterZ);
                                     length = lightDirection.length();
                                     lightDirection.div(length);
-                                    length -= light.getLightSize();
+                                    length -= light.getSize();
 
                                     if (length < 0.0) {
                                         lightDirection.negate();
