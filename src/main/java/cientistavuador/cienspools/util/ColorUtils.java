@@ -89,6 +89,23 @@ public class ColorUtils {
         }
     }
     
+    public static void setSRGBA(Vector4f out, int red, int green, int blue, int alpha) {
+        out.set(
+                Math.pow(red / 255f, 2.2),
+                Math.pow(green / 255f, 2.2),
+                Math.pow(blue / 255f, 2.2),
+                alpha / 255f
+        );
+    }
+    
+    public static void setSRGB(Vector3f out, int red, int green, int blue) {
+        out.set(
+                Math.pow(red / 255f, 2.2),
+                Math.pow(green / 255f, 2.2),
+                Math.pow(blue / 255f, 2.2)
+        );
+    }
+    
     private ColorUtils() {
 
     }

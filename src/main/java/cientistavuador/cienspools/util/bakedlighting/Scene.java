@@ -43,7 +43,7 @@ public class Scene {
 
         private final Vector3f diffuse = new Vector3f(1f, 1f, 1f);
 
-        private float lightSize = 0.02f;
+        private float lightSize = 0.05f;
         private String groupName = "";
 
         protected Light() {
@@ -69,7 +69,8 @@ public class Scene {
         public void setLightSize(float lightSize) {
             this.lightSize = lightSize;
         }
-
+        
+        @Deprecated
         public float getLuminance() {
             return getDiffuse().length();
         }
@@ -147,7 +148,8 @@ public class Scene {
                 Vector3f outputDirection, Vector3f outputColor,
                 float directAttenuation
         ) {
-            float diffuseFactor = Math.max(normal.dot(outputDirection.set(this.directionNegated)), 0f);
+            float diffuseFactor = (float) (Math.max(
+                    normal.dot(outputDirection.set(this.directionNegated)), 0f) / Math.PI);
             outputColor.set(this.getDiffuse()).mul(diffuseFactor);
         }
 
@@ -222,6 +224,7 @@ public class Scene {
 
         private final Vector3f position = new Vector3f(-1f, 2f, 6f);
         private float bakeCutoff = 1f / 255f;
+        private float range = 10f;
 
         public PointLight() {
 
@@ -239,12 +242,22 @@ public class Scene {
             setPosition(position.x(), position.y(), position.z());
         }
 
+        @Deprecated
         public float getBakeCutoff() {
             return bakeCutoff;
         }
 
+        @Deprecated
         public void setBakeCutoff(float bakeCutoff) {
             this.bakeCutoff = bakeCutoff;
+        }
+
+        public float getRange() {
+            return range;
+        }
+
+        public void setRange(float range) {
+            this.range = range;
         }
 
         @Override
@@ -254,11 +267,13 @@ public class Scene {
                 float directAttenuation
         ) {
             outputDirection.set(this.position).sub(position).normalize();
-            float diffuseFactor = Math.max(normal.dot(outputDirection), 0f);
-
+            float diffuseFactor = (float) (Math.max(normal.dot(outputDirection), 0f) / Math.PI);
+            
             float distance = this.position.distance(position);
-            float attenuation = 1f / ((distance * distance) + directAttenuation);
-
+            float attenuation = (float) (Math.max(Math.min(
+                    1f - Math.pow(distance / getRange(), 4.0), 1f), 0f) 
+                    / ((distance * distance) + getLightSize()));
+            
             diffuseFactor *= attenuation;
 
             outputColor.set(this.getDiffuse()).mul(diffuseFactor);
@@ -276,6 +291,7 @@ public class Scene {
 
         private final Vector3f position = new Vector3f(-1f, 2f, 6f);
         private float bakeCutoff = 1f / 255f;
+        private float range = 10f;
 
         private final Vector3f direction = new Vector3f(0, -1, 0);
         private final Vector3f directionNegated = new Vector3f(this.direction).negate();
@@ -298,12 +314,22 @@ public class Scene {
             setPosition(position.x(), position.y(), position.z());
         }
 
+        @Deprecated
         public float getBakeCutoff() {
             return bakeCutoff;
         }
 
+        @Deprecated
         public void setBakeCutoff(float bakeCutoff) {
             this.bakeCutoff = bakeCutoff;
+        }
+
+        public float getRange() {
+            return range;
+        }
+
+        public void setRange(float range) {
+            this.range = range;
         }
 
         private float calculateRadiansCosine(float angle) {
@@ -358,10 +384,12 @@ public class Scene {
                 float directAttenuation
         ) {
             outputDirection.set(this.position).sub(position).normalize();
-            float diffuseFactor = Math.max(normal.dot(outputDirection), 0f);
-
+            float diffuseFactor = (float) (Math.max(normal.dot(outputDirection), 0f) / Math.PI);
+            
             float distance = this.position.distance(position);
-            float attenuation = 1f / ((distance * distance) + directAttenuation);
+            float attenuation = (float) (Math.max(Math.min(
+                    1f - Math.pow(distance / getRange(), 4.0), 1f), 0f) 
+                    / ((distance * distance) + getLightSize()));
 
             diffuseFactor *= attenuation;
 

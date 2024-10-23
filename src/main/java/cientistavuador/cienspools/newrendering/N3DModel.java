@@ -182,7 +182,7 @@ public class N3DModel {
                         materialsList.add(material);
                     }
 
-                    if (materialTextures != NTextures.NULL_TEXTURES && !texturesList.contains(materialTextures)) {
+                    if (materialTextures != NTextures.NULL_TEXTURE && !texturesList.contains(materialTextures)) {
                         texturesList.add(materialTextures);
                     }
 

@@ -166,6 +166,7 @@ public class NMap {
     private final Rectanglei[] lightmapRectangles;
 
     private NLightmaps lightmaps = null;
+    private NCubemaps cubemaps = null;
 
     public NMap(String name, Collection<N3DObject> objects, int lightmapMargin, float lightmapPixelToWorldRatio) {
         this.name = name;
@@ -419,6 +420,14 @@ public class NMap {
         }
     }
 
+    public NCubemaps getCubemaps() {
+        return cubemaps;
+    }
+
+    public void setCubemaps(NCubemaps cubemaps) {
+        this.cubemaps = cubemaps;
+    }
+    
     public List<NRayResult> testRay(
             double pX, double pY, double pZ,
             float dX, float dY, float dZ

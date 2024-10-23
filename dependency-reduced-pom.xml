@@ -27,6 +27,7 @@
           <include>**/*.cbm</include>
           <include>**/*.lit</include>
           <include>**/*.xsd</include>
+          <include>**/*.fbx</include>
         </includes>
       </resource>
     </resources>

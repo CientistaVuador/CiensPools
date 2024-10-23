@@ -29,6 +29,9 @@ package cientistavuador.cienspools.newrendering;
 import cientistavuador.cienspools.util.bakedlighting.AmbientCube;
 import cientistavuador.cienspools.Main;
 import cientistavuador.cienspools.camera.Camera;
+import cientistavuador.cienspools.newrendering.NLight.NDirectionalLight;
+import cientistavuador.cienspools.newrendering.NLight.NPointLight;
+import cientistavuador.cienspools.newrendering.NLight.NSpotLight;
 import cientistavuador.cienspools.util.BetterUniformSetter;
 import cientistavuador.cienspools.util.GPUOcclusion;
 import cientistavuador.cienspools.water.Water;
@@ -55,7 +58,6 @@ public class N3DObjectRenderer {
 
     public static boolean PARALLAX_ENABLED = true;
     public static boolean REFLECTIONS_ENABLED = true;
-    public static boolean SPECULAR_ENABLED = true;
     public static boolean HDR_OUTPUT = false;
     public static boolean REFLECTIONS_DEBUG = false;
 
@@ -74,46 +76,43 @@ public class N3DObjectRenderer {
         renderQueue.add(obj);
     }
 
-    private static NProgram.NProgramLight convertToShaderLight(
-            Camera camera, NLight light,
-            float redFactor, float greenFactor, float blueFactor, float ambientFactor
-    ) {
-        if (light == null) {
-            return NProgram.NULL_LIGHT;
-        }
+    private static class WrappedLight {
 
+        int type;
+        NLight light;
+        Vector3f position;
+        Vector3f color;
+        float ambient;
+
+        WrappedLight(int type, NLight light, Vector3f position, Vector3f color, float ambient) {
+            this.type = type;
+            this.light = light;
+            this.position = position;
+            this.color = color;
+            this.ambient = ambient;
+        }
+    }
+
+    private static WrappedLight wrapLight(
+            Camera camera, NLight light, Vector3f color, float ambientFactor
+    ) {
         int lightType = NProgram.NULL_LIGHT_TYPE;
 
-        Vector3fc diffuse = light.getDiffuse();
-        Vector3fc specular = light.getSpecular();
-        Vector3fc ambient = light.getAmbient();
-
         Vector3dc position = null;
-        Vector3fc direction = null;
-        float innerCone = 0f;
-        float outerCone = 0f;
 
         if (light instanceof NLight.NDirectionalLight e) {
             lightType = NProgram.DIRECTIONAL_LIGHT_TYPE;
-            direction = e.getDirection();
         } else if (light instanceof NLight.NPointLight e) {
             lightType = NProgram.POINT_LIGHT_TYPE;
             position = e.getPosition();
         } else if (light instanceof NLight.NSpotLight e) {
             lightType = NProgram.SPOT_LIGHT_TYPE;
-            direction = e.getDirection();
             position = e.getPosition();
-            innerCone = e.getInnerCone();
-            outerCone = e.getOuterCone();
         }
 
         float pX = 0f;
         float pY = 0f;
         float pZ = 0f;
-
-        float dX = 0f;
-        float dY = 0f;
-        float dZ = 0f;
 
         if (position != null) {
             pX = (float) (position.x() - camera.getPosition().x());
@@ -121,21 +120,7 @@ public class N3DObjectRenderer {
             pZ = (float) (position.z() - camera.getPosition().z());
         }
 
-        if (direction != null) {
-            dX = direction.x();
-            dY = direction.y();
-            dZ = direction.z();
-        }
-
-        return new NProgram.NProgramLight(
-                lightType,
-                pX, pY, pZ,
-                dX, dY, dZ,
-                innerCone, outerCone,
-                diffuse.x() * redFactor, diffuse.y() * greenFactor, diffuse.z() * blueFactor,
-                specular.x() * redFactor, specular.y() * greenFactor, specular.z() * blueFactor,
-                ambient.x() * redFactor * ambientFactor, ambient.y() * greenFactor * ambientFactor, ambient.z() * blueFactor * ambientFactor
-        );
+        return new WrappedLight(lightType, light, new Vector3f(pX, pY, pZ), color, ambientFactor);
     }
 
     private static List<N3DObject> collectObjects() {
@@ -236,7 +221,7 @@ public class N3DObjectRenderer {
         public final float distanceSquared;
         public final NGeometry geometry;
         public final NCubemap[] cubemaps;
-        public final NProgram.NProgramLight[] lights;
+        public final WrappedLight[] lights;
 
         public ToRender(
                 N3DObject obj,
@@ -245,7 +230,7 @@ public class N3DObjectRenderer {
                 float distanceSquared,
                 NGeometry geometry,
                 NCubemap[] cubemaps,
-                NProgram.NProgramLight[] lights
+                WrappedLight[] lights
         ) {
             this.obj = obj;
             this.transformation = transformation;
@@ -378,7 +363,7 @@ public class N3DObjectRenderer {
 
                         NCubemap[] finalToRenderCubemaps = Arrays.copyOf(toRenderCubemaps.toArray(NCubemap[]::new), NProgram.MAX_AMOUNT_OF_CUBEMAPS);
 
-                        List<NProgram.NProgramLight> toRenderLights = new ArrayList<>();
+                        List<WrappedLight> toRenderLights = new ArrayList<>();
                         lights.sort((o1, o2) -> {
                             double disto1 = 0.0;
                             double disto2 = 0.0;
@@ -420,7 +405,9 @@ public class N3DObjectRenderer {
                             float r = 1f;
                             float g = 1f;
                             float b = 1f;
-                            if (obj.getMap() != null && obj.getLightmaps() == NLightmaps.NULL_LIGHTMAPS) {
+                            if (obj.getMap() != null
+                                    && obj.getLightmaps() == NLightmaps.NULL_LIGHTMAPS
+                                    && !light.isDynamic()) {
                                 Vector3d lightPosition = null;
                                 double length = Double.POSITIVE_INFINITY;
 
@@ -457,10 +444,10 @@ public class N3DObjectRenderer {
                                 b = shadowColor.z();
                             }
                             if (r != 0f || g != 0f || b != 0f || ambientFactor != 0f) {
-                                toRenderLights.add(convertToShaderLight(camera, light, r, g, b, ambientFactor));
+                                toRenderLights.add(wrapLight(camera, light, new Vector3f(r, g, b), ambientFactor));
                             }
                         }
-                        NProgram.NProgramLight[] finalLights = toRenderLights.toArray(toRenderLights.toArray(NProgram.NProgramLight[]::new));
+                        WrappedLight[] finalLights = toRenderLights.toArray(WrappedLight[]::new);
                         finalLights = Arrays.copyOf(finalLights, NProgram.MAX_AMOUNT_OF_LIGHTS);
 
                         float distanceSquared = (centerX * centerX) + (centerY * centerY) + (centerZ * centerZ);
@@ -567,7 +554,7 @@ public class N3DObjectRenderer {
     ) {
         NLightmaps.NULL_LIGHTMAPS.lightmaps();
         NCubemap.NULL_CUBEMAP.cubemap();
-        NTextures.NULL_TEXTURES.textures();
+        NTextures.NULL_TEXTURE.textures();
 
         for (ToRender t : toRender) {
             NTextures textures = t.geometry.getMaterial().getTextures();
@@ -587,16 +574,15 @@ public class N3DObjectRenderer {
 
         glUseProgram(variant.getProgram());
 
-        NProgram.sendBoneMatrix(variant, IDENTITY, -1);
-        
+        variant.uniformMatrix4fv(NProgram.UNIFORM_BONE_MATRIX(-1), IDENTITY);
+
         variant
                 .uniformMatrix4fv(NProgram.UNIFORM_PROJECTION, camera.getProjection())
                 .uniformMatrix4fv(NProgram.UNIFORM_VIEW, camera.getView())
-                .uniform1i(NProgram.UNIFORM_REFLECTIONS_DEBUG, (REFLECTIONS_DEBUG ? 1 : 0))
-                .uniform1i(NProgram.UNIFORM_HDR_OUTPUT, (HDR_OUTPUT ? 1 : 0))
-                .uniform1i(NProgram.UNIFORM_PARALLAX_ENABLED, (PARALLAX_ENABLED ? 1 : 0))
-                .uniform1i(NProgram.UNIFORM_REFLECTIONS_ENABLED, (REFLECTIONS_ENABLED ? 1 : 0))
-                .uniform1i(NProgram.UNIFORM_REFLECTIONS_SUPPORTED, (REFLECTIONS_ENABLED ? 1 : 0))
+                .uniform1i(NProgram.UNIFORM_ENABLE_GAMMA_CORRECTION, (HDR_OUTPUT ? 0 : 1))
+                .uniform1i(NProgram.UNIFORM_ENABLE_TONEMAPPING, (HDR_OUTPUT ? 0 : 1))
+                .uniform1i(NProgram.UNIFORM_ENABLE_PARALLAX_MAPPING, (PARALLAX_ENABLED ? 1 : 0))
+                .uniform1i(NProgram.UNIFORM_ENABLE_REFLECTIONS, (REFLECTIONS_ENABLED ? 1 : 0))
                 .uniform1f(NProgram.UNIFORM_WATER_COUNTER, Water.WATER_COUNTER)
                 .uniform1i(NProgram.UNIFORM_WATER_FRAMES, 0)
                 .uniform1i(NProgram.UNIFORM_MATERIAL_TEXTURES, 1)
@@ -605,10 +591,10 @@ public class N3DObjectRenderer {
                 .uniform1i(NProgram.UNIFORM_REFLECTION_CUBEMAP_1, 4)
                 .uniform1i(NProgram.UNIFORM_REFLECTION_CUBEMAP_2, 5)
                 .uniform1i(NProgram.UNIFORM_REFLECTION_CUBEMAP_3, 6);
-        
+
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D_ARRAY, Water.TEXTURE);
-        
+
         render(variant, camera, toRender);
 
         glUseProgram(0);
@@ -620,91 +606,140 @@ public class N3DObjectRenderer {
             List<ToRender> list
     ) {
         Matrix4f worldToLocal = new Matrix4f();
-        Vector3f relativePosition = new Vector3f();
+        Vector3f relative = new Vector3f();
 
         Matrix4f transformedBone = new Matrix4f();
 
-        NProgram.NProgramLight[] lastLights = null;
-        AmbientCube lastAmbientCube = null;
         NLightmaps lastLightmaps = null;
-        NMaterial lastMaterial = null;
         NTextures lastTextures = null;
         NCubemap[] lastCubemaps = null;
         Matrix4fc lastTransformation = null;
         NMesh lastMesh = null;
         NAnimator lastAnimator = null;
-        N3DObject lastFresnel = null;
 
         Matrix3f normalMatrix = new Matrix3f();
 
         for (ToRender render : list) {
             N3DModel n3dmodel = render.obj.getN3DModel();
 
-            NProgram.NProgramLight[] lights = render.lights;
+            WrappedLight[] lights = render.lights;
             AmbientCube ambientCube = render.obj.getAmbientCube();
             NLightmaps lightmaps = render.obj.getLightmaps();
             NMaterial material = render.geometry.getMaterial();
+            if (REFLECTIONS_DEBUG) {
+                material = NMaterial.MIRROR;
+            }
             NTextures textures = material.getTextures();
             NCubemap[] cubemaps = render.cubemaps;
             Matrix4f transformation = render.transformation;
             NMesh mesh = render.geometry.getMesh();
             NAnimator animator = render.obj.getAnimator();
-            N3DObject fresnel = render.obj;
 
-            if (!Arrays.deepEquals(lastLights, lights)) {
-                for (int i = 0; i < lights.length; i++) {
-                    NProgram.sendLight(variant, lights[i], i);
+            for (int i = 0; i < lights.length; i++) {
+                WrappedLight light = lights[i];
+                if (light == null) {
+                    variant.uniform1i(NProgram.UNIFORM_LIGHT_TYPE(i), NProgram.NULL_LIGHT_TYPE);
+                    continue;
                 }
-                lastLights = lights;
+
+                NLight nlight = light.light;
+                variant
+                        .uniform1i(NProgram.UNIFORM_LIGHT_TYPE(i), light.type)
+                        .uniform1f(NProgram.UNIFORM_LIGHT_SIZE(i), nlight.getSize())
+                        .uniform3f(NProgram.UNIFORM_LIGHT_DIFFUSE(i),
+                                nlight.getDiffuse().x() * light.color.x(),
+                                nlight.getDiffuse().y() * light.color.y(),
+                                nlight.getDiffuse().z() * light.color.z()
+                        )
+                        .uniform3f(NProgram.UNIFORM_LIGHT_SPECULAR(i),
+                                nlight.getSpecular().x() * light.color.x(),
+                                nlight.getSpecular().y() * light.color.y(),
+                                nlight.getSpecular().z() * light.color.z()
+                        )
+                        .uniform3f(NProgram.UNIFORM_LIGHT_AMBIENT(i),
+                                nlight.getAmbient().x() * light.color.x() * light.ambient,
+                                nlight.getAmbient().y() * light.color.y() * light.ambient,
+                                nlight.getAmbient().z() * light.color.z() * light.ambient
+                        )
+                        .uniform3f(NProgram.UNIFORM_LIGHT_POSITION(i),
+                                light.position.x(),
+                                light.position.y(),
+                                light.position.z()
+                        );
+                switch (light.type) {
+                    case NProgram.DIRECTIONAL_LIGHT_TYPE -> {
+                        NDirectionalLight directional = (NDirectionalLight) light.light;
+                        variant
+                                .uniform3f(NProgram.UNIFORM_LIGHT_DIRECTION(i),
+                                        directional.getDirection().x(),
+                                        directional.getDirection().y(),
+                                        directional.getDirection().z()
+                                );
+                    }
+                    case NProgram.POINT_LIGHT_TYPE -> {
+                        NPointLight point = (NPointLight) light.light;
+                        variant
+                                .uniform1f(NProgram.UNIFORM_LIGHT_RANGE(i), point.getRange());
+                    }
+                    case NProgram.SPOT_LIGHT_TYPE -> {
+                        NSpotLight spot = (NSpotLight) light.light;
+                        variant
+                                .uniform1f(NProgram.UNIFORM_LIGHT_RANGE(i), spot.getRange())
+                                .uniform3f(NProgram.UNIFORM_LIGHT_DIRECTION(i),
+                                        spot.getDirection().x(),
+                                        spot.getDirection().y(),
+                                        spot.getDirection().z()
+                                )
+                                .uniform1f(NProgram.UNIFORM_LIGHT_INNER_CONE(i), spot.getInnerCone())
+                                .uniform1f(NProgram.UNIFORM_LIGHT_OUTER_CONE(i), spot.getOuterCone());
+                    }
+                }
             }
 
-            if (!ambientCube.equals(lastAmbientCube)) {
-                NProgram.sendAmbientCube(variant, ambientCube);
-                lastAmbientCube = ambientCube;
+            for (int i = 0; i < AmbientCube.SIDES; i++) {
+                Vector3fc c = ambientCube.getSide(i);
+                variant.uniform3f(NProgram.UNIFORM_AMBIENT_CUBE(i),
+                        c.x(), c.y(), c.z()
+                );
             }
 
             if (animator != null) {
                 transformation = render.model;
             }
 
-            if (!material.equalsPropertiesOnly(lastMaterial)) {
-                Vector4fc d = material.getDiffuseColor();
-                Vector3fc s = material.getSpecularColor();
-                Vector3fc e = material.getEmissiveColor();
-                Vector3fc r = material.getReflectionColor();
-
-                float sr = s.x();
-                float sg = s.y();
-                float sb = s.z();
-
-                if (!SPECULAR_ENABLED) {
-                    sr = 0f;
-                    sg = 0f;
-                    sb = 0f;
-                }
-
-                NProgram.sendMaterial(variant, new NProgram.NProgramMaterial(
-                        d.x(), d.y(), d.z(), d.w(),
-                        sr, sg, sb,
-                        e.x(), e.y(), e.z(),
-                        r.x(), r.y(), r.z(),
-                        material.getMinExponent(), material.getMaxExponent(),
-                        material.getParallaxHeightCoefficient(), material.getParallaxMinLayers(), material.getParallaxMaxLayers()
-                ));
-                lastMaterial = material;
+            {
+                Vector4fc c = material.getNewColor();
+                Vector3fc f = material.getNewFresnelOutlineColor();
+                variant
+                        .uniform4f(NProgram.UNIFORM_MATERIAL_COLOR, c.x(), c.y(), c.z(), c.w())
+                        .uniform1f(NProgram.UNIFORM_MATERIAL_METALLIC, material.getNewMetallic())
+                        .uniform1f(NProgram.UNIFORM_MATERIAL_ROUGHNESS, material.getNewRoughness())
+                        .uniform1f(NProgram.UNIFORM_MATERIAL_HEIGHT, material.getNewHeight())
+                        .uniform1f(NProgram.UNIFORM_MATERIAL_HEIGHT_MIN_LAYERS, material.getNewHeightMinLayers())
+                        .uniform1f(NProgram.UNIFORM_MATERIAL_HEIGHT_MAX_LAYERS, material.getNewHeightMaxLayers())
+                        .uniform1f(NProgram.UNIFORM_MATERIAL_EMISSIVE, material.getNewEmissive())
+                        .uniform1f(NProgram.UNIFORM_MATERIAL_WATER, material.getNewWater())
+                        .uniform1f(NProgram.UNIFORM_MATERIAL_REFRACTION, material.getNewRefraction())
+                        .uniform1f(NProgram.UNIFORM_MATERIAL_FRESNEL_OUTLINE, material.getNewFresnelOutline())
+                        .uniform3f(NProgram.UNIFORM_MATERIAL_FRESNEL_OUTLINE_COLOR, f.x(), f.y(), f.z())
+                        ;
+                
+                variant
+                        .uniform1i(NProgram.UNIFORM_ENABLE_REFRACTIONS,
+                                (material.getNewRefraction() == 0f ? 0 : 1))
+                        .uniform1i(NProgram.UNIFORM_ENABLE_PARALLAX_MAPPING, 
+                                (material.getNewHeight() == 0f ? 0 : 1))
+                        .uniform1i(NProgram.UNIFORM_ENABLE_WATER, 
+                                (material.getNewWater() == 0f ? 0 : 1))
+                        ;
             }
-
+            
             if (!textures.equals(lastTextures)) {
                 int texturesId = textures.textures();
 
                 glActiveTexture(GL_TEXTURE1);
                 glBindTexture(GL_TEXTURE_2D_ARRAY, texturesId);
-
-                variant.uniform1i(
-                        NProgram.UNIFORM_PARALLAX_SUPPORTED,
-                        textures.isHeightMapSupported() ? 1 : 0
-                );
-
+                
                 lastTextures = textures;
             }
 
@@ -715,9 +750,13 @@ public class N3DObjectRenderer {
                 glBindTexture(GL_TEXTURE_2D_ARRAY, maps);
 
                 for (int i = 0; i < lightmaps.getNumberOfLightmaps(); i++) {
-                    NProgram.sendLightmapIntensity(variant, lightmaps.getIntensity(i), i);
+                    variant.uniform1f(NProgram.UNIFORM_LIGHTMAP_INTENSITY(i),
+                            lightmaps.getIntensity(i));
                 }
-
+                
+                variant.uniform1i(NProgram.UNIFORM_ENABLE_LIGHTMAPS, 
+                        (lightmaps == NLightmaps.NULL_LIGHTMAPS ? 0 : 1));
+                
                 lastLightmaps = lightmaps;
             }
 
@@ -737,12 +776,12 @@ public class N3DObjectRenderer {
                             lastCubemapObj = lastCubemaps[i].cubemap();
                         }
                     }
-                    
+
                     if (cubemapObj != lastCubemapObj) {
                         glActiveTexture(GL_TEXTURE3 + i);
                         glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapObj);
                     }
-                    
+
                     boolean enabled = false;
                     float intensity = 0f;
 
@@ -750,18 +789,18 @@ public class N3DObjectRenderer {
                         enabled = true;
                         intensity = cubemap.getIntensity();
 
-                        cubemap.getCubemapBox().calculateRelative(camera.getPosition(), worldToLocal, relativePosition);
+                        cubemap.getCubemapBox().calculateRelative(
+                                camera.getPosition(), worldToLocal, relative);
                     }
                     
-                    NProgram.sendParallaxCubemapInfo(
-                            variant,
-                            i,
-                            enabled,
-                            intensity,
-                            relativePosition.x(), relativePosition.y(), relativePosition.z(),
-                            worldToLocal
-                    );
-
+                    variant
+                            .uniform1i(NProgram.UNIFORM_PARALLAX_CUBEMAP_ENABLED(i), (enabled ? 1 : 0))
+                            .uniform1f(NProgram.UNIFORM_PARALLAX_CUBEMAP_INTENSITY(i), intensity)
+                            .uniform3f(NProgram.UNIFORM_PARALLAX_CUBEMAP_POSITION(i),
+                                    relative.x(), relative.y(), relative.z())
+                            .uniformMatrix4fv(NProgram.UNIFORM_PARALLAX_CUBEMAP_WORLD_TO_LOCAL(i),
+                                    worldToLocal)
+                            ;
                 }
 
                 lastCubemaps = cubemaps;
@@ -779,7 +818,10 @@ public class N3DObjectRenderer {
                 lastTransformation = transformation;
             }
 
-            if (animator != lastAnimator || (animator == null && mesh.getAmountOfBones() != 0) || !mesh.equals(lastMesh)) {
+            if (animator != lastAnimator 
+                    || (animator == null && mesh.getAmountOfBones() != 0) 
+                    || !mesh.equals(lastMesh)
+                    ) {
                 for (int boneIndex = 0; boneIndex < mesh.getAmountOfBones(); boneIndex++) {
                     String bone = mesh.getBone(boneIndex);
 
@@ -792,9 +834,9 @@ public class N3DObjectRenderer {
                                 .mul(boneNode.getToNodeSpace())
                                 .mul(render.geometry.getParent().getToRootSpace());
 
-                        NProgram.sendBoneMatrix(variant, transformedBone, boneIndex);
+                        variant.uniformMatrix4fv(NProgram.UNIFORM_BONE_MATRIX(boneIndex), transformedBone);
                     } else {
-                        NProgram.sendBoneMatrix(variant, IDENTITY, boneIndex);
+                        variant.uniformMatrix4fv(NProgram.UNIFORM_BONE_MATRIX(boneIndex), IDENTITY);
                     }
                 }
 
@@ -805,16 +847,7 @@ public class N3DObjectRenderer {
                 glBindVertexArray(mesh.getVAO());
                 lastMesh = mesh;
             }
-
-            if (!fresnel.equalsFresnelOutline(lastFresnel)) {
-                NProgram.sendFresnelOutlineInfo(variant,
-                        fresnel.isFresnelOutlineEnabled(),
-                        fresnel.getFresnelOutlineExponent(),
-                        fresnel.getFresnelOutlineColor().x(), fresnel.getFresnelOutlineColor().y(), fresnel.getFresnelOutlineColor().z()
-                );
-                lastFresnel = fresnel;
-            }
-
+            
             glDrawElements(GL_TRIANGLES, mesh.getIndices().length, GL_UNSIGNED_INT, 0);
 
             Main.NUMBER_OF_DRAWCALLS++;

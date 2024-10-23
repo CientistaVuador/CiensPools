@@ -26,6 +26,7 @@
  */
 package cientistavuador.cienspools.newrendering;
 
+import cientistavuador.cienspools.util.ColorUtils;
 import java.util.Objects;
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
@@ -37,7 +38,7 @@ import org.joml.Vector4fc;
  * @author Cien
  */
 public class NMaterial {
-
+    
     public static final Vector4fc DEFAULT_DIFFUSE_COLOR = new Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
     public static final Vector3fc DEFAULT_SPECULAR_COLOR = new Vector3f(1.0f, 1.0f, 1.0f);
     public static final Vector3fc DEFAULT_EMISSIVE_COLOR = new Vector3f(1.2f, 1.2f, 1.2f);
@@ -56,10 +57,57 @@ public class NMaterial {
         NULL_MATERIAL.getReflectionColor().set(0f, 0f, 0f);
         NULL_MATERIAL.setParallaxHeightCoefficient(0f);
     }
-
+    
+    public static final NMaterial MIRROR;
+    static {
+        MIRROR = new NMaterial("Mirror", NTextures.BLANK_TEXTURE);
+        MIRROR.setNewRoughness(0f);
+    }
+    public static final NMaterial DARK_GLASS;
+    static {
+        DARK_GLASS = new NMaterial("Dark Glass", NTextures.BLANK_TEXTURE);
+        DARK_GLASS.getNewColor().set(0.0075f, 0.0075f, 0.01f, 0.7f);
+        DARK_GLASS.setNewMetallic(0f);
+        DARK_GLASS.setNewRoughness(0f);
+    }
+    public static final NMaterial WATER;
+    static {
+        WATER = new NMaterial("Water", NTextures.BLANK_TEXTURE);
+        WATER.getNewColor().set(0.005f, 0.005f, 0.0075f, 0.50f);
+        WATER.setNewMetallic(0f);
+        WATER.setNewRoughness(0f);
+        WATER.setNewRefraction(1f / 1.33f);
+        WATER.setNewWater(0.5f);
+    }
+    public static final NMaterial ORANGE_JUICE;
+    static {
+        ORANGE_JUICE = new NMaterial("Orange Juice", NTextures.BLANK_TEXTURE);
+        ColorUtils.setSRGBA(ORANGE_JUICE.getNewColor(), 255, 92, 0, 255);
+        ORANGE_JUICE.setNewMetallic(0f);
+        ORANGE_JUICE.setNewRoughness(0.3f);
+        ORANGE_JUICE.setNewWater(1f);
+    }
+    
     private final String name;
 
-    private NTextures textures = NTextures.NULL_TEXTURES;
+    private NTextures textures = NTextures.NULL_TEXTURE;
+    
+    //todo: add new properties
+    private final Vector4f newColor = new Vector4f(1f, 1f, 1f, 1f);
+    
+    private float newMetallic = 1f;
+    private float newRoughness = 1f;
+    
+    private float newHeight = 0f;
+    private float newHeightMinLayers = 8f;
+    private float newHeightMaxLayers = 32f;
+    
+    private float newEmissive = 0f;
+    private float newWater = 0f;
+    private float newRefraction = 0f;
+    
+    private float newFresnelOutline = 0f;
+    private final Vector3f newFresnelOutlineColor = new Vector3f(0f, 1f, 0f);
 
     private final Vector4f diffuseColor = new Vector4f(DEFAULT_DIFFUSE_COLOR);
     private final Vector3f specularColor = new Vector3f(DEFAULT_SPECULAR_COLOR);
@@ -79,7 +127,7 @@ public class NMaterial {
     public NMaterial(String name, NTextures textures) {
         this.name = name;
         if (textures == null) {
-            textures = NTextures.NULL_TEXTURES;
+            textures = NTextures.NULL_TEXTURE;
         }
         this.textures = textures;
     }
@@ -94,11 +142,91 @@ public class NMaterial {
 
     public void setTextures(NTextures textures) {
         if (textures == null) {
-            textures = NTextures.NULL_TEXTURES;
+            textures = NTextures.NULL_TEXTURE;
         }
         this.textures = textures;
     }
 
+    public Vector4f getNewColor() {
+        return newColor;
+    }
+
+    public float getNewMetallic() {
+        return newMetallic;
+    }
+
+    public void setNewMetallic(float newMetallic) {
+        this.newMetallic = newMetallic;
+    }
+    
+    public float getNewRoughness() {
+        return newRoughness;
+    }
+
+    public void setNewRoughness(float newRoughness) {
+        this.newRoughness = newRoughness;
+    }
+
+    public float getNewHeight() {
+        return newHeight;
+    }
+
+    public void setNewHeight(float newHeight) {
+        this.newHeight = newHeight;
+    }
+
+    public float getNewHeightMinLayers() {
+        return newHeightMinLayers;
+    }
+
+    public void setNewHeightMinLayers(float newHeightMinLayers) {
+        this.newHeightMinLayers = newHeightMinLayers;
+    }
+
+    public float getNewHeightMaxLayers() {
+        return newHeightMaxLayers;
+    }
+
+    public void setNewHeightMaxLayers(float newHeightMaxLayers) {
+        this.newHeightMaxLayers = newHeightMaxLayers;
+    }
+
+    public float getNewEmissive() {
+        return newEmissive;
+    }
+
+    public void setNewEmissive(float newEmissive) {
+        this.newEmissive = newEmissive;
+    }
+
+    public float getNewWater() {
+        return newWater;
+    }
+
+    public void setNewWater(float newWater) {
+        this.newWater = newWater;
+    }
+
+    public float getNewRefraction() {
+        return newRefraction;
+    }
+
+    public void setNewRefraction(float newRefraction) {
+        this.newRefraction = newRefraction;
+    }
+
+    public float getNewFresnelOutline() {
+        return newFresnelOutline;
+    }
+
+    public void setNewFresnelOutline(float newFresnelOutline) {
+        this.newFresnelOutline = newFresnelOutline;
+    }
+    
+    public Vector3f getNewFresnelOutlineColor() {
+        return newFresnelOutlineColor;
+    }
+    
     public Vector4f getDiffuseColor() {
         return diffuseColor;
     }
@@ -188,8 +316,8 @@ public class NMaterial {
 
     public NBlendingMode getBlendingMode() {
         NBlendingMode mode = this.textures.getBlendingMode();
-        float materialAlpha = this.diffuseColor.w();
-
+        float materialAlpha = this.newColor.w();
+        
         if (materialAlpha != 1f && NBlendingMode.OPAQUE.equals(mode)) {
             mode = NBlendingMode.ALPHA_BLENDING;
         }

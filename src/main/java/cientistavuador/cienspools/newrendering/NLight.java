@@ -96,14 +96,26 @@ public abstract class NLight {
         return ambient;
     }
     
-    public void setDiffuseSpecularAmbient(float r, float g, float b) {
-        this.diffuse.set(r, g, b).mul(5f);
-        this.specular.set(r, g, b);
-        this.ambient.set(r, g, b).mul(0.05f);
+    public void setDiffuseSpecularAmbient(
+            float rd, float gd, float bd,
+            float rs, float gs, float bs,
+            float ra, float ga, float ba
+    ) {
+        getDiffuse().set(rd, gd, bd);
+        getSpecular().set(rs, gs, bs);
+        getAmbient().set(ra, ga, ba);
     }
     
-    public void setDiffuseSpecularAmbient(float value) {
-        setDiffuseSpecularAmbient(value, value, value);
+    public void setDiffuseSpecularAmbient(
+            float diffuse,
+            float specular,
+            float ambient
+    ) {
+        setDiffuseSpecularAmbient(
+                diffuse, diffuse, diffuse,
+                specular, specular, specular,
+                ambient, ambient, ambient
+        );
     }
     
     public static class NDirectionalLight extends NLight {
@@ -145,7 +157,7 @@ public abstract class NLight {
     
     public static class NSpotLight extends NLight {
         private final Vector3d position = new Vector3d();
-        private final Vector3f direction = new Vector3f();
+        private final Vector3f direction = new Vector3f(0f, -1f, 0f);
         private float range = 10f;
         
         private float innerCone = (float) Math.cos(Math.toRadians(25f));

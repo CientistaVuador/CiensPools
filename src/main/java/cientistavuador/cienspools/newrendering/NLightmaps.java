@@ -54,6 +54,7 @@ import org.lwjgl.opengl.EXTTextureCompressionS3TC;
 import org.lwjgl.opengl.EXTTextureFilterAnisotropic;
 import org.lwjgl.opengl.GL;
 import static org.lwjgl.opengl.GL33C.*;
+import org.lwjgl.opengl.GL42C;
 import org.lwjgl.opengl.KHRDebug;
 import static org.lwjgl.system.MemoryUtil.*;
 
@@ -360,24 +361,30 @@ public class NLightmaps {
         if (GL.getCapabilities().GL_EXT_texture_compression_s3tc) {
             internalFormat = EXTTextureCompressionS3TC.GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
         }
-
+        
         int mipLevels = MipmapUtils.numberOfMipmaps(getWidth(), getHeight());
-        for (int i = 0; i < mipLevels; i++) {
-            glTexImage3D(
+        if (Main.isSupported(4, 2)) {
+            GL42C.glTexStorage3D(
                     GL_TEXTURE_2D_ARRAY,
-                    i,
+                    mipLevels,
                     internalFormat,
-                    
-                    MipmapUtils.mipmapSize(getWidth(), i),
-                    MipmapUtils.mipmapSize(getHeight(), i),
-                    getNumberOfLightmaps(),
-                    
-                    0,
-                    
-                    GL_RGBA,
-                    GL_UNSIGNED_BYTE,
-                    (ByteBuffer) null
+                    getWidth(), getHeight(), getNumberOfLightmaps()
             );
+        } else {
+            for (int i = 0; i < mipLevels; i++) {
+                glTexImage3D(
+                        GL_TEXTURE_2D_ARRAY,
+                        i,
+                        internalFormat,
+                        MipmapUtils.mipmapSize(getWidth(), i),
+                        MipmapUtils.mipmapSize(getHeight(), i),
+                        getNumberOfLightmaps(),
+                        0,
+                        GL_RGBA,
+                        GL_UNSIGNED_BYTE,
+                        (ByteBuffer) null
+                );
+            }
         }
 
         for (int i = 0; i < getNumberOfLightmaps(); i++) {
@@ -390,15 +397,10 @@ public class NLightmaps {
                     glTexSubImage3D(
                             GL_TEXTURE_2D_ARRAY,
                             0,
-                            
                             0,
                             0,
-                            i,
-                            
-                            texture.width(),
-                            texture.height(),
+                            i, texture.width(), texture.height(),
                             1,
-                            
                             GL_RGBA,
                             GL_UNSIGNED_BYTE,
                             data
@@ -411,15 +413,10 @@ public class NLightmaps {
                     glCompressedTexSubImage3D(
                             GL_TEXTURE_2D_ARRAY,
                             j,
-                            
                             0,
                             0,
-                            i,
-                            
-                            texture.mipWidth(j),
-                            texture.mipHeight(j),
+                            i, texture.mipWidth(j), texture.mipHeight(j),
                             1,
-                            
                             internalFormat,
                             texture.mipSlice(j)
                     );

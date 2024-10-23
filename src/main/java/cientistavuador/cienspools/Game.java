@@ -43,6 +43,7 @@ import cientistavuador.cienspools.newrendering.NLight;
 import cientistavuador.cienspools.newrendering.NLightmaps;
 import cientistavuador.cienspools.newrendering.NLightmapsStore;
 import cientistavuador.cienspools.newrendering.NMap;
+import cientistavuador.cienspools.newrendering.NMaterial;
 import cientistavuador.cienspools.newrendering.NTextures;
 import cientistavuador.cienspools.physics.PlayerController;
 import cientistavuador.cienspools.popups.BakePopup;
@@ -127,17 +128,20 @@ public class Game {
                         .readModel("cientistavuador/cienspools/resources/models/room.n3dm");
                 N3DObject room = new N3DObject("room", roomModel);
                 mapObjects.add(room);
+                
+                roomModel.getGeometry(1).setMaterial(NMaterial.DARK_GLASS);
             }
 
             this.map = new NMap("map", mapObjects, NMap.DEFAULT_LIGHTMAP_MARGIN, 60f);
             this.map.setLightmaps(NLightmapsStore
                     .readLightmaps("cientistavuador/cienspools/resources/lightmaps/lightmap.lit"));
-
+            
+            
             this.flashlight.setInnerConeAngle(10f);
             this.flashlight.setOuterConeAngle(40f);
-            this.flashlight.setDiffuseSpecularAmbient(0f);
+            this.flashlight.setDiffuseSpecularAmbient(0f, 0f, 0f);
             this.lights.add(this.flashlight);
-
+            
             {
                 N3DModel bottle = N3DModelStore
                         .readModel("cientistavuador/cienspools/resources/models/bottle.n3dm");
@@ -191,6 +195,7 @@ public class Game {
             throw new UncheckedIOException(ex);
         }
         this.cubemaps = new NCubemaps(this.skybox, cubemapsList);
+        this.map.setCubemaps(this.cubemaps);
 
         this.camera.setMovementDisabled(true);
         this.playerController.getCharacterController().addToPhysicsSpace(this.physicsSpace);
@@ -207,7 +212,7 @@ public class Game {
 
     public void start() {
 
-        NTextures.NULL_TEXTURES.textures();
+        NTextures.NULL_TEXTURE.textures();
         NCubemap.NULL_CUBEMAP.cubemap();
         NLightmaps.NULL_LIGHTMAPS.lightmaps();
 
@@ -449,7 +454,6 @@ public class Game {
             boolean reflectionsDebug = N3DObjectRenderer.REFLECTIONS_DEBUG;
 
             N3DObjectRenderer.REFLECTIONS_ENABLED = false;
-            N3DObjectRenderer.SPECULAR_ENABLED = false;
             N3DObjectRenderer.HDR_OUTPUT = true;
             N3DObjectRenderer.REFLECTIONS_DEBUG = false;
 
@@ -487,7 +491,6 @@ public class Game {
             this.cubemaps = new NCubemaps(this.skybox, cubemapsList);
 
             N3DObjectRenderer.REFLECTIONS_ENABLED = reflectionsEnabled;
-            N3DObjectRenderer.SPECULAR_ENABLED = true;
             N3DObjectRenderer.HDR_OUTPUT = false;
             N3DObjectRenderer.REFLECTIONS_DEBUG = reflectionsDebug;
         }
@@ -499,9 +502,9 @@ public class Game {
         }
         if (key == GLFW_KEY_F && action == GLFW_PRESS) {
             if (this.flashlight.getDiffuse().x() == 0f) {
-                this.flashlight.setDiffuseSpecularAmbient(1f);
+                this.flashlight.setDiffuseSpecularAmbient(10f, 1f, 0.05f);
             } else {
-                this.flashlight.setDiffuseSpecularAmbient(0f);
+                this.flashlight.setDiffuseSpecularAmbient(0f, 0f, 0f);
             }
         }
         if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
