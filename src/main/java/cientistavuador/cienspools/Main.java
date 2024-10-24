@@ -505,7 +505,6 @@ public class Main {
         TextureCompressor.init();
         
         Water.init();
-        ResourceLocator.init();
         DebugRenderer.init();
         GLFonts.init();
         Textures.init();

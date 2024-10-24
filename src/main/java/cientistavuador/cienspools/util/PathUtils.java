@@ -28,54 +28,25 @@ package cientistavuador.cienspools.util;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Objects;
-import java.util.WeakHashMap;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  *
  * @author Cien
  */
-public class FileSystemUtils {
+public class PathUtils {
     
-    private static final class FileSystemKey {
-        private final String key;
-
-        public FileSystemKey(String key) {
-            this.key = key;
-        }
-
-        @Override
-        public int hashCode() {
-            int hash = 5;
-            hash = 41 * hash + Objects.hashCode(this.key);
-            return hash;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (this == obj) {
-                return true;
-            }
-            if (obj == null) {
-                return false;
-            }
-            if (getClass() != obj.getClass()) {
-                return false;
-            }
-            final FileSystemKey other = (FileSystemKey) obj;
-            return Objects.equals(this.key, other.key);
-        }
-    }
+    private static final Map<String, WeakReference<FileSystem>> cache = new HashMap<>();
     
-    private static final WeakHashMap<FileSystemKey, FileSystem> cache = new WeakHashMap<>();
-    
-    public static Path pathOfClass(Class<?> clazz) throws IOException {
+    public static Path pathOf(Class<?> clazz) throws IOException {
         URL clazzOrigin = clazz.getProtectionDomain().getCodeSource().getLocation();
         if (clazzOrigin == null) {
             throw new IOException("Class has no origin.");
@@ -102,14 +73,13 @@ public class FileSystemUtils {
             
             FileSystem jarFileSystem;
             synchronized (cache) {
-                FileSystemKey key = new FileSystemKey(originPath.toAbsolutePath().toString());
-                jarFileSystem = cache.get(key);
-                if (jarFileSystem != null && !jarFileSystem.isOpen()) {
-                    jarFileSystem = null;
-                }
-                if (jarFileSystem == null) {
+                String key = originPath.toAbsolutePath().toString();
+                WeakReference<FileSystem> reference = cache.get(key);
+                if (reference == null 
+                        || (jarFileSystem = reference.get()) == null 
+                        || !jarFileSystem.isOpen()) {
                     jarFileSystem = FileSystems.newFileSystem(originPath);
-                    cache.put(key, jarFileSystem);
+                    cache.put(key, new WeakReference<>(jarFileSystem));
                 }
             }
             
@@ -125,7 +95,7 @@ public class FileSystemUtils {
         }
     } 
     
-    private FileSystemUtils() {
+    private PathUtils() {
         
     }
 }

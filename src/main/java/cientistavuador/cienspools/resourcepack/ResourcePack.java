@@ -36,7 +36,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -47,8 +51,69 @@ import org.xml.sax.SAXException;
  *
  * @author Cien
  */
-public class ResourcePack {
-
+public class ResourcePack implements AutoCloseable {
+    
+    protected static List<Resource> getResourcesById(String id, Map<String, List<Resource>> idMap) {
+        if (id == null) {
+            id = "";
+        }
+        List<Resource> list = idMap.get(id);
+        if (list == null) {
+            return List.of();
+        }
+        return Collections.unmodifiableList(list);
+    }
+    
+    protected static Resource getResource(String id, Map<String, List<Resource>> idMap) {
+        List<Resource> list = getResourcesById(id, idMap);
+        if (list.isEmpty()) {
+            return null;
+        }
+        Resource highestPriority = list.get(0);
+        for (int i = 1; i < list.size(); i++) {
+            Resource other = list.get(i);
+            if (other.getPriority() > highestPriority.getPriority()) {
+                highestPriority = other;
+            }
+        }
+        return highestPriority;
+    }
+    
+    protected static Resource getResource(String type, String id, Map<String, List<Resource>> idMap) {
+        if (type == null) {
+            return getResource(id, idMap);
+        }
+        List<Resource> list = getResourcesById(id, idMap);
+        if (list.isEmpty()) {
+            return null;
+        }
+        Resource highestPriority = null;
+        for (Resource other : list) {
+            if (!other.getType().equals(type)) {
+                continue;
+            }
+            if (highestPriority == null) {
+                highestPriority = other;
+                continue;
+            }
+            if (other.getPriority() > highestPriority.getPriority()) {
+                highestPriority = other;
+            }
+        }
+        return highestPriority;
+    }
+    
+    protected static List<Resource> getResourcesByType(String type, Map<String, List<Resource>> typeMap) {
+        if (type == null) {
+            type = "";
+        }
+        List<Resource> list = typeMap.get(type);
+        if (list == null) {
+            return List.of();
+        }
+        return Collections.unmodifiableList(list);
+    }
+    
     public static final String RESOURCE_PACK_XML = "resourcePack.xml";
 
     private static void readAliases(Resource resource, Element aliases) {
@@ -106,12 +171,7 @@ public class ResourcePack {
     private static Resource createResource(Element resourceElement) {
         Resource resource = new Resource();
         
-        int priority = 0;
-        Element priorityElement = XMLUtils.getElement(resourceElement, "priority");
-        if (priorityElement != null) {
-            priority = Integer.parseInt(priorityElement.getTextContent());
-        }
-        resource.setPriority(priority);
+        resource.setPriority(Integer.parseInt(resourceElement.getAttribute("priority")));
         
         readAliases(resource, XMLUtils.getElement(resourceElement, "aliases"));
         readAuthorship(resource,  XMLUtils.getElement(resourceElement, "authorship"));
@@ -161,7 +221,7 @@ public class ResourcePack {
                 = new BufferedInputStream(Files.newInputStream(resourcePackXML))) {
             Document document = XMLUtils
                     .parseXML(new InputSource(stream), Schemas.getSchema("resourcePack.xsd"));
-
+            
             return createResourcePack(fileSystem, document);
         }
     }
@@ -169,7 +229,10 @@ public class ResourcePack {
     protected ResourceLocator locator;
     
     private FileSystem fileSystem;
-    private final List<Resource> resources = new ArrayList<>();
+    private final Set<Resource> resources = new HashSet<>();
+    
+    private final Map<String, List<Resource>> idMap = new HashMap<>();
+    private final Map<String, List<Resource>> typeMap = new HashMap<>();
 
     public ResourcePack() {
         
@@ -187,48 +250,153 @@ public class ResourcePack {
         this.fileSystem = fileSystem;
     }
 
-    public List<Resource> getResources() {
-        return Collections.unmodifiableList(this.resources);
+    public Set<Resource> getResources() {
+        return Collections.unmodifiableSet(this.resources);
+    }
+    
+    private void addToIdMap(Resource r, String id) {
+        List<Resource> list = this.idMap.get(id);
+        if (list == null) {
+            list = new ArrayList<>();
+            this.idMap.put(id, list);
+        }
+        list.add(r);
+    }
+    
+    private void addToTypeMap(Resource r, String type) {
+        List<Resource> list = this.typeMap.get(type);
+        if (list == null) {
+            list = new ArrayList<>();
+            this.typeMap.put(type, list);
+        }
+        list.add(r);
     }
     
     public boolean addResource(Resource r) {
+        if (r == null || r.resourcePack != null) {
+            return false;
+        }
         boolean success = this.resources.add(r);
-        if (success && getLocator() != null) {
-            getLocator().onResourceAdded(this, r);
+        if (success) {
+            r.resourcePack = this;
+            
+            addToIdMap(r, r.getId());
+            for (String alias:r.getAliases()) {
+                addToIdMap(r, alias);
+            }
+            addToTypeMap(r, r.getType());
+            
+            if (getLocator() != null) {
+                getLocator().onResourceAdded(this, r);
+            }
         }
         return success;
     }
     
+    private void removeFromIdMap(Resource r, String id) {
+        List<Resource> list = this.idMap.get(id);
+        if (list == null) {
+            return;
+        }
+        list.remove(r);
+        if (list.isEmpty()) {
+            this.idMap.remove(id);
+        }
+    }
+    
+    private void removeFromTypeMap(Resource r, String type) {
+        List<Resource> list = this.typeMap.get(type);
+        if (list == null) {
+            return;
+        }
+        list.remove(r);
+        if (list.isEmpty()) {
+            this.idMap.remove(type);
+        }
+    }
+    
     public boolean removeResource(Resource r) {
+        if (r == null || r.resourcePack != this) {
+            return false;
+        }
         boolean success = this.resources.remove(r);
-        if (success && getLocator() != null) {
-            getLocator().onResourceRemoved(this, r);
+        if (success) {
+            r.resourcePack = null;
+            
+            removeFromIdMap(r, r.getId());
+            for (String alias:r.getAliases()) {
+                removeFromIdMap(r, alias);
+            }
+            removeFromTypeMap(r, r.getType());
+            
+            if (getLocator() != null) {
+                getLocator().onResourceRemoved(this, r);
+            }
         }
         return success;
     }
     
     protected void onIdChanged(Resource r, String oldId, String newId) {
+        removeFromIdMap(r, oldId);
+        addToIdMap(r, newId);
         if (getLocator() != null) {
             getLocator().onIdChanged(this, r, oldId, newId);
         }
     }
     
     protected void onTypeChanged(Resource r, String oldType, String newType) {
+        removeFromTypeMap(r, oldType);
+        addToTypeMap(r, newType);
         if (getLocator() != null) {
             getLocator().onTypeChanged(this, r, oldType, newType);
         }
     }
     
     protected void onAliasAdded(Resource r, String alias) {
+        addToIdMap(r, alias);
         if (getLocator() != null) {
             getLocator().onAliasAdded(this, r, alias);
         }
     }
     
     protected void onAliasRemoved(Resource r, String alias) {
+        removeFromIdMap(r, alias);
         if (getLocator() != null) {
             getLocator().onAliasRemoved(this, r, alias);
         }
     }
     
+    public List<Resource> getResourcesById(String id) {
+        return getResourcesById(id, this.idMap);
+    }
+    
+    public Resource getResource(String id) {
+        return getResource(id, this.idMap);
+    }
+    
+    public Resource getResource(String type, String id) {
+        return getResource(type, id, this.idMap);
+    }
+    
+    public List<Resource> getResourcesByType(String type) {
+        return getResourcesByType(type, this.typeMap);
+    }
+    
+    public ResourcePack global() {
+        ResourceLocator.GLOBAL.addResourcePack(this);
+        return this;
+    }
+    
+    @Override
+    public void close() throws IOException {
+        if (getLocator() != null) {
+            getLocator().removeResourcePack(this);
+        }
+        if (this.fileSystem == null) {
+            return;
+        }
+        FileSystem system = this.fileSystem;
+        this.fileSystem = null;
+        system.close();
+    }
 }

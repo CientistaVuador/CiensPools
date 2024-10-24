@@ -45,16 +45,19 @@ import cientistavuador.cienspools.newrendering.NLightmapsStore;
 import cientistavuador.cienspools.newrendering.NMap;
 import cientistavuador.cienspools.newrendering.NMaterial;
 import cientistavuador.cienspools.newrendering.NTextures;
+import cientistavuador.cienspools.newrendering.NTexturesStore;
 import cientistavuador.cienspools.physics.PlayerController;
 import cientistavuador.cienspools.popups.BakePopup;
 import cientistavuador.cienspools.popups.ContinuePopup;
+import cientistavuador.cienspools.resourcepack.Resource;
+import cientistavuador.cienspools.resourcepack.ResourceLocator;
 import cientistavuador.cienspools.resourcepack.ResourcePack;
 import cientistavuador.cienspools.text.GLFontRenderer;
 import cientistavuador.cienspools.text.GLFontSpecifications;
 import cientistavuador.cienspools.ubo.CameraUBO;
 import cientistavuador.cienspools.ubo.UBOBindingPoints;
 import cientistavuador.cienspools.util.DebugRenderer;
-import cientistavuador.cienspools.util.FileSystemUtils;
+import cientistavuador.cienspools.util.PathUtils;
 import cientistavuador.cienspools.util.PhysicsSpaceDebugger;
 import cientistavuador.cienspools.util.StringUtils;
 import cientistavuador.cienspools.util.bakedlighting.AmbientCubeDebug;
@@ -66,9 +69,13 @@ import com.jme3.bullet.collision.shapes.HullCollisionShape;
 import com.jme3.bullet.objects.PhysicsRigidBody;
 import com.jme3.math.Vector3f;
 import com.simsilica.mathd.Vec3d;
+import java.io.BufferedInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -120,14 +127,6 @@ public class Game {
     private final PlayerController playerController = new PlayerController();
 
     {
-        try {
-            ResourcePack resourcePack = ResourcePack.of(
-                    FileSystemUtils.pathOfClass(Game.class).resolve("resourcePack.zip")
-            );
-        } catch (Exception ex) {
-            throw new RuntimeException(ex);
-        }
-
         try {
             this.skybox = NCubemapStore
                     .readCubemap("cientistavuador/cienspools/resources/cubemaps/skybox.cbm");

@@ -26,6 +26,8 @@
  */
 package cientistavuador.cienspools.resourcepack;
 
+import java.nio.file.FileSystem;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -52,19 +54,19 @@ public class Resource {
     private final Map<String, String> metadata = new LinkedHashMap<>();
     private final Map<String, String> data = new LinkedHashMap<>();
     private Element extension = null;
-
+    
     public Resource() {
 
     }
-
+    
     public ResourcePack getResourcePack() {
         return this.resourcePack;
     }
-
+    
     public String getType() {
         return this.type;
     }
-
+    
     public void setType(String newType) {
         if (newType == null) {
             newType = "";
@@ -134,6 +136,10 @@ public class Resource {
     public String getPreview() {
         return this.preview;
     }
+    
+    public Path getPreviewPath() {
+        return getPath(getPreview());
+    }
 
     public void setPreview(String preview) {
         this.preview = preview;
@@ -162,6 +168,10 @@ public class Resource {
     public Map<String, String> getData() {
         return this.data;
     }
+    
+    public Path getData(String key) {
+        return getPath(getData().get(key));
+    }
 
     public Element getExtension() {
         return this.extension;
@@ -171,4 +181,18 @@ public class Resource {
         this.extension = extension;
     }
     
+    public Path getPath(String path) {
+        if (path == null) {
+            return null;
+        }
+        ResourcePack pack = getResourcePack();
+        if (pack == null) {
+            return null;
+        }
+        FileSystem system = pack.getFileSystem();
+        if (system == null || !system.isOpen()) {
+            return null;
+        }
+        return system.getPath("/").resolve(path);
+    }
 }
