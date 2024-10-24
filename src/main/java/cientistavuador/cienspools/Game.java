@@ -48,11 +48,13 @@ import cientistavuador.cienspools.newrendering.NTextures;
 import cientistavuador.cienspools.physics.PlayerController;
 import cientistavuador.cienspools.popups.BakePopup;
 import cientistavuador.cienspools.popups.ContinuePopup;
+import cientistavuador.cienspools.resourcepack.ResourcePack;
 import cientistavuador.cienspools.text.GLFontRenderer;
 import cientistavuador.cienspools.text.GLFontSpecifications;
 import cientistavuador.cienspools.ubo.CameraUBO;
 import cientistavuador.cienspools.ubo.UBOBindingPoints;
 import cientistavuador.cienspools.util.DebugRenderer;
+import cientistavuador.cienspools.util.FileSystemUtils;
 import cientistavuador.cienspools.util.PhysicsSpaceDebugger;
 import cientistavuador.cienspools.util.StringUtils;
 import cientistavuador.cienspools.util.bakedlighting.AmbientCubeDebug;
@@ -112,12 +114,20 @@ public class Game {
 
     private boolean ambientCubeDebug = false;
     private boolean debugCollision = false;
-    
+
     private final PhysicsSpace physicsSpace = new PhysicsSpace(PhysicsSpace.BroadphaseType.DBVT);
     private final PhysicsSpaceDebugger physicsSpaceDebugger = new PhysicsSpaceDebugger(this.physicsSpace);
     private final PlayerController playerController = new PlayerController();
-    
+
     {
+        try {
+            ResourcePack resourcePack = ResourcePack.of(
+                    FileSystemUtils.pathOfClass(Game.class).resolve("resourcePack.zip")
+            );
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+
         try {
             this.skybox = NCubemapStore
                     .readCubemap("cientistavuador/cienspools/resources/cubemaps/skybox.cbm");
@@ -128,29 +138,28 @@ public class Game {
                         .readModel("cientistavuador/cienspools/resources/models/room.n3dm");
                 N3DObject room = new N3DObject("room", roomModel);
                 mapObjects.add(room);
-                
-                roomModel.getGeometry(1).setMaterial(NMaterial.DARK_GLASS);
+
+                roomModel.getGeometry(1).setMaterial(NMaterial.WATER);
             }
 
             this.map = new NMap("map", mapObjects, NMap.DEFAULT_LIGHTMAP_MARGIN, 60f);
             this.map.setLightmaps(NLightmapsStore
                     .readLightmaps("cientistavuador/cienspools/resources/lightmaps/lightmap.lit"));
-            
-            
+
             this.flashlight.setInnerConeAngle(10f);
             this.flashlight.setOuterConeAngle(40f);
             this.flashlight.setDiffuseSpecularAmbient(0f, 0f, 0f);
             this.lights.add(this.flashlight);
-            
+
             {
                 N3DModel bottle = N3DModelStore
                         .readModel("cientistavuador/cienspools/resources/models/bottle.n3dm");
                 this.waterBottle = new N3DObject("bottle", bottle);
                 this.waterBottle.setMap(this.map);
-                
+
                 this.waterBottle.getPosition().set(0, -4, 0);
                 this.waterBottle.getScale().set(7f);
-                
+
                 PhysicsRigidBody rigidBody = new PhysicsRigidBody(
                         bottle.getHullCollisionShape(), 0f
                 );
@@ -166,7 +175,7 @@ public class Game {
                 ));
                 this.physicsSpace.addCollisionObject(rigidBody);
             }
-            
+
             {
                 this.boomBoxModel = N3DModelImporter
                         .importFromJarFile("cientistavuador/cienspools/resources/models/BoomBox.glb");
@@ -227,7 +236,7 @@ public class Game {
         for (int i = 0; i < this.cubemaps.getNumberOfCubemaps(); i++) {
             this.cubemaps.getCubemap(i).cubemap();
         }
-        
+
         System.gc();
     }
 
@@ -248,7 +257,7 @@ public class Game {
         if (this.playerController.getCharacterController().getPosition().y() < -10f) {
             this.playerController.getCharacterController().setPosition(0f, 0.1f, 0f);
         }
-        
+
         this.flashlight.getPosition().set(this.camera.getPosition());
         this.flashlight.getDirection().set(this.camera.getFront());
 
@@ -267,17 +276,17 @@ public class Game {
                     this.camera.getProjection(), this.camera.getView(), this.camera.getPosition()
             );
         }
-        
+
         if (this.debugCollision) {
             this.physicsSpaceDebugger.pushToDebugRenderer(
                     this.camera.getProjection(), this.camera.getView(), this.camera.getPosition());
         }
-        
+
         for (int i = 0; i < this.map.getNumberOfObjects(); i++) {
             N3DObjectRenderer.queueRender(this.map.getObject(i));
         }
         N3DObjectRenderer.queueRender(this.waterBottle);
-        for (N3DObject boomBox:this.boomBoxes) {
+        for (N3DObject boomBox : this.boomBoxes) {
             N3DObjectRenderer.queueRender(boomBox);
         }
 
@@ -332,7 +341,7 @@ public class Game {
             boomBox.getScale().set(40f);
             this.boomBoxModel.getHullCollisionShape().setScale(40f);
             this.boomBoxes.add(boomBox);
-            
+
             HullCollisionShape hull = this.boomBoxModel.getHullCollisionShape();
             Vector3f offset = new Vector3f(
                     0 * Main.TO_PHYSICS_ENGINE_UNITS,
@@ -341,13 +350,13 @@ public class Game {
             );
             CompoundCollisionShape compound = new CompoundCollisionShape();
             compound.addChildShape(hull, offset);
-            
+
             boomBox.getPosition().set(
                     offset.x * Main.FROM_PHYSICS_ENGINE_UNITS,
                     offset.y * Main.FROM_PHYSICS_ENGINE_UNITS,
                     offset.z * Main.FROM_PHYSICS_ENGINE_UNITS
             );
-            
+
             PhysicsRigidBody rigidBody = new PhysicsRigidBody(
                     compound,
                     5f
@@ -416,7 +425,7 @@ public class Game {
                                     groups.add(light.getGroupName());
                                 }
                             }
-                            
+
                             int originalSize = newMap.getOriginalLightmapSize();
                             int size = newMap.getLightmapSize();
                             long requiredMemory = Lightmapper.approximatedMemoryUsage(size, this.scene.getSamplingMode().numSamples(), groups.size());
@@ -516,6 +525,6 @@ public class Game {
     }
 
     public void mouseCallback(long window, int button, int action, int mods) {
-        
+
     }
 }

@@ -27,24 +27,16 @@
 package cientistavuador.cienspools.resourcepack;
 
 import cientistavuador.cienspools.resources.schemas.Schemas;
-import cientistavuador.cienspools.util.ObjectCleaner;
 import cientistavuador.cienspools.util.XMLUtils;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
-import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import javax.xml.parsers.ParserConfigurationException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -57,155 +49,186 @@ import org.xml.sax.SAXException;
  */
 public class ResourcePack {
 
-    public static final String XML_ROOT_FILE = "resourcePack.xml";
+    public static final String RESOURCE_PACK_XML = "resourcePack.xml";
 
-    private static void emitResourcePackWarning(FileSystem fileSystem, String message) {
-        System.out.println("Resource Pack '" + fileSystem + "' Warning: " + message);
+    private static void readAliases(Resource resource, Element aliases) {
+        if (aliases == null) {
+            return;
+        }
+        NodeList list = aliases.getElementsByTagName("id");
+        for (int i = 0; i < list.getLength(); i++) {
+            Element id = (Element) list.item(i);
+            if (id.getParentNode() != aliases) {
+                continue;
+            }
+            resource.addAlias(id.getTextContent());
+        }
     }
 
-    private static void emitResourcePackWarning(FileSystem fileSystem, String id, String message) {
-        emitResourcePackWarning(fileSystem, "ID - " + id + " - " + message);
+    private static void readAuthorship(Resource resource, Element authorship) {
+        if (authorship == null) {
+            return;
+        }
+        resource.setOrigin(XMLUtils.getElementText(authorship, "origin"));
+        resource.setPreview(XMLUtils.getElementText(authorship, "preview"));
+        resource.setTitle(XMLUtils.getElementText(authorship, "title"));
+        resource.setDescription(XMLUtils.getElementText(authorship, "description"));
     }
 
-    public static ResourcePack load(Path file) throws IOException {
-        //todo: cleanup
+    private static void readMeta(Resource resource, Element meta) {
+        if (meta == null) {
+            return;
+        }
+        NodeList entries = meta.getElementsByTagName("entry");
+        for (int i = 0; i < entries.getLength(); i++) {
+            Element entry = (Element) entries.item(i);
+            if (entry.getParentNode() != meta) {
+                continue;
+            }
+            resource.getMetadata().put(entry.getAttribute("key"), entry.getTextContent());
+        }
+    }
+
+    private static void readData(Resource resource, Element data) {
+        if (data == null) {
+            return;
+        }
+        NodeList files = data.getElementsByTagName("file");
+        for (int i = 0; i < files.getLength(); i++) {
+            Element file = (Element) files.item(i);
+            if (file.getParentNode() != data) {
+                continue;
+            }
+            resource.getData().put(file.getAttribute("type"), file.getTextContent());
+        }
+    }
+
+    private static Resource createResource(Element resourceElement) {
+        Resource resource = new Resource();
         
-        FileSystem fileSystem = FileSystems.newFileSystem(file);
-        List<Resource> resourcesList = new ArrayList<>();
-
-        Path rootPath = fileSystem.getPath("/");
-        Path xmlFile = rootPath.resolve(XML_ROOT_FILE);
-        if (!Files.isRegularFile(xmlFile)) {
-            emitResourcePackWarning(fileSystem, "Not a valid resource pack, '" + XML_ROOT_FILE + "' not found.");
-            return null;
+        int priority = 0;
+        Element priorityElement = XMLUtils.getElement(resourceElement, "priority");
+        if (priorityElement != null) {
+            priority = Integer.parseInt(priorityElement.getTextContent());
         }
-
-        try {
-            Document document = XMLUtils.parseXML(
-                    new InputSource(new BufferedInputStream(Files.newInputStream(xmlFile))),
-                    Schemas.getSchema("resourcePack.xsd")
-            );
-
-            NodeList resourcesElements = document.getDocumentElement().getChildNodes();
-            for (int i = 0; i < resourcesElements.getLength(); i++) {
-                Element resourceElement = (Element) resourcesElements.item(i);
-
-                String resourceId = resourceElement.getAttribute("id");
-                int resourcePriority = Integer.parseInt(resourceElement.getAttribute("priority"));
-                Set<String> resourceAliases = new HashSet<>();
-                Authorship resourceAuthorship = null;
-                Map<String, String> metadata = new LinkedHashMap<>();
-                Map<String, Path> data = new LinkedHashMap<>();
-
-                Element aliasesElement = XMLUtils.getFirstElementByName(resourceElement, "aliases");
-                if (aliasesElement != null) {
-                    NodeList idsElements = aliasesElement.getChildNodes();
-                    for (int j = 0; j < idsElements.getLength(); j++) {
-                        resourceAliases.add(idsElements.item(j).getTextContent());
-                    }
-                }
-
-                Element authorshipElement = XMLUtils.getFirstElementByName(resourceElement, "authorship");
-                if (authorshipElement != null) {
-                    Element previewElement = XMLUtils.getFirstElementByName(authorshipElement, "preview");
-                    Path preview = null;
-                    if (previewElement != null) {
-                        try {
-                            preview = rootPath.resolve(previewElement.getTextContent());
-                            if (!Files.isRegularFile(preview)) {
-                                emitResourcePackWarning(fileSystem, resourceId, preview + " does not exist, ignoring.");
-                                preview = null;
-                            }
-                        } catch (InvalidPathException ex) {
-                            emitResourcePackWarning(fileSystem, resourceId, "Invalid preview path string: " + ex.getMessage());
-                        }
-                    }
-                    Element titleElement = XMLUtils.getFirstElementByName(authorshipElement, "title");
-                    Element descriptionElement = XMLUtils.getFirstElementByName(authorshipElement, "description");
-                    resourceAuthorship = new Authorship(
-                            authorshipElement.getAttribute("origin"),
-                            preview,
-                            (titleElement == null ? null : titleElement.getTextContent()),
-                            (descriptionElement == null ? null : descriptionElement.getTextContent())
-                    );
-                }
-
-                Element metaElement = XMLUtils.getFirstElementByName(resourceElement, "meta");
-                if (metaElement != null) {
-                    NodeList entryElements = metaElement.getChildNodes();
-                    for (int j = 0; j < entryElements.getLength(); j++) {
-                        Element entry = (Element) entryElements.item(j);
-                        metadata.put(entry.getAttribute("key"), entry.getTextContent());
-                    }
-                }
-
-                Element dataElement = XMLUtils.getFirstElementByName(resourceElement, "data");
-                if (dataElement != null) {
-                    NodeList fileElements = dataElement.getChildNodes();
-                    for (int j = 0; j < fileElements.getLength(); j++) {
-                        Element fileElement = (Element) fileElements.item(j);
-                        String type = fileElement.getAttribute("type");
-                        try {
-                            Path filePathElement = rootPath.resolve(fileElement.getTextContent());
-                            if (Files.isRegularFile(filePathElement)) {
-                                data.put(type, filePathElement);
-                            } else {
-                                emitResourcePackWarning(fileSystem, resourceId, filePathElement + " does not exist, ignoring.");
-                            }
-                        } catch (InvalidPathException ex) {
-                            emitResourcePackWarning(fileSystem, resourceId, "Invalid path string at file type " + type + ": " + ex.getMessage());
-                        }
-                    }
-                }
-
-                Resource r = new Resource(
-                        resourceId,
-                        resourcePriority,
-                        Collections.unmodifiableSet(resourceAliases),
-                        resourceAuthorship,
-                        Collections.unmodifiableMap(metadata),
-                        Collections.unmodifiableMap(data)
-                );
-                if (resourceAuthorship != null) {
-                    resourceAuthorship.resource = r;
-                }
-                resourcesList.add(r);
-            }
-        } catch (ParserConfigurationException | SAXException ex) {
-            emitResourcePackWarning(fileSystem, "Failed to parse '" + XML_ROOT_FILE + "': " + ex.getMessage());
-            return null;
+        resource.setPriority(priority);
+        
+        readAliases(resource, XMLUtils.getElement(resourceElement, "aliases"));
+        readAuthorship(resource,  XMLUtils.getElement(resourceElement, "authorship"));
+        readMeta(resource, XMLUtils.getElement(resourceElement, "meta"));
+        readData(resource,  XMLUtils.getElement(resourceElement, "data"));
+        
+        Element extension = XMLUtils.getElement(resourceElement, "extension");
+        if (extension != null) {
+            extension = (Element) XMLUtils.getFirstElement(extension).cloneNode(true);
         }
-
-        ResourcePack pack = new ResourcePack(fileSystem, Collections.unmodifiableList(resourcesList));
-        for (Resource r:pack.getResources()) {
-            r.resourcePack = pack;
-        }
-        ObjectCleaner.get().register(pack, () -> {
-            try {
-                fileSystem.close();
-            } catch (IOException ex) {
-            }
-        });
-        return pack;
+        resource.setExtension(extension);
+        
+        resource.setType(resourceElement.getAttribute("type"));
+        resource.setId(resourceElement.getAttribute("id"));
+        
+        return resource;
     }
 
-    private final FileSystem fileSystem;
-    private final List<Resource> resources;
-
-    protected ResourcePack(
-            FileSystem fileSystem,
-            List<Resource> textures
+    private static ResourcePack createResourcePack(
+            FileSystem fs, Document document
     ) {
-        this.fileSystem = fileSystem;
-        this.resources = textures;
+        ResourcePack resourcePack = new ResourcePack();
+        resourcePack.setFileSystem(fs);
+        
+        Element rootElement = document.getDocumentElement();
+        NodeList resourceElements = rootElement.getElementsByTagName("resource");
+        for (int i = 0; i < resourceElements.getLength(); i++) {
+            Element resourceElement = (Element) resourceElements.item(i);
+            if (resourceElement.getParentNode() != rootElement) {
+                continue;
+            }
+            resourcePack.addResource(createResource(resourceElement));
+        }
+        
+        return resourcePack;
     }
 
+    public static ResourcePack of(Path path) throws SAXException, IOException {
+        FileSystem fileSystem = FileSystems.newFileSystem(path);
+        
+        Path resourcePackXML = fileSystem.getPath("/", RESOURCE_PACK_XML);
+        if (!Files.isRegularFile(resourcePackXML)) {
+            throw new IOException(RESOURCE_PACK_XML + " not found.");
+        }
+
+        try (BufferedInputStream stream
+                = new BufferedInputStream(Files.newInputStream(resourcePackXML))) {
+            Document document = XMLUtils
+                    .parseXML(new InputSource(stream), Schemas.getSchema("resourcePack.xsd"));
+
+            return createResourcePack(fileSystem, document);
+        }
+    }
+
+    protected ResourceLocator locator;
+    
+    private FileSystem fileSystem;
+    private final List<Resource> resources = new ArrayList<>();
+
+    public ResourcePack() {
+        
+    }
+
+    public ResourceLocator getLocator() {
+        return locator;
+    }
+    
     public FileSystem getFileSystem() {
-        return fileSystem;
+        return this.fileSystem;
+    }
+
+    public void setFileSystem(FileSystem fileSystem) {
+        this.fileSystem = fileSystem;
     }
 
     public List<Resource> getResources() {
-        return resources;
+        return Collections.unmodifiableList(this.resources);
     }
-
+    
+    public boolean addResource(Resource r) {
+        boolean success = this.resources.add(r);
+        if (success && getLocator() != null) {
+            getLocator().onResourceAdded(this, r);
+        }
+        return success;
+    }
+    
+    public boolean removeResource(Resource r) {
+        boolean success = this.resources.remove(r);
+        if (success && getLocator() != null) {
+            getLocator().onResourceRemoved(this, r);
+        }
+        return success;
+    }
+    
+    protected void onIdChanged(Resource r, String oldId, String newId) {
+        if (getLocator() != null) {
+            getLocator().onIdChanged(this, r, oldId, newId);
+        }
+    }
+    
+    protected void onTypeChanged(Resource r, String oldType, String newType) {
+        if (getLocator() != null) {
+            getLocator().onTypeChanged(this, r, oldType, newType);
+        }
+    }
+    
+    protected void onAliasAdded(Resource r, String alias) {
+        if (getLocator() != null) {
+            getLocator().onAliasAdded(this, r, alias);
+        }
+    }
+    
+    protected void onAliasRemoved(Resource r, String alias) {
+        if (getLocator() != null) {
+            getLocator().onAliasRemoved(this, r, alias);
+        }
+    }
+    
 }

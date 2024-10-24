@@ -33,7 +33,7 @@ import cientistavuador.cienspools.geometry.Geometries;
 import cientistavuador.cienspools.newrendering.NProgram;
 import cientistavuador.cienspools.newrendering.NSkybox;
 import cientistavuador.cienspools.popups.LoadingPopup;
-import cientistavuador.cienspools.resourcepack.ResourcePacks;
+import cientistavuador.cienspools.resourcepack.ResourceLocator;
 import cientistavuador.cienspools.sound.Sounds;
 import cientistavuador.cienspools.text.GLFonts;
 import cientistavuador.cienspools.texture.Textures;
@@ -505,7 +505,7 @@ public class Main {
         TextureCompressor.init();
         
         Water.init();
-        ResourcePacks.init();
+        ResourceLocator.init();
         DebugRenderer.init();
         GLFonts.init();
         Textures.init();

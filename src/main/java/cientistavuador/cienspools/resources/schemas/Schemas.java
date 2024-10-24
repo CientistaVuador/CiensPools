@@ -27,6 +27,7 @@
 package cientistavuador.cienspools.resources.schemas;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -48,10 +49,12 @@ public class Schemas {
     private static final ConcurrentHashMap<String, Schema> schemas = new ConcurrentHashMap<>();
 
     public static Schema getSchema(String file, String... more) {
-        String key = file;
-        if (more.length != 0) {
-            key += "\n" + Stream.of(more).collect(Collectors.joining("\n"));
-        }
+        List<String> files = new ArrayList<>();
+        files.add(file);
+        files.addAll(Arrays.asList(more));
+        files.sort(String.CASE_INSENSITIVE_ORDER);
+        String key = files.stream().collect(Collectors.joining("\n"));
+        
         {
             Schema sc = schemas.get(key);
             if (sc != null) {

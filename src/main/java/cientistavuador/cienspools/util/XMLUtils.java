@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -66,61 +67,53 @@ public class XMLUtils {
         }
     };
 
-    public static Document parseXML(InputSource source, Schema schema) 
-            throws ParserConfigurationException, SAXException, IOException
-    {
+    public static Document parseXML(InputSource source, Schema schema)
+            throws SAXException, IOException {
         DocumentBuilderFactory factory = DocumentBuilderFactory.newDefaultInstance();
         factory.setNamespaceAware(true);
         factory.setSchema(schema);
         factory.setCoalescing(true);
         
-        DocumentBuilder builder = factory.newDocumentBuilder();
-        builder.setErrorHandler(ERROR_HANDLER);
-        Document doc = builder.parse(source);
-        Element rootElement = doc.getDocumentElement();
-        rootElement.normalize();
-        
-        return doc;
+        try {
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            builder.setErrorHandler(ERROR_HANDLER);
+            Document doc = builder.parse(source);
+            Element rootElement = doc.getDocumentElement();
+            rootElement.normalize();
+
+            return doc;
+        } catch (ParserConfigurationException ex) {
+            throw new SAXException(ex);
+        }
+    }
+
+    public static Element getFirstElement(Element parent) {
+        NodeList children = parent.getElementsByTagName("*");
+        if (children.getLength() != 0) {
+            return (Element) children.item(0);
+        }
+        return null;
     }
     
-    public static Element getFirstElementByName(Element parent, String name) {
+    public static Element getElement(Element parent, String name) {
         NodeList children = parent.getElementsByTagName(name);
         for (int i = 0; i < children.getLength(); i++) {
             Element e = (Element) children.item(i);
-            if (e.getParentNode() == parent && e.getTagName().equals(name)) {
+            if (e.getParentNode() == parent) {
                 return e;
             }
         }
         return null;
     }
     
-    public static String getFirstElementTextContentByName(Element parent, String name) {
-        Element top = getFirstElementByName(parent, name);
+    public static String getElementText(Element parent, String name) {
+        Element top = getElement(parent, name);
         if (top == null) {
             return null;
         }
         return top.getTextContent();
     }
-    
-    public static List<String> getChildrenAsTextContent(Element parent) {
-        List<String> list = new ArrayList<>();
-        NodeList children = parent.getChildNodes();
-        for (int i = 0; i < children.getLength(); i++) {
-            list.add(children.item(i).getTextContent());
-        }
-        return list;
-    }
-    
-    public static Map<String, String> getChildrenAsKeyValue(Element parent, String keyAttributeName) {
-        Map<String, String> map = new LinkedHashMap<>();
-        NodeList children = parent.getChildNodes();
-        for (int i = 0; i < children.getLength(); i++) {
-            Element child = (Element) children.item(i);
-            map.put(child.getAttribute(keyAttributeName), child.getTextContent());
-        }
-        return map;
-    }
-    
+
     public static String escapeText(String text) {
         return XMLUtils.escapeText(text, true);
     }

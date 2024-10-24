@@ -26,67 +26,149 @@
  */
 package cientistavuador.cienspools.resourcepack;
 
-import java.nio.file.Path;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import org.w3c.dom.Element;
 
 /**
  *
  * @author Cien
  */
 public class Resource {
-    
+
     protected ResourcePack resourcePack;
     
-    private final String id;
-    private final int priority;
-    private final Set<String> aliases;
-    private final Authorship authorship;
-    private final Map<String, String> metadata;
-    private final Map<String, Path> data;
-    
-    protected Resource(
-            String id,
-            int priority,
-            Set<String> aliases,
-            Authorship authorship,
-            Map<String, String> metadata,
-            Map<String, Path> data
-    ) {
-        this.id = id;
-        this.priority = priority;
-        this.aliases = aliases;
-        this.authorship = authorship;
-        this.metadata = metadata;
-        this.data = data;
+    private String type = "";
+    private String id = "";
+    private int priority = 0;
+    private final Set<String> aliases = new HashSet<>();
+    private String origin = null;
+    private String preview = null;
+    private String title = null;
+    private String description = null;
+    private final Map<String, String> metadata = new LinkedHashMap<>();
+    private final Map<String, String> data = new LinkedHashMap<>();
+    private Element extension = null;
+
+    public Resource() {
+
     }
 
     public ResourcePack getResourcePack() {
-        return resourcePack;
+        return this.resourcePack;
     }
 
+    public String getType() {
+        return this.type;
+    }
+
+    public void setType(String newType) {
+        if (newType == null) {
+            newType = "";
+        }
+        String oldType = this.type;
+        if (!oldType.equals(newType)) {
+            this.type = newType;
+            if (getResourcePack() != null) {
+                getResourcePack().onTypeChanged(this, oldType, newType);
+            }
+        }
+    }
+    
     public String getId() {
-        return id;
+        return this.id;
+    }
+
+    public void setId(String newId) {
+        if (newId == null) {
+            newId = "";
+        }
+        String oldId = this.id;
+        if (!oldId.equals(newId)) {
+            this.id = newId;
+            if (getResourcePack() != null) {
+                getResourcePack().onIdChanged(this, oldId, newId);
+            }
+        }
     }
 
     public int getPriority() {
-        return priority;
+        return this.priority;
     }
 
+    public void setPriority(int priority) {
+        this.priority = priority;
+    }
+    
     public Set<String> getAliases() {
-        return aliases;
+        return Collections.unmodifiableSet(this.aliases);
+    }
+    
+    public boolean addAlias(String alias) {
+        boolean success = this.aliases.add(alias);
+        if (success && getResourcePack() != null) {
+            getResourcePack().onAliasAdded(this, alias);
+        }
+        return success;
+    }
+    
+    public boolean removeAlias(String alias) {
+        boolean success = this.aliases.remove(alias);
+        if (success && getResourcePack() != null) {
+            getResourcePack().onAliasRemoved(this, alias);
+        }
+        return success;
     }
 
-    public Authorship getAuthorship() {
-        return authorship;
+    public String getOrigin() {
+        return this.origin;
     }
 
+    public void setOrigin(String origin) {
+        this.origin = origin;
+    }
+
+    public String getPreview() {
+        return this.preview;
+    }
+
+    public void setPreview(String preview) {
+        this.preview = preview;
+    }
+
+    public String getTitle() {
+        return this.title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getDescription() {
+        return this.description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+    
     public Map<String, String> getMetadata() {
-        return metadata;
+        return this.metadata;
     }
 
-    public Map<String, Path> getData() {
-        return data;
+    public Map<String, String> getData() {
+        return this.data;
+    }
+
+    public Element getExtension() {
+        return this.extension;
+    }
+
+    public void setExtension(Element extension) {
+        this.extension = extension;
     }
     
 }
