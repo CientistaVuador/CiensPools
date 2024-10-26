@@ -33,7 +33,6 @@ import cientistavuador.cienspools.geometry.Geometries;
 import cientistavuador.cienspools.newrendering.NProgram;
 import cientistavuador.cienspools.newrendering.NSkybox;
 import cientistavuador.cienspools.popups.LoadingPopup;
-import cientistavuador.cienspools.resourcepack.ResourceLocator;
 import cientistavuador.cienspools.sound.Sounds;
 import cientistavuador.cienspools.text.GLFonts;
 import cientistavuador.cienspools.texture.Textures;

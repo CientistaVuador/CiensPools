@@ -51,7 +51,7 @@ import org.xml.sax.SAXException;
  *
  * @author Cien
  */
-public class ResourcePack implements AutoCloseable {
+public class ResourcePack implements AutoCloseable, AssociatedResource {
     
     protected static List<Resource> getResourcesById(String id, Map<String, List<Resource>> idMap) {
         if (id == null) {
@@ -178,12 +178,6 @@ public class ResourcePack implements AutoCloseable {
         readMeta(resource, XMLUtils.getElement(resourceElement, "meta"));
         readData(resource,  XMLUtils.getElement(resourceElement, "data"));
         
-        Element extension = XMLUtils.getElement(resourceElement, "extension");
-        if (extension != null) {
-            extension = (Element) XMLUtils.getFirstElement(extension).cloneNode(true);
-        }
-        resource.setExtension(extension);
-        
         resource.setType(resourceElement.getAttribute("type"));
         resource.setId(resourceElement.getAttribute("id"));
         
@@ -225,7 +219,20 @@ public class ResourcePack implements AutoCloseable {
             return createResourcePack(fileSystem, document);
         }
     }
+    
+    public static final String RESOURCE_PACK_TYPE = "resourcePack";
+    public static final String RESOURCE_PACK_FILE_TYPE = "application/zip";
 
+    public static ResourcePack of(Resource resource) throws SAXException, IOException {
+        ResourcePackUtils.validate(resource, RESOURCE_PACK_TYPE, true, 
+                null, new String[] {RESOURCE_PACK_FILE_TYPE}
+        );
+        ResourcePack pack = of(resource.getData(RESOURCE_PACK_FILE_TYPE));
+        pack.associatedResource = resource;
+        return pack;
+    }
+    
+    protected Resource associatedResource;
     protected ResourceLocator locator;
     
     private FileSystem fileSystem;
@@ -233,11 +240,16 @@ public class ResourcePack implements AutoCloseable {
     
     private final Map<String, List<Resource>> idMap = new HashMap<>();
     private final Map<String, List<Resource>> typeMap = new HashMap<>();
-
+    
     public ResourcePack() {
         
     }
 
+    @Override
+    public Resource getAssociatedResource() {
+        return this.associatedResource;
+    }
+    
     public ResourceLocator getLocator() {
         return locator;
     }
@@ -398,5 +410,23 @@ public class ResourcePack implements AutoCloseable {
         FileSystem system = this.fileSystem;
         this.fileSystem = null;
         system.close();
+    }
+
+    public String toString(boolean includeXMLHeader) {
+        StringBuilder b = new StringBuilder();
+        if (includeXMLHeader) {
+            b.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+        }
+        b.append("<resourcePack xmlns=\"https://cientistavuador.github.io/schemas/resourcePack.xsd\">\n");
+        for (Resource r:getResources()) {
+            b.append(r.toString().indent(4));
+        }
+        b.append("</resourcePack>");
+        return b.toString();
+    }
+    
+    @Override
+    public String toString() {
+        return toString(false);
     }
 }

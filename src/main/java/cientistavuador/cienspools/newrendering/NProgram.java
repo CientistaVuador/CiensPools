@@ -134,7 +134,7 @@ public class NProgram {
             uniform sampler2DArray waterFrames;
             
             vec3 sampleWaterNormal(vec2 uv) {
-                vec4 waterColor = texture(waterFrames, vec3(uv, waterCounter * float(textureSize(waterFrames, 0).z)));
+                vec4 waterColor = texture(waterFrames, vec3(uv * 10.0, waterCounter * float(textureSize(waterFrames, 0).z)));
                 float nx = (((waterColor.r + waterColor.g + waterColor.b) / 3.0) * 2.0) - 1.0;
                 float ny = (waterColor.a * 2.0) - 1.0;
                 vec3 waterNormal = vec3(
@@ -266,6 +266,7 @@ public class NProgram {
                 float emissive;
                 float water;
                 float refraction;
+                float refractionPower;
                 float fresnelOutline;
                 vec3 fresnelOutlineColor;
             };
@@ -575,6 +576,7 @@ public class NProgram {
                 
                 if (enableRefractions) {
                     vec3 refractedDirection = refract(viewDirection, normal, refraction);
+                    refractedDirection = normalize(mix(viewDirection, refractedDirection, material.refractionPower));
                     vec3 refractedColor = computeReflection(
                             position, viewDirection,
                             refractedDirection, normal,
@@ -710,6 +712,7 @@ public class NProgram {
     public static final String UNIFORM_MATERIAL_EMISSIVE = "material.emissive";
     public static final String UNIFORM_MATERIAL_WATER = "material.water";
     public static final String UNIFORM_MATERIAL_REFRACTION = "material.refraction";
+    public static final String UNIFORM_MATERIAL_REFRACTION_POWER = "material.refractionPower";
     public static final String UNIFORM_MATERIAL_FRESNEL_OUTLINE = "material.fresnelOutline";
     public static final String UNIFORM_MATERIAL_FRESNEL_OUTLINE_COLOR = "material.fresnelOutlineColor";
     

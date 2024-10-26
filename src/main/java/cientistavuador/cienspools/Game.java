@@ -50,14 +50,12 @@ import cientistavuador.cienspools.physics.PlayerController;
 import cientistavuador.cienspools.popups.BakePopup;
 import cientistavuador.cienspools.popups.ContinuePopup;
 import cientistavuador.cienspools.resourcepack.Resource;
-import cientistavuador.cienspools.resourcepack.ResourceLocator;
 import cientistavuador.cienspools.resourcepack.ResourcePack;
 import cientistavuador.cienspools.text.GLFontRenderer;
 import cientistavuador.cienspools.text.GLFontSpecifications;
 import cientistavuador.cienspools.ubo.CameraUBO;
 import cientistavuador.cienspools.ubo.UBOBindingPoints;
 import cientistavuador.cienspools.util.DebugRenderer;
-import cientistavuador.cienspools.util.PathUtils;
 import cientistavuador.cienspools.util.PhysicsSpaceDebugger;
 import cientistavuador.cienspools.util.StringUtils;
 import cientistavuador.cienspools.util.bakedlighting.AmbientCubeDebug;
@@ -69,13 +67,9 @@ import com.jme3.bullet.collision.shapes.HullCollisionShape;
 import com.jme3.bullet.objects.PhysicsRigidBody;
 import com.jme3.math.Vector3f;
 import com.simsilica.mathd.Vec3d;
-import java.io.BufferedInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -127,6 +121,36 @@ public class Game {
     private final PlayerController playerController = new PlayerController();
 
     {
+        Resource resource = new Resource();
+        
+        resource.setType("texture");
+        resource.setId("76e9ea85-05e3-4cec-9b69-11a2204c2b8c");
+        resource.setPriority(1);
+        
+        resource.addAlias("508a081f-b4e4-4fc6-b2a6-73f9d12a7258");
+        
+        resource.setOrigin("https://cc0-textures.com/t/th-brick-floor");
+        resource.setPreview("Wood/preview.png");
+        resource.setTitle("Wood");
+        resource.setDescription("This is my texture!");
+        
+        resource.getMetadata().put("waterMap", "true");
+        resource.getMetadata().put("refractiveMap", "true");
+        resource.getMetadata().put("heightMap", "true");
+        resource.getMetadata().put("blendingMode", "OPAQUE");
+        resource.getMetadata().put("data", "ASDLKASLKASPOEQIPOX>ZXCKLJLKWEQPIOAISPDO");
+        resource.getMetadata().put("useRawImages", "");
+        
+        resource.getData().put("ntexture/cr_cg_cb_ca", "Wood/cr_cg_cb_ca.dds.zst");
+        resource.getData().put("ntexture/ht_rg_mt_nx", "Wood/ht_rg_mt_nx.dds.zst");
+        resource.getData().put("ntexture/wt_em_rf_ny", "Wood/wt_em_un_ny.dds.zst");
+        
+        ResourcePack pack = new ResourcePack();
+        
+        pack.addResource(resource);
+        
+        System.out.println(pack.toString(true));
+        
         try {
             this.skybox = NCubemapStore
                     .readCubemap("cientistavuador/cienspools/resources/cubemaps/skybox.cbm");
@@ -137,14 +161,14 @@ public class Game {
                         .readModel("cientistavuador/cienspools/resources/models/room.n3dm");
                 N3DObject room = new N3DObject("room", roomModel);
                 mapObjects.add(room);
-
+                
                 roomModel.getGeometry(1).setMaterial(NMaterial.WATER);
             }
 
             this.map = new NMap("map", mapObjects, NMap.DEFAULT_LIGHTMAP_MARGIN, 60f);
             this.map.setLightmaps(NLightmapsStore
                     .readLightmaps("cientistavuador/cienspools/resources/lightmaps/lightmap.lit"));
-
+            
             this.flashlight.setInnerConeAngle(10f);
             this.flashlight.setOuterConeAngle(40f);
             this.flashlight.setDiffuseSpecularAmbient(0f, 0f, 0f);
@@ -178,6 +202,16 @@ public class Game {
             {
                 this.boomBoxModel = N3DModelImporter
                         .importFromJarFile("cientistavuador/cienspools/resources/models/BoomBox.glb");
+            }
+            
+            {
+                N3DModel cubeModel = N3DModelImporter
+                        .importFromJarFile("cientistavuador/cienspools/resources/models/cube.glb");
+                N3DObject cube = new N3DObject("cube", cubeModel);
+                cube.getScale().set(10f, 0.1f, 10f);
+                cube.getN3DModel().getGeometry(0).setMaterial(NMaterial.WATER);
+                cube.setMap(this.map);
+                this.boomBoxes.add(cube);
             }
         } catch (IOException ex) {
             throw new UncheckedIOException(ex);
@@ -334,7 +368,7 @@ public class Game {
     }
 
     public void keyCallback(long window, int key, int scancode, int action, int mods) {
-        if (key == GLFW_KEY_B && action == GLFW_PRESS) {
+        if (key == GLFW_KEY_B && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
             N3DObject boomBox = new N3DObject("boomBox", this.boomBoxModel);
             boomBox.setMap(this.map);
             boomBox.getScale().set(40f);
@@ -371,7 +405,7 @@ public class Game {
                     this.camera.getPosition().z() * Main.TO_PHYSICS_ENGINE_UNITS
             ));
             rigidBody.setProtectGravity(true);
-            rigidBody.setGravity(new Vector3f(0f, -3f, 0f));
+            rigidBody.setGravity(new Vector3f(0f, -98f, 0f));
             boomBox.setRigidBody(rigidBody);
             this.physicsSpace.addCollisionObject(rigidBody);
         }
@@ -507,6 +541,9 @@ public class Game {
         }
         if (key == GLFW_KEY_F7 && action == GLFW_PRESS) {
             this.debugCollision = !this.debugCollision;
+        }
+        if (key == GLFW_KEY_F8 && action == GLFW_PRESS) {
+            N3DObjectRenderer.USE_TONEMAPPING = !N3DObjectRenderer.USE_TONEMAPPING;
         }
         if (key == GLFW_KEY_F && action == GLFW_PRESS) {
             if (this.flashlight.getDiffuse().x() == 0f) {

@@ -66,7 +66,7 @@ public class NMaterial {
     public static final NMaterial DARK_GLASS;
     static {
         DARK_GLASS = new NMaterial("Dark Glass", NTextures.BLANK_TEXTURE);
-        DARK_GLASS.getNewColor().set(0.0075f, 0.0075f, 0.01f, 0.7f);
+        DARK_GLASS.getNewColor().set(0.0075f, 0.0075f, 0.0075f, 0.7f);
         DARK_GLASS.setNewMetallic(0f);
         DARK_GLASS.setNewRoughness(0f);
     }
@@ -77,7 +77,7 @@ public class NMaterial {
         WATER.setNewMetallic(0f);
         WATER.setNewRoughness(0f);
         WATER.setNewRefraction(1f / 1.33f);
-        WATER.setNewWater(0.5f);
+        WATER.setNewWater(1f);
     }
     public static final NMaterial ORANGE_JUICE;
     static {
@@ -86,6 +86,15 @@ public class NMaterial {
         ORANGE_JUICE.setNewMetallic(0f);
         ORANGE_JUICE.setNewRoughness(0.3f);
         ORANGE_JUICE.setNewWater(1f);
+    }
+    public static final NMaterial GLASS;
+    static {
+        GLASS = new NMaterial("Glass", NTextures.BLANK_TEXTURE);
+        GLASS.getNewColor().set(0.95f, 0.95f, 0.95f, 0.3f);
+        GLASS.setNewRoughness(0f);
+        GLASS.setNewMetallic(0.97f);
+        GLASS.setNewRefraction(1f / 1.53f);
+        GLASS.setNewRefractionPower(0.6f);
     }
     
     private final String name;
@@ -105,6 +114,7 @@ public class NMaterial {
     private float newEmissive = 0f;
     private float newWater = 0f;
     private float newRefraction = 0f;
+    private float newRefractionPower = 0.25f;
     
     private float newFresnelOutline = 0f;
     private final Vector3f newFresnelOutlineColor = new Vector3f(0f, 1f, 0f);
@@ -213,6 +223,14 @@ public class NMaterial {
 
     public void setNewRefraction(float newRefraction) {
         this.newRefraction = newRefraction;
+    }
+
+    public float getNewRefractionPower() {
+        return newRefractionPower;
+    }
+    
+    public void setNewRefractionPower(float newRefractionPower) {
+        this.newRefractionPower = newRefractionPower;
     }
 
     public float getNewFresnelOutline() {

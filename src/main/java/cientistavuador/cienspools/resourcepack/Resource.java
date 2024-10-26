@@ -26,21 +26,23 @@
  */
 package cientistavuador.cienspools.resourcepack;
 
+import cientistavuador.cienspools.util.XMLUtils;
+import java.lang.ref.WeakReference;
 import java.nio.file.FileSystem;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
-import org.w3c.dom.Element;
 
 /**
  *
  * @author Cien
  */
 public class Resource {
-
+    
     protected ResourcePack resourcePack;
     
     private String type = "";
@@ -53,10 +55,9 @@ public class Resource {
     private String description = null;
     private final Map<String, String> metadata = new LinkedHashMap<>();
     private final Map<String, String> data = new LinkedHashMap<>();
-    private Element extension = null;
     
     public Resource() {
-
+        
     }
     
     public ResourcePack getResourcePack() {
@@ -110,6 +111,9 @@ public class Resource {
     }
     
     public boolean addAlias(String alias) {
+        if (alias == null) {
+            alias = "";
+        }
         boolean success = this.aliases.add(alias);
         if (success && getResourcePack() != null) {
             getResourcePack().onAliasAdded(this, alias);
@@ -118,6 +122,9 @@ public class Resource {
     }
     
     public boolean removeAlias(String alias) {
+        if (alias == null) {
+            alias = "";
+        }
         boolean success = this.aliases.remove(alias);
         if (success && getResourcePack() != null) {
             getResourcePack().onAliasRemoved(this, alias);
@@ -135,6 +142,21 @@ public class Resource {
 
     public String getPreview() {
         return this.preview;
+    }
+    
+    public Path getPath(String path) {
+        if (path == null) {
+            return null;
+        }
+        ResourcePack pack = getResourcePack();
+        if (pack == null) {
+            return null;
+        }
+        FileSystem system = pack.getFileSystem();
+        if (system == null || !system.isOpen()) {
+            return null;
+        }
+        return system.getPath("/").resolve(path);
     }
     
     public Path getPreviewPath() {
@@ -172,27 +194,134 @@ public class Resource {
     public Path getData(String key) {
         return getPath(getData().get(key));
     }
-
-    public Element getExtension() {
-        return this.extension;
-    }
-
-    public void setExtension(Element extension) {
-        this.extension = extension;
+    
+    private String writeAliases(int indent) {
+        if (getAliases().isEmpty()) {
+            return "";
+        }
+        StringBuilder b = new StringBuilder();
+        b.append("<aliases>\n");
+        String in = " ".repeat(indent);
+        for (String alias:getAliases()) {
+            b.append(in).append("<id>").append(XMLUtils.escapeText(alias)).append("</id>\n");
+        }
+        b.append("</aliases>");
+        return b.toString().indent(4);
     }
     
-    public Path getPath(String path) {
-        if (path == null) {
-            return null;
+    private String writeAuthorship(int indent) {
+        String o = getOrigin();
+        String p = getPreview();
+        String t = getTitle();
+        String d = getDescription();
+        
+        if (o == null 
+                && p == null 
+                && t == null 
+                && d == null) {
+            return "";
         }
-        ResourcePack pack = getResourcePack();
-        if (pack == null) {
-            return null;
+        String in = " ".repeat(indent);
+        
+        StringBuilder b = new StringBuilder();
+        b.append("<authorship>\n");
+        if (o != null) {
+            b.append(in).append("<origin>").append(XMLUtils.escapeText(o)).append("</origin>\n");
         }
-        FileSystem system = pack.getFileSystem();
-        if (system == null || !system.isOpen()) {
-            return null;
+        if (p != null) {
+            b.append(in).append("<preview>").append(XMLUtils.escapeText(p)).append("</preview>\n");
         }
-        return system.getPath("/").resolve(path);
+        if (t != null) {
+            b.append(in).append("<title>").append(XMLUtils.escapeText(t)).append("</title>\n");
+        }
+        if (d != null) {
+            b.append(in).append("<description>").append(XMLUtils.escapeText(d)).append("</description>\n");
+        }
+        b.append("</authorship>");
+        return b.toString().indent(indent);
     }
+    
+    private String writeMeta(int indent) {
+        if (getMetadata().isEmpty()) {
+            return "";
+        }
+        
+        String in = " ".repeat(indent);
+        
+        StringBuilder b = new StringBuilder();
+        b.append("<meta>\n");
+        for (Entry<String, String> entry:getMetadata().entrySet()) {
+            String key = entry.getKey();
+            if (key == null) {
+                continue;
+            }
+            String value = entry.getValue();
+            if (value == null) {
+                value = "";
+            }
+            
+            b.append(in).append("<entry key=").append(XMLUtils.quoteAttribute(key));
+            if (value.isEmpty()) {
+                b.append("/>\n");
+            } else {
+                b.append(">").append(XMLUtils.escapeText(value)).append("</entry>\n");
+            }
+        }
+        b.append("</meta>");
+        return b.toString().indent(indent);
+    }
+    
+    private String writeData(int indent) {
+        if (getData().isEmpty()) {
+            return "";
+        }
+        
+        String in = " ".repeat(indent);
+        
+        StringBuilder b = new StringBuilder();
+        b.append("<data>\n");
+        for (Entry<String, String> entry:getData().entrySet()) {
+            String key = entry.getKey();
+            if (key == null) {
+                continue;
+            }
+            String value = entry.getValue();
+            if (value == null) {
+                value = "";
+            }
+            
+            b.append(in)
+                    .append("<file type=")
+                    .append(XMLUtils.quoteAttribute(key))
+                    .append(">")
+                    .append(XMLUtils.escapeText(value))
+                    .append("</file>\n")
+                    ;
+        }
+        b.append("</data>");
+        return b.toString().indent(indent);
+    }
+    
+    @Override
+    public String toString() {
+        StringBuilder b = new StringBuilder();
+        b.append("<resource type=")
+                .append(XMLUtils.quoteAttribute(getType()))
+                .append(" id=")
+                .append(XMLUtils.quoteAttribute(getId()))
+                ;
+        if (getPriority() != 0) {
+            b.append(" priority=\"").append(getPriority()).append("\"");
+        }
+        b.append(">\n");
+        final int indent = 4;
+        b.append(writeAliases(indent));
+        b.append(writeAuthorship(indent));
+        b.append(writeMeta(indent));
+        b.append(writeData(indent));
+        b.append("</resource>");
+        return b.toString();
+    }
+    
+    
 }

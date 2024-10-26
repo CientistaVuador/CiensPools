@@ -60,6 +60,7 @@ public class N3DObjectRenderer {
     public static boolean REFLECTIONS_ENABLED = true;
     public static boolean HDR_OUTPUT = false;
     public static boolean REFLECTIONS_DEBUG = false;
+    public static boolean USE_TONEMAPPING = true;
 
     public static final int OCCLUSION_QUERY_MINIMUM_VERTICES = 1024;
     public static final int OCCLUSION_QUERY_MINIMUM_SAMPLES = 8;
@@ -580,7 +581,7 @@ public class N3DObjectRenderer {
                 .uniformMatrix4fv(NProgram.UNIFORM_PROJECTION, camera.getProjection())
                 .uniformMatrix4fv(NProgram.UNIFORM_VIEW, camera.getView())
                 .uniform1i(NProgram.UNIFORM_ENABLE_GAMMA_CORRECTION, (HDR_OUTPUT ? 0 : 1))
-                .uniform1i(NProgram.UNIFORM_ENABLE_TONEMAPPING, (HDR_OUTPUT ? 0 : 1))
+                .uniform1i(NProgram.UNIFORM_ENABLE_TONEMAPPING, (HDR_OUTPUT || !USE_TONEMAPPING ? 0 : 1))
                 .uniform1i(NProgram.UNIFORM_ENABLE_PARALLAX_MAPPING, (PARALLAX_ENABLED ? 1 : 0))
                 .uniform1i(NProgram.UNIFORM_ENABLE_REFLECTIONS, (REFLECTIONS_ENABLED ? 1 : 0))
                 .uniform1f(NProgram.UNIFORM_WATER_COUNTER, Water.WATER_COUNTER)
@@ -720,6 +721,7 @@ public class N3DObjectRenderer {
                         .uniform1f(NProgram.UNIFORM_MATERIAL_EMISSIVE, material.getNewEmissive())
                         .uniform1f(NProgram.UNIFORM_MATERIAL_WATER, material.getNewWater())
                         .uniform1f(NProgram.UNIFORM_MATERIAL_REFRACTION, material.getNewRefraction())
+                        .uniform1f(NProgram.UNIFORM_MATERIAL_REFRACTION_POWER, material.getNewRefractionPower())
                         .uniform1f(NProgram.UNIFORM_MATERIAL_FRESNEL_OUTLINE, material.getNewFresnelOutline())
                         .uniform3f(NProgram.UNIFORM_MATERIAL_FRESNEL_OUTLINE_COLOR, f.x(), f.y(), f.z())
                         ;

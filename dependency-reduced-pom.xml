@@ -10,25 +10,11 @@
       <resource>
         <directory>${basedir}/src/main/java</directory>
         <includes>
-          <include>**/*.png</include>
-          <include>**/*.jpg</include>
-          <include>**/*.txt</include>
-          <include>**/*.ogg</include>
-          <include>**/*.zip</include>
-          <include>**/*.obj</include>
-          <include>**/*.gz</include>
-          <include>**/*.lightmap</include>
-          <include>**/*.mesh</include>
-          <include>**/*.collision</include>
-          <include>**/*.glb</include>
-          <include>**/*.mdl</include>
-          <include>**/*.jpeg</include>
-          <include>**/*.n3dm</include>
-          <include>**/*.cbm</include>
-          <include>**/*.lit</include>
-          <include>**/*.xsd</include>
-          <include>**/*.fbx</include>
+          <include>**/*.*</include>
         </includes>
+        <excludes>
+          <exclude>**/*.java</exclude>
+        </excludes>
       </resource>
     </resources>
     <finalName>CiensPools</finalName>
