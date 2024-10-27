@@ -93,7 +93,16 @@ public class PathUtils {
         } catch (URISyntaxException ex) {
             throw new IOException(ex);
         }
-    } 
+    }
+    
+    public static FileSystem createFileSystem(Path path) throws IOException {
+        if (path.getParent() != null) {
+            Files.createDirectories(path.getParent());
+        }
+        Map<String, String> env = new HashMap<>();
+        env.put("create", "true");
+        return FileSystems.newFileSystem(path, env);
+    }
     
     private PathUtils() {
         

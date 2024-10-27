@@ -45,7 +45,6 @@ import cientistavuador.cienspools.newrendering.NLightmapsStore;
 import cientistavuador.cienspools.newrendering.NMap;
 import cientistavuador.cienspools.newrendering.NMaterial;
 import cientistavuador.cienspools.newrendering.NTextures;
-import cientistavuador.cienspools.newrendering.NTexturesStore;
 import cientistavuador.cienspools.physics.PlayerController;
 import cientistavuador.cienspools.popups.BakePopup;
 import cientistavuador.cienspools.popups.ContinuePopup;
@@ -55,7 +54,9 @@ import cientistavuador.cienspools.text.GLFontRenderer;
 import cientistavuador.cienspools.text.GLFontSpecifications;
 import cientistavuador.cienspools.ubo.CameraUBO;
 import cientistavuador.cienspools.ubo.UBOBindingPoints;
+import cientistavuador.cienspools.util.ColorUtils;
 import cientistavuador.cienspools.util.DebugRenderer;
+import cientistavuador.cienspools.util.PathUtils;
 import cientistavuador.cienspools.util.PhysicsSpaceDebugger;
 import cientistavuador.cienspools.util.StringUtils;
 import cientistavuador.cienspools.util.bakedlighting.AmbientCubeDebug;
@@ -70,6 +71,7 @@ import com.simsilica.mathd.Vec3d;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -110,6 +112,7 @@ public class Game {
     private final List<N3DObject> boomBoxes = new ArrayList<>();
 
     private final NLight.NSpotLight flashlight = new NLight.NSpotLight("flashlight");
+    private final NLight.NPointLight lighter = new NLight.NPointLight("lighter");
     private final List<NLight> lights = new ArrayList<>();
     private final Scene scene = new Scene();
 
@@ -121,48 +124,22 @@ public class Game {
     private final PlayerController playerController = new PlayerController();
 
     {
-        Resource resource = new Resource();
-        
-        resource.setType("texture");
-        resource.setId("76e9ea85-05e3-4cec-9b69-11a2204c2b8c");
-        resource.setPriority(1);
-        
-        resource.addAlias("508a081f-b4e4-4fc6-b2a6-73f9d12a7258");
-        
-        resource.setOrigin("https://cc0-textures.com/t/th-brick-floor");
-        resource.setPreview("Wood/preview.png");
-        resource.setTitle("Wood");
-        resource.setDescription("This is my texture!");
-        
-        resource.getMetadata().put("waterMap", "true");
-        resource.getMetadata().put("refractiveMap", "true");
-        resource.getMetadata().put("heightMap", "true");
-        resource.getMetadata().put("blendingMode", "OPAQUE");
-        resource.getMetadata().put("data", "ASDLKASLKASPOEQIPOX>ZXCKLJLKWEQPIOAISPDO");
-        resource.getMetadata().put("useRawImages", "");
-        
-        resource.getData().put("ntexture/cr_cg_cb_ca", "Wood/cr_cg_cb_ca.dds.zst");
-        resource.getData().put("ntexture/ht_rg_mt_nx", "Wood/ht_rg_mt_nx.dds.zst");
-        resource.getData().put("ntexture/wt_em_rf_ny", "Wood/wt_em_un_ny.dds.zst");
-        
-        ResourcePack pack = new ResourcePack();
-        
-        pack.addResource(resource);
-        
-        System.out.println(pack.toString(true));
-        
         try {
             this.skybox = NCubemapStore
                     .readCubemap("cientistavuador/cienspools/resources/cubemaps/skybox.cbm");
-
+            
             List<N3DObject> mapObjects = new ArrayList<>();
             {
                 N3DModel roomModel = N3DModelStore
                         .readModel("cientistavuador/cienspools/resources/models/room.n3dm");
                 N3DObject room = new N3DObject("room", roomModel);
+                roomModel.getGeometry(2).getMaterial().setNewEmissive(20f);
                 mapObjects.add(room);
-                
+
+                roomModel.getGeometry(2).getMaterial().setNewDiffuseSpecularRatio(0.05f);
+                roomModel.getGeometry(2).getMaterial().setNewInverseRoughnessExponent(5.5f);
                 roomModel.getGeometry(1).setMaterial(NMaterial.WATER);
+                roomModel.getGeometry(0).getMaterial().setNewInverseRoughnessExponent(4f);
             }
 
             this.map = new NMap("map", mapObjects, NMap.DEFAULT_LIGHTMAP_MARGIN, 60f);
@@ -171,8 +148,13 @@ public class Game {
             
             this.flashlight.setInnerConeAngle(10f);
             this.flashlight.setOuterConeAngle(40f);
-            this.flashlight.setDiffuseSpecularAmbient(0f, 0f, 0f);
-            this.lights.add(this.flashlight);
+            this.flashlight.setDiffuseSpecularAmbient(50f, 10f, 0.05f);
+            this.flashlight.setRange(20f);
+            this.flashlight.setSize(0.25f);
+            
+            ColorUtils.setSRGB(this.lighter.getDiffuse(), 233, 140, 80).mul(4f);
+            ColorUtils.setSRGB(this.lighter.getSpecular(), 233, 140, 80).mul(0.03f);
+            ColorUtils.setSRGB(this.lighter.getAmbient(), 233, 140, 80).mul(0.015f);
 
             {
                 N3DModel bottle = N3DModelStore
@@ -211,7 +193,7 @@ public class Game {
                 cube.getScale().set(10f, 0.1f, 10f);
                 cube.getN3DModel().getGeometry(0).setMaterial(NMaterial.WATER);
                 cube.setMap(this.map);
-                this.boomBoxes.add(cube);
+                //this.boomBoxes.add(cube);
             }
         } catch (IOException ex) {
             throw new UncheckedIOException(ex);
@@ -246,6 +228,9 @@ public class Game {
         this.physicsSpace.addCollisionObject(new PhysicsRigidBody(this.map.getMeshCollision(), 0f));
         this.physicsSpace.setAccuracy(1f / 480f);
         this.physicsSpace.setMaxSubSteps(16);
+        
+        this.map.getLightmaps().setIntensity(0, 1f);
+        this.cubemaps.getCubemap(0).setIntensity(1f);
     }
 
     private Game() {
@@ -292,8 +277,11 @@ public class Game {
         }
 
         this.flashlight.getPosition().set(this.camera.getPosition());
-        this.flashlight.getDirection().set(this.camera.getFront());
-
+        this.flashlight.getDirection().set(this.camera.getFront()).add(0f, -0.15f, 0f).normalize();
+        
+        this.lighter.getPosition().set(this.camera.getRight()).negate()
+                .mul(0.05f).add(this.camera.getPosition());
+        
         if (this.nextMap != null) {
             this.map = this.nextMap;
 
@@ -371,8 +359,8 @@ public class Game {
         if (key == GLFW_KEY_B && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
             N3DObject boomBox = new N3DObject("boomBox", this.boomBoxModel);
             boomBox.setMap(this.map);
-            boomBox.getScale().set(40f);
-            this.boomBoxModel.getHullCollisionShape().setScale(40f);
+            boomBox.getScale().set(1f);
+            this.boomBoxModel.getHullCollisionShape().setScale(1f);
             this.boomBoxes.add(boomBox);
 
             HullCollisionShape hull = this.boomBoxModel.getHullCollisionShape();
@@ -511,8 +499,8 @@ public class Game {
                 NCubemap cubemap = NCubemapRenderer.render(
                         name,
                         info,
-                        256,
-                        8,
+                        1024,
+                        4,
                         this.lights,
                         this.cubemaps
                 );
@@ -546,10 +534,17 @@ public class Game {
             N3DObjectRenderer.USE_TONEMAPPING = !N3DObjectRenderer.USE_TONEMAPPING;
         }
         if (key == GLFW_KEY_F && action == GLFW_PRESS) {
-            if (this.flashlight.getDiffuse().x() == 0f) {
-                this.flashlight.setDiffuseSpecularAmbient(10f, 1f, 0.05f);
+            if (this.lights.contains(this.flashlight)) {
+                this.lights.remove(this.flashlight);
             } else {
-                this.flashlight.setDiffuseSpecularAmbient(0f, 0f, 0f);
+                this.lights.add(this.flashlight);
+            }
+        }
+        if (key == GLFW_KEY_L && action == GLFW_PRESS) {
+            if (this.lights.contains(this.lighter)) {
+                this.lights.remove(this.lighter);
+            } else {
+                this.lights.add(this.lighter);
             }
         }
         if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {

@@ -26,13 +26,10 @@
  */
 package cientistavuador.cienspools.resourcepack;
 
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  *
@@ -42,19 +39,15 @@ public class ResourceLocator {
 
     public static final ResourceLocator GLOBAL = new ResourceLocator();
     
-    public static Resource get(String id) {
-        return GLOBAL.getResource(id);
-    }
-    
     public static Resource get(String type, String id) {
         return GLOBAL.getResource(type, id);
     }
     
-    private final Set<ResourcePack> resourcePacks = new HashSet<>();
-
-    private final Map<String, List<Resource>> idMap = new HashMap<>();
-    private final Map<String, List<Resource>> typeMap = new HashMap<>();
-
+    private final Set<ResourcePack> resourcePacks = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    
+    private final Map<String, Set<Resource>> idMap = new ConcurrentHashMap<>();
+    private final Map<String, Set<Resource>> typeMap = new ConcurrentHashMap<>();
+    
     public ResourceLocator() {
 
     }
@@ -64,18 +57,18 @@ public class ResourceLocator {
     }
 
     private void addToIdMap(Resource r, String id) {
-        List<Resource> list = this.idMap.get(id);
+        Set<Resource> list = this.idMap.get(id);
         if (list == null) {
-            list = new ArrayList<>();
+            list = Collections.newSetFromMap(new ConcurrentHashMap<>());
             this.idMap.put(id, list);
         }
         list.add(r);
     }
 
     private void addToTypeMap(Resource r, String type) {
-        List<Resource> list = this.typeMap.get(type);
+        Set<Resource> list = this.typeMap.get(type);
         if (list == null) {
-            list = new ArrayList<>();
+            list = Collections.newSetFromMap(new ConcurrentHashMap<>());
             this.typeMap.put(type, list);
         }
         list.add(r);
@@ -105,7 +98,7 @@ public class ResourceLocator {
     }
 
     private void removeFromIdMap(Resource r, String id) {
-        List<Resource> list = this.idMap.get(id);
+        Set<Resource> list = this.idMap.get(id);
         if (list == null) {
             return;
         }
@@ -116,7 +109,7 @@ public class ResourceLocator {
     }
 
     private void removeFromTypeMap(Resource r, String type) {
-        List<Resource> list = this.typeMap.get(type);
+        Set<Resource> list = this.typeMap.get(type);
         if (list == null) {
             return;
         }
@@ -175,20 +168,16 @@ public class ResourceLocator {
         removeFromIdMap(r, alias);
     }
     
-    public List<Resource> getResourcesById(String id) {
+    public Set<Resource> getResourcesById(String id) {
         return ResourcePack.getResourcesById(id, this.idMap);
     }
     
-    public Resource getResource(String id) {
-        return ResourcePack.getResource(id, this.idMap);
+    public Set<Resource> getResourcesByType(String type) {
+        return ResourcePack.getResourcesByType(type, this.typeMap);
     }
     
     public Resource getResource(String type, String id) {
         return ResourcePack.getResource(type, id, this.idMap);
-    }
-    
-    public List<Resource> getResourcesByType(String type) {
-        return ResourcePack.getResourcesByType(type, this.typeMap);
     }
 
 }

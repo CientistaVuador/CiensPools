@@ -84,17 +84,16 @@ public class NMaterial {
         ORANGE_JUICE = new NMaterial("Orange Juice", NTextures.BLANK_TEXTURE);
         ColorUtils.setSRGBA(ORANGE_JUICE.getNewColor(), 255, 92, 0, 255);
         ORANGE_JUICE.setNewMetallic(0f);
-        ORANGE_JUICE.setNewRoughness(0.3f);
-        ORANGE_JUICE.setNewWater(1f);
+        ORANGE_JUICE.setNewRoughness(0.7f);
+        ORANGE_JUICE.setNewWater(0.5f);
     }
     public static final NMaterial GLASS;
     static {
         GLASS = new NMaterial("Glass", NTextures.BLANK_TEXTURE);
-        GLASS.getNewColor().set(0.95f, 0.95f, 0.95f, 0.3f);
+        GLASS.getNewColor().set(0.94f, 0.95f, 0.96f, 0.25f);
         GLASS.setNewRoughness(0f);
-        GLASS.setNewMetallic(0.97f);
+        GLASS.setNewMetallic(1f);
         GLASS.setNewRefraction(1f / 1.53f);
-        GLASS.setNewRefractionPower(0.6f);
     }
     
     private final String name;
@@ -106,6 +105,9 @@ public class NMaterial {
     
     private float newMetallic = 1f;
     private float newRoughness = 1f;
+    
+    private float newInverseRoughnessExponent = 4f;
+    private float newDiffuseSpecularRatio = 0.5f;
     
     private float newHeight = 0f;
     private float newHeightMinLayers = 8f;
@@ -175,6 +177,22 @@ public class NMaterial {
 
     public void setNewRoughness(float newRoughness) {
         this.newRoughness = newRoughness;
+    }
+
+    public float getNewInverseRoughnessExponent() {
+        return newInverseRoughnessExponent;
+    }
+
+    public void setNewInverseRoughnessExponent(float newInverseRoughnessExponent) {
+        this.newInverseRoughnessExponent = newInverseRoughnessExponent;
+    }
+
+    public float getNewDiffuseSpecularRatio() {
+        return newDiffuseSpecularRatio;
+    }
+
+    public void setNewDiffuseSpecularRatio(float newDiffuseSpecularRatio) {
+        this.newDiffuseSpecularRatio = newDiffuseSpecularRatio;
     }
 
     public float getNewHeight() {

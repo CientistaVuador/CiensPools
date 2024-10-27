@@ -46,7 +46,7 @@ import org.joml.Vector4i;
  */
 public class LightmapUVs {
 
-    private static final float EPSILON = 0.001f;
+    private static final float EPSILON = 0.1f;
     private static final int VERTEX_SIZE = 3;
     public static final int DEFAULT_MARGIN = 1;
     private static final int OPTIMIZATION_TRIGGER = 1024;

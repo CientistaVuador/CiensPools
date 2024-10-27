@@ -35,7 +35,7 @@ import java.nio.file.Path;
  * @author Cien
  */
 public class ResourcePackUtils {
-
+    
     public static void validate(
             Resource resource,
             String type,

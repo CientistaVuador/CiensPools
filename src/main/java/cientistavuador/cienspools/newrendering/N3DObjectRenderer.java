@@ -715,6 +715,8 @@ public class N3DObjectRenderer {
                         .uniform4f(NProgram.UNIFORM_MATERIAL_COLOR, c.x(), c.y(), c.z(), c.w())
                         .uniform1f(NProgram.UNIFORM_MATERIAL_METALLIC, material.getNewMetallic())
                         .uniform1f(NProgram.UNIFORM_MATERIAL_ROUGHNESS, material.getNewRoughness())
+                        .uniform1f(NProgram.UNIFORM_MATERIAL_INVERSE_ROUGHNESS_EXPONENT, material.getNewInverseRoughnessExponent())
+                        .uniform1f(NProgram.UNIFORM_MATERIAL_DIFFUSE_SPECULAR_RATIO, material.getNewDiffuseSpecularRatio())
                         .uniform1f(NProgram.UNIFORM_MATERIAL_HEIGHT, material.getNewHeight())
                         .uniform1f(NProgram.UNIFORM_MATERIAL_HEIGHT_MIN_LAYERS, material.getNewHeightMinLayers())
                         .uniform1f(NProgram.UNIFORM_MATERIAL_HEIGHT_MAX_LAYERS, material.getNewHeightMaxLayers())

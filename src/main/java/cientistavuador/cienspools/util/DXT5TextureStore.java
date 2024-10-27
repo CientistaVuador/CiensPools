@@ -41,6 +41,7 @@ import java.nio.IntBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import javax.imageio.ImageIO;
 import static org.lwjgl.glfw.GLFW.*;
 import org.lwjgl.opengl.EXTTextureCompressionS3TC;
@@ -80,12 +81,12 @@ public class DXT5TextureStore {
         private final int[] mipsHeight;
         private final int[] mipsOffset;
         private final int[] mipsSize;
-        
+
         private static class WrappedBuffer {
 
             ByteBuffer buffer;
         }
-        
+
         private final WrappedBuffer wrappedBuffer;
 
         public DXT5Texture(ByteBuffer buffer) {
@@ -202,8 +203,11 @@ public class DXT5TextureStore {
         public ByteBuffer mipSlice(int level) {
             return buffer().slice(mipOffset(level), mipSize(level));
         }
-        
+
         private byte[] decompressFallback() {
+            if (!MainTasks.isRunning()) {
+                throw new IllegalStateException("Main Tasks is not running.");
+            }
             final long window = MainTasks.run(() -> {
                 glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
                 glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
@@ -231,7 +235,7 @@ public class DXT5TextureStore {
                         if (!GL.getCapabilities().GL_EXT_texture_compression_s3tc) {
                             throw new UnsupportedOperationException("DXT5 Decompression is not supported by the current driver.");
                         }
-                        
+
                         glActiveTexture(GL_TEXTURE0);
                         glBindTexture(GL_TEXTURE_2D, texture);
 
@@ -266,7 +270,7 @@ public class DXT5TextureStore {
                     } finally {
                         glDeleteTextures(texture);
                     }
-                    
+
                     GL.setCapabilities(null);
                     glfwMakeContextCurrent(0);
                 });
@@ -286,7 +290,6 @@ public class DXT5TextureStore {
             if (!TextureCompressor.isNVIDIATextureToolsSupported()) {
                 return decompressFallback();
             }
-
             try {
                 Path workDir = TextureCompressor.createTempCompressorFolder();
 
@@ -361,7 +364,7 @@ public class DXT5TextureStore {
 
                 outputFile.delete();
                 workDirFile.delete();
-                
+
                 return decompressedImage;
             } catch (IOException ex) {
                 throw new UncheckedIOException(ex);
@@ -446,7 +449,7 @@ public class DXT5TextureStore {
         if (!TextureCompressor.isNVIDIATextureToolsSupported()) {
             return createDXT5TextureFallback(rgba, width, height);
         }
-        
+
         int amountOfMips = MipmapUtils.numberOfMipmaps(width, height);
 
         try {
@@ -578,7 +581,7 @@ public class DXT5TextureStore {
             throw t;
         }
     }
-    
+
     public static DXT5Texture readDXT5Texture(byte[] data) {
         try {
             return readDXT5Texture(new ByteArrayInputStream(data));

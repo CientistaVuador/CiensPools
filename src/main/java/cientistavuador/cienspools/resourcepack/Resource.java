@@ -27,7 +27,6 @@
 package cientistavuador.cienspools.resourcepack;
 
 import cientistavuador.cienspools.util.XMLUtils;
-import java.lang.ref.WeakReference;
 import java.nio.file.FileSystem;
 import java.nio.file.Path;
 import java.util.Collections;
@@ -36,6 +35,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  *
@@ -43,10 +43,10 @@ import java.util.Set;
  */
 public class Resource {
     
-    protected ResourcePack resourcePack;
+    protected volatile ResourcePack resourcePack;
     
-    private String type = "";
-    private String id = "";
+    private String type = "unknown";
+    private String id = UUID.randomUUID().toString();
     private int priority = 0;
     private final Set<String> aliases = new HashSet<>();
     private String origin = null;

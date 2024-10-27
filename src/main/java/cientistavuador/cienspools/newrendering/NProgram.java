@@ -40,7 +40,7 @@ public class NProgram {
     
     public static final float FRESNEL_BALANCE = 0.05f;
     public static final float DIFFUSE_BALANCE = 0.50f;
-    public static final float MAX_SHININESS = 2048f;
+    public static final float MAX_SHININESS = 16384f;
     
     public static final int MAX_AMOUNT_OF_LIGHTS = 24;
     public static final int MAX_AMOUNT_OF_LIGHTMAPS = 32;
@@ -134,7 +134,7 @@ public class NProgram {
             uniform sampler2DArray waterFrames;
             
             vec3 sampleWaterNormal(vec2 uv) {
-                vec4 waterColor = texture(waterFrames, vec3(uv * 10.0, waterCounter * float(textureSize(waterFrames, 0).z)));
+                vec4 waterColor = texture(waterFrames, vec3(uv, waterCounter * float(textureSize(waterFrames, 0).z)));
                 float nx = (((waterColor.r + waterColor.g + waterColor.b) / 3.0) * 2.0) - 1.0;
                 float ny = (waterColor.a * 2.0) - 1.0;
                 vec3 waterNormal = vec3(
@@ -260,6 +260,8 @@ public class NProgram {
                 vec4 color;
                 float metallic;
                 float roughness;
+                float inverseRoughnessExponent;
+                float diffuseSpecularRatio;
                 float height;
                 float heightMinLayers;
                 float heightMaxLayers;
@@ -351,19 +353,21 @@ public class NProgram {
             
             BlinnPhongMaterial convertPBRMaterialToBlinnPhong(
                 vec3 viewDirection, vec3 normal,
-                vec3 color, float metallic, float roughness, float ambientOcclusion, float fresnel
+                vec3 color, float metallic, float roughness, float ambientOcclusion, float fresnel,
+                float inverseRoughnessExponent, float diffuseSpecularRatio
             ) {
-                float shininess = pow(MAX_SHININESS, 1.0 - roughness);
-                float specular = ((shininess + 2.0) * (shininess + 4.0)) / (8.0 * PI * (pow(2.0, -shininess * 0.5) + shininess));
+                float shininess = 1.0 / clamp(pow(roughness, inverseRoughnessExponent), 1.0 / 65535.0, 1.0);
+                float specular = ((shininess + 2.0) * (shininess + 4.0)) 
+                                    / (8.0 * PI * (pow(2.0, -shininess * 0.5) + shininess));
                 return BlinnPhongMaterial(
                     shininess,
                     mix(
-                        (color * DIFFUSE_BALANCE) / PI,
+                        (color * diffuseSpecularRatio) / PI,
                         vec3(0.0),
                         metallic
                     ),
                     mix(
-                        vec3(max(specular - 0.3496155267919281, 0.0)) * (1.0 - DIFFUSE_BALANCE) * fresnel * PI,
+                        vec3(max(specular - 0.3496155267919281, 0.0)) * (1.0 - diffuseSpecularRatio) * fresnel,
                         vec3(specular) * color,
                         metallic
                     ),
@@ -549,7 +553,8 @@ public class NProgram {
                 }
                 
                 BlinnPhongMaterial bpMaterial = convertPBRMaterialToBlinnPhong(
-                    viewDirection, normal, color.rgb, metallic, roughness, 1.0, fresnel
+                    viewDirection, normal, color.rgb, metallic, roughness, 1.0, fresnel,
+                    material.inverseRoughnessExponent, material.diffuseSpecularRatio
                 );
                 if (!enableReflections) {
                     bpMaterial.specular = vec3(0.0);
@@ -706,6 +711,8 @@ public class NProgram {
     public static final String UNIFORM_MATERIAL_COLOR = "material.color";
     public static final String UNIFORM_MATERIAL_METALLIC = "material.metallic";
     public static final String UNIFORM_MATERIAL_ROUGHNESS = "material.roughness";
+    public static final String UNIFORM_MATERIAL_INVERSE_ROUGHNESS_EXPONENT = "material.inverseRoughnessExponent";
+    public static final String UNIFORM_MATERIAL_DIFFUSE_SPECULAR_RATIO = "material.diffuseSpecularRatio";
     public static final String UNIFORM_MATERIAL_HEIGHT = "material.height";
     public static final String UNIFORM_MATERIAL_HEIGHT_MIN_LAYERS = "material.heightMinLayers";
     public static final String UNIFORM_MATERIAL_HEIGHT_MAX_LAYERS = "material.heightMaxLayers";

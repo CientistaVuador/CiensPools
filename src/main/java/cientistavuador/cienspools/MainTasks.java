@@ -43,6 +43,12 @@ public class MainTasks {
     public static final ConcurrentLinkedQueue<Runnable> MAIN_TASKS = new ConcurrentLinkedQueue<>();
     public static final Thread MAIN_THREAD = Thread.currentThread();
     
+    private static boolean running = false;
+    
+    public static boolean isRunning() {
+        return running;
+    }
+    
     public static boolean isMainThread() {
         return Thread.currentThread() == MAIN_THREAD;
     }
@@ -51,7 +57,7 @@ public class MainTasks {
         if (!isMainThread()) {
             throw new IllegalCallerException("Not main thread.");
         }
-        
+        running = true;
         Runnable r;
         while ((r = MAIN_TASKS.poll()) != null) {
             r.run();
