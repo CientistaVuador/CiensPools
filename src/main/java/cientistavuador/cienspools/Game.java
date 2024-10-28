@@ -49,14 +49,12 @@ import cientistavuador.cienspools.physics.PlayerController;
 import cientistavuador.cienspools.popups.BakePopup;
 import cientistavuador.cienspools.popups.ContinuePopup;
 import cientistavuador.cienspools.resourcepack.Resource;
-import cientistavuador.cienspools.resourcepack.ResourcePack;
 import cientistavuador.cienspools.text.GLFontRenderer;
 import cientistavuador.cienspools.text.GLFontSpecifications;
 import cientistavuador.cienspools.ubo.CameraUBO;
 import cientistavuador.cienspools.ubo.UBOBindingPoints;
 import cientistavuador.cienspools.util.ColorUtils;
 import cientistavuador.cienspools.util.DebugRenderer;
-import cientistavuador.cienspools.util.PathUtils;
 import cientistavuador.cienspools.util.PhysicsSpaceDebugger;
 import cientistavuador.cienspools.util.StringUtils;
 import cientistavuador.cienspools.util.bakedlighting.AmbientCubeDebug;
@@ -71,7 +69,6 @@ import com.simsilica.mathd.Vec3d;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -127,7 +124,7 @@ public class Game {
         try {
             this.skybox = NCubemapStore
                     .readCubemap("cientistavuador/cienspools/resources/cubemaps/skybox.cbm");
-            
+
             List<N3DObject> mapObjects = new ArrayList<>();
             {
                 N3DModel roomModel = N3DModelStore
@@ -145,13 +142,13 @@ public class Game {
             this.map = new NMap("map", mapObjects, NMap.DEFAULT_LIGHTMAP_MARGIN, 60f);
             this.map.setLightmaps(NLightmapsStore
                     .readLightmaps("cientistavuador/cienspools/resources/lightmaps/lightmap.lit"));
-            
+
             this.flashlight.setInnerConeAngle(10f);
             this.flashlight.setOuterConeAngle(40f);
-            this.flashlight.setDiffuseSpecularAmbient(50f, 10f, 0.05f);
+            this.flashlight.setDiffuseSpecularAmbient(100f, 4f, 0.0f);
             this.flashlight.setRange(20f);
             this.flashlight.setSize(0.25f);
-            
+
             ColorUtils.setSRGB(this.lighter.getDiffuse(), 233, 140, 80).mul(4f);
             ColorUtils.setSRGB(this.lighter.getSpecular(), 233, 140, 80).mul(0.03f);
             ColorUtils.setSRGB(this.lighter.getAmbient(), 233, 140, 80).mul(0.015f);
@@ -183,15 +180,15 @@ public class Game {
 
             {
                 this.boomBoxModel = N3DModelImporter
-                        .importFromJarFile("cientistavuador/cienspools/resources/models/BoomBox.glb");
+                        .importFromJarFile("cientistavuador/cienspools/resources/models/DamagedHelmet.glb");
             }
-            
+
             {
                 N3DModel cubeModel = N3DModelImporter
                         .importFromJarFile("cientistavuador/cienspools/resources/models/cube.glb");
                 N3DObject cube = new N3DObject("cube", cubeModel);
-                cube.getScale().set(10f, 0.1f, 10f);
-                cube.getN3DModel().getGeometry(0).setMaterial(NMaterial.WATER);
+                cube.getScale().set(0.01f);
+                cube.getN3DModel().getGeometry(0).setMaterial(NMaterial.GLASS);
                 cube.setMap(this.map);
                 //this.boomBoxes.add(cube);
             }
@@ -228,7 +225,7 @@ public class Game {
         this.physicsSpace.addCollisionObject(new PhysicsRigidBody(this.map.getMeshCollision(), 0f));
         this.physicsSpace.setAccuracy(1f / 480f);
         this.physicsSpace.setMaxSubSteps(16);
-        
+
         this.map.getLightmaps().setIntensity(0, 1f);
         this.cubemaps.getCubemap(0).setIntensity(1f);
     }
@@ -278,10 +275,10 @@ public class Game {
 
         this.flashlight.getPosition().set(this.camera.getPosition());
         this.flashlight.getDirection().set(this.camera.getFront()).add(0f, -0.15f, 0f).normalize();
-        
+
         this.lighter.getPosition().set(this.camera.getRight()).negate()
                 .mul(0.05f).add(this.camera.getPosition());
-        
+
         if (this.nextMap != null) {
             this.map = this.nextMap;
 
@@ -359,8 +356,8 @@ public class Game {
         if (key == GLFW_KEY_B && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
             N3DObject boomBox = new N3DObject("boomBox", this.boomBoxModel);
             boomBox.setMap(this.map);
-            boomBox.getScale().set(1f);
-            this.boomBoxModel.getHullCollisionShape().setScale(1f);
+            boomBox.getScale().set(40f);
+            this.boomBoxModel.getHullCollisionShape().setScale(40f);
             this.boomBoxes.add(boomBox);
 
             HullCollisionShape hull = this.boomBoxModel.getHullCollisionShape();

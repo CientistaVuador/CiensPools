@@ -43,10 +43,17 @@ import java.util.UUID;
  */
 public class Resource {
     
+    public static String generateRandomId(String suffix) {
+        UUID uuid = UUID.randomUUID();
+        String most = Long.toHexString(uuid.getMostSignificantBits()).toUpperCase();
+        String least = Long.toHexString(uuid.getLeastSignificantBits()).toUpperCase();
+        return most + "|" + least + (suffix != null && !suffix.isEmpty() ? "|" + suffix : "");
+    }
+    
     protected volatile ResourcePack resourcePack;
     
     private String type = "unknown";
-    private String id = UUID.randomUUID().toString();
+    private String id = generateRandomId(null);
     private int priority = 0;
     private final Set<String> aliases = new HashSet<>();
     private String origin = null;
@@ -97,6 +104,10 @@ public class Resource {
             }
         }
     }
+    
+    public void setRandomId(String suffix) {
+        setId(generateRandomId(suffix));
+    }
 
     public int getPriority() {
         return this.priority;
@@ -131,6 +142,8 @@ public class Resource {
         }
         return success;
     }
+    
+    
 
     public String getOrigin() {
         return this.origin;

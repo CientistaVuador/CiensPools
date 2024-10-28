@@ -341,6 +341,9 @@ public class NProgram {
             
             struct BlinnPhongMaterial {
                 float shininess;
+                float viewAngle;
+                float A;
+                float B;
                 vec3 diffuse;
                 vec3 specular;
                 vec3 ambient;
@@ -359,8 +362,12 @@ public class NProgram {
                 float shininess = 1.0 / clamp(pow(roughness, inverseRoughnessExponent), 1.0 / 65535.0, 1.0);
                 float specular = ((shininess + 2.0) * (shininess + 4.0)) 
                                     / (8.0 * PI * (pow(2.0, -shininess * 0.5) + shininess));
+                float r = roughness * roughness;
                 return BlinnPhongMaterial(
                     shininess,
+                    acos(clamp(dot(normal, -viewDirection), 0.0, 1.0)),
+                    1.0 - 0.5 * (r / (r + 0.57)),
+                    0.45 * (r / (r + 0.09)),
                     mix(
                         (color * diffuseSpecularRatio) / PI,
                         vec3(0.0),
@@ -397,12 +404,21 @@ public class NProgram {
                 
                 vec3 halfwayDirection = -normalize(lightDirection + viewDirection);
                 float diffuseFactor = max(dot(normal, -lightDirection), 0.0);
-                float specularFactor = pow(max(dot(normal, halfwayDirection), 0.0), bpMaterial.shininess) * diffuseFactor;
+                float specularFactor = pow(max(dot(normal, halfwayDirection), 0.0), bpMaterial.shininess)
+                                    * diffuseFactor;
                 float ambientFactor = 1.0;
+                
+                float diffuseFactorAngle = acos(diffuseFactor);
+                float alpha = max(bpMaterial.viewAngle, diffuseFactorAngle);
+                float beta = min(bpMaterial.viewAngle, diffuseFactorAngle);
+                float gamma = cos(bpMaterial.viewAngle - diffuseFactorAngle);
+                float C = sin(alpha) * tan(beta);
+                diffuseFactor *= (bpMaterial.A + (bpMaterial.B * max(0.0, gamma) * C));
                 
                 if (light.type != DIRECTIONAL_LIGHT_TYPE) {
                     float distance = length(light.position - fragPosition);
-                    float pointAttenuation = clamp(1.0 - pow(distance / light.range, 4.0), 0.0, 1.0) / ((distance * distance) + light.size);
+                    float pointAttenuation = clamp(1.0 - pow(distance / light.range, 4.0), 0.0, 1.0) 
+                                            / ((distance * distance) + light.size);
                     
                     diffuseFactor *= pointAttenuation;
                     specularFactor *= pointAttenuation;

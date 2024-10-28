@@ -54,6 +54,8 @@ import java.nio.ByteBuffer;
 import java.nio.DoubleBuffer;
 import java.nio.IntBuffer;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.joml.Vector3f;
 import org.lwjgl.PointerBuffer;
 import static org.lwjgl.glfw.GLFW.*;
@@ -78,11 +80,11 @@ import static org.lwjgl.system.MemoryUtil.*;
 public class Main {
 
     public static final String APPLICATION_NAME = "Cien's Pools";
-    
+
     public static final float PHYSICS_ENGINE_UNITS = 10f;
     public static final float TO_PHYSICS_ENGINE_UNITS = PHYSICS_ENGINE_UNITS;
     public static final float FROM_PHYSICS_ENGINE_UNITS = 1f / PHYSICS_ENGINE_UNITS;
-    
+
     public static final boolean USE_MSAA = false;
     public static final boolean DEBUG_ENABLED = true;
     public static final boolean SPIKE_LAG_WARNINGS = false;
@@ -91,10 +93,10 @@ public class Main {
     public static final int OPENGL_MAJOR_VERSION;
     public static final int OPENGL_MINOR_VERSION;
     public static final boolean COMPATIBLE_MODE;
-    
+
     static {
         MainTasks.init();
-        
+
         if (!glfwInit()) {
             throw new IllegalStateException("Could not initialize GLFW!");
         }
@@ -147,7 +149,7 @@ public class Main {
         }
 
         COMPATIBLE_MODE = compatible;
-        
+
         glfwMakeContextCurrent(dummyWindow);
         GL.createCapabilities();
 
@@ -161,7 +163,7 @@ public class Main {
         System.out.println("GLSL Version: " + glGetString(GL_SHADING_LANGUAGE_VERSION));
         System.out.println("Max Texture Size: " + glGetInteger(GL_MAX_TEXTURE_SIZE));
         System.out.println("Max Texture Array Layers: " + glGetInteger(GL_MAX_ARRAY_TEXTURE_LAYERS));
-        
+
         GL.setCapabilities(null);
         glfwMakeContextCurrent(0);
 
@@ -228,6 +230,7 @@ public class Main {
     public static long WINDOW_POINTER = NULL;
     public static long FRAME = 0;
     public static boolean FULLSCREEN = false;
+    public static int FRAMERATE_LIMIT = 240;
     public static double ONE_SECOND_COUNTER = 0.0;
     public static double ONE_MINUTE_COUNTER = 0.0;
     public static int NUMBER_OF_DRAWCALLS = 0;
@@ -252,7 +255,7 @@ public class Main {
     public static final Thread MAIN_THREAD = MainTasks.MAIN_THREAD;
     private static final int[] savedWindowStatus = new int[4];
     private static GLDebugMessageCallback DEBUG_CALLBACK = null;
-    
+
     private static String debugSource(int source) {
         return switch (source) {
             case GL_DEBUG_SOURCE_API ->
@@ -312,7 +315,7 @@ public class Main {
     public static void main(String[] args) {
         LoadingPopup loadingPopup = new LoadingPopup();
         loadingPopup.setVisible(true);
-        
+
         glfwSetErrorCallback((error, description) -> {
             GLFWErrorException exception = new GLFWErrorException("GLFW Error " + error + ": " + memASCIISafe(description));
             if (THROW_GL_GLFW_ERRORS) {
@@ -335,18 +338,18 @@ public class Main {
             glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_ANY_PROFILE);
             glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_FALSE);
         }
-        
+
         glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-        
+
         WINDOW_POINTER = glfwCreateWindow(Main.WIDTH, Main.HEIGHT, Main.WINDOW_TITLE, NULL, NULL);
         if (WINDOW_POINTER == NULL) {
             throw new IllegalStateException("Found a compatible OpenGL version but now it's not compatible anymore.");
         }
-        
+
         glfwMakeContextCurrent(WINDOW_POINTER);
         glfwSwapInterval(0);
         GL.createCapabilities();
-        
+
         loadWindowIcon:
         {
             System.out.println("Loading window icon...");
@@ -474,7 +477,7 @@ public class Main {
         glClearStencil(0);
         glCullFace(GL_BACK);
         glLineWidth(1f);
-        
+
         glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
         glPixelStorei(GL_UNPACK_LSB_FIRST, GL_FALSE);
         glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
@@ -483,7 +486,7 @@ public class Main {
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
         glPixelStorei(GL_UNPACK_IMAGE_HEIGHT, 0);
         glPixelStorei(GL_UNPACK_SKIP_IMAGES, 0);
-        
+
         glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
         int maxUBOBindings = glGetInteger(GL_MAX_UNIFORM_BUFFER_BINDINGS);
         if (maxUBOBindings < MIN_UNIFORM_BUFFER_BINDINGS) {
@@ -493,16 +496,16 @@ public class Main {
         if (maxTextureSize < 8192) {
             throw new IllegalStateException("Max texture size must be 8192 or more! Update your drivers or buy a new GPU.");
         }
-        
+
         glHint(GL_TEXTURE_COMPRESSION_HINT, GL_NICEST);
         if (GL.getCapabilities().GL_NV_multisample_filter_hint) {
             glHint(NVMultisampleFilterHint.GL_MULTISAMPLE_FILTER_HINT_NV, GL_NICEST);
         }
-        
+
         Main.checkGLError();
-        
+
         TextureCompressor.init();
-        
+
         Water.init();
         DebugRenderer.init();
         GLFonts.init();
@@ -619,12 +622,12 @@ public class Main {
                             System.out.println("Warning: No Monitor Found For Fullscreen.");
                             break goFullscreen;
                         }
-                        
+
                         Main.savedWindowStatus[0] = windowX;
                         Main.savedWindowStatus[1] = windowY;
                         Main.savedWindowStatus[2] = windowWidth;
                         Main.savedWindowStatus[3] = windowHeight;
-                        
+
                         glfwSetWindowMonitor(window, foundMonitor, 0, 0, foundWidth, foundHeight, foundRefreshRate);
                     }
                 } else {
@@ -642,32 +645,32 @@ public class Main {
         Game.get().start();
 
         Main.checkGLError();
-        
+
         loadingPopup.setVisible(false);
         loadingPopup.dispose();
-        
+
         glfwShowWindow(WINDOW_POINTER);
 
         int frames = 0;
-        long nextFpsUpdate = System.currentTimeMillis() + 1000;
+        long nextFpsUpdate = System.nanoTime() + 1_000_000_000;
         long nextTitleUpdate = System.currentTimeMillis() + 100;
         long timeFrameBegin = System.nanoTime();
-        
+
         while (!glfwWindowShouldClose(WINDOW_POINTER)) {
             Main.TPF = (System.nanoTime() - timeFrameBegin) / 1E9d;
             timeFrameBegin = System.nanoTime();
 
             Main.NUMBER_OF_DRAWCALLS = 0;
             Main.NUMBER_OF_VERTICES = 0;
-            Main.WINDOW_TITLE = Main.APPLICATION_NAME+" - FPS: " + Main.FPS;
-            
+            Main.WINDOW_TITLE = Main.APPLICATION_NAME + " - FPS: " + Main.FPS;
+
             if (SPIKE_LAG_WARNINGS) {
                 int tpfFps = (int) (1.0 / Main.TPF);
                 if (tpfFps < 60 && ((Main.FPS - tpfFps) > 30)) {
                     System.out.println("[Spike Lag Warning] From " + Main.FPS + " FPS to " + tpfFps + " FPS; current frame TPF: " + String.format("%.3f", Main.TPF) + "s");
                 }
             }
-            
+
             try (MemoryStack stack = MemoryStack.stackPush()) {
                 DoubleBuffer mouseX = stack.mallocDouble(1);
                 DoubleBuffer mouseY = stack.mallocDouble(1);
@@ -696,15 +699,15 @@ public class Main {
                 WINDOW_WIDTH = windowWidth.get();
                 WINDOW_HEIGHT = windowHeight.get();
             }
-            
+
             Water.update(TPF);
-            
+
             glfwPollEvents();
             glViewport(0, 0, Main.WIDTH, Main.HEIGHT);
             glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-            
+
             MainTasks.runTasks();
-            
+
             ALSourceUtil.update();
             Game.get().loop();
             glFlush();
@@ -712,10 +715,10 @@ public class Main {
             glfwSwapBuffers(WINDOW_POINTER);
 
             frames++;
-            if (System.currentTimeMillis() >= nextFpsUpdate) {
+            if (System.nanoTime() >= nextFpsUpdate) {
                 Main.FPS = frames;
                 frames = 0;
-                nextFpsUpdate = System.currentTimeMillis() + 1000;
+                nextFpsUpdate = System.nanoTime() + 1_000_000_000;
             }
 
             if (System.currentTimeMillis() >= nextTitleUpdate) {
@@ -734,7 +737,26 @@ public class Main {
             }
 
             Main.FRAME++;
-            
+
+            if (FRAMERATE_LIMIT > 0) {
+                double tpf = (System.nanoTime() - timeFrameBegin) / 1E9d;
+                double sleep = (1.0 / FRAMERATE_LIMIT) - tpf;
+                if (sleep > 0) {
+                    long sleepStart = System.nanoTime();
+                    long sleepMs = ((long) (sleep * 1000.0)) - 1000;
+                    if (sleepMs > 0) {
+                        try {
+                            Thread.sleep(sleepMs);
+                        } catch (InterruptedException ex) {
+                            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+                    }
+                    while (((System.nanoTime() - sleepStart) / 1E9d) < sleep) {
+                        Thread.onSpinWait();
+                    }
+                }
+            }
+
             if (Main.EXIT_SIGNAL) {
                 glfwMakeContextCurrent(0);
                 glfwDestroyWindow(Main.WINDOW_POINTER);
