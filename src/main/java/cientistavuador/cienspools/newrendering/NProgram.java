@@ -209,7 +209,7 @@ public class NProgram {
                 ivec2 cubemapSize = textureSize(cube, 0);
                 float mipLevels = 1.0 + floor(log2(max(float(cubemapSize.x), float(cubemapSize.y))));
                 #endif
-                float lodLevel = mipLevels * sqrt(roughness);
+                float lodLevel = mipLevels * pow(roughness, 0.25);
                 #ifdef SUPPORTED_400
                 lodLevel = max(textureQueryLod(cube, direction).x, lodLevel);
                 #endif
@@ -362,12 +362,11 @@ public class NProgram {
                 float shininess = 1.0 / clamp(pow(roughness, inverseRoughnessExponent), 1.0 / 65535.0, 1.0);
                 float specular = ((shininess + 2.0) * (shininess + 4.0)) 
                                     / (8.0 * PI * (pow(2.0, -shininess * 0.5) + shininess));
-                float r = roughness * roughness;
                 return BlinnPhongMaterial(
                     shininess,
                     acos(clamp(dot(normal, -viewDirection), 0.0, 1.0)),
-                    1.0 - 0.5 * (r / (r + 0.57)),
-                    0.45 * (r / (r + 0.09)),
+                    1.0 - 0.5 * (roughness / (roughness + 0.57)),
+                    0.45 * (roughness / (roughness + 0.09)),
                     mix(
                         (color * diffuseSpecularRatio) / PI,
                         vec3(0.0),
@@ -402,19 +401,20 @@ public class NProgram {
                                     ? normalize(light.direction) 
                                     : normalize(fragPosition - light.position));
                 
-                vec3 halfwayDirection = -normalize(lightDirection + viewDirection);
                 float diffuseFactor = max(dot(normal, -lightDirection), 0.0);
+                vec3 halfwayDirection = -normalize(lightDirection + viewDirection);
                 float specularFactor = pow(max(dot(normal, halfwayDirection), 0.0), bpMaterial.shininess)
-                                    * diffuseFactor;
+                                        * diffuseFactor;
+                
+                float dAngle = acos(diffuseFactor);
+                float vAngle = bpMaterial.viewAngle;
+                float C = sin(max(vAngle, dAngle)) * tan(min(vAngle, dAngle));
+                
+                float orenNayar = (bpMaterial.A + (bpMaterial.B * max(0.0, cos(vAngle - dAngle)) * C));
+                diffuseFactor *= orenNayar;
+                specularFactor *= orenNayar;
+                
                 float ambientFactor = 1.0;
-                
-                float diffuseFactorAngle = acos(diffuseFactor);
-                float alpha = max(bpMaterial.viewAngle, diffuseFactorAngle);
-                float beta = min(bpMaterial.viewAngle, diffuseFactorAngle);
-                float gamma = cos(bpMaterial.viewAngle - diffuseFactorAngle);
-                float C = sin(alpha) * tan(beta);
-                diffuseFactor *= (bpMaterial.A + (bpMaterial.B * max(0.0, gamma) * C));
-                
                 if (light.type != DIRECTIONAL_LIGHT_TYPE) {
                     float distance = length(light.position - fragPosition);
                     float pointAttenuation = clamp(1.0 - pow(distance / light.range, 4.0), 0.0, 1.0) 
@@ -486,7 +486,7 @@ public class NProgram {
                 if (furthestDistance >= 0.0) {
                     vec3 reflectedColor = cubemapReflectionIndexed(furthestIndex, roughness, resultDirection);
                     return mix(
-                                reflectedColor * fresnel * pow(1.0 - roughness, 2.0),
+                                reflectedColor * fresnel * (1.0 - roughness),
                                 reflectedColor * color,
                                 metallic
                             );
@@ -550,6 +550,8 @@ public class NProgram {
                 if (!enableReflections) {
                     metallic = 0.0;
                 }
+                
+                roughness *= roughness;
                 
                 vec4 outputColor = vec4(0.0, 0.0, 0.0, color.a);
                 

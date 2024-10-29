@@ -28,7 +28,6 @@ package cientistavuador.cienspools.newrendering;
 
 import cientistavuador.cienspools.util.DXT5TextureStore;
 import cientistavuador.cienspools.util.DXT5TextureStore.DXT5Texture;
-import cientistavuador.cienspools.util.E8Image;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
@@ -86,9 +85,8 @@ public class NCubemapImporter {
             totalAverageR += averageR;
             totalAverageG += averageG;
             totalAverageB += averageB;
-
-            E8Image e8Image = new E8Image(side, size, size);
-            sidesDXT5[i] = DXT5TextureStore.createDXT5Texture(e8Image.getRGBE(), size, size);
+            
+            sidesDXT5[i] = DXT5TextureStore.createDXT5TextureHDR(side, size, size, true);
         }
 
         float inv = 1f / NCubemap.SIDES;

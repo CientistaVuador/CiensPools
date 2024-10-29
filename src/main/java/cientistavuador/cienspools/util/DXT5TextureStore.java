@@ -27,6 +27,7 @@
 package cientistavuador.cienspools.util;
 
 import cientistavuador.cienspools.MainTasks;
+import cientistavuador.cienspools.util.postprocess.GaussianBlur;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -40,8 +41,8 @@ import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import javax.imageio.ImageIO;
 import static org.lwjgl.glfw.GLFW.*;
 import org.lwjgl.opengl.EXTTextureCompressionS3TC;
@@ -442,7 +443,113 @@ public class DXT5TextureStore {
             throw t;
         }
     }
+    
+    public static DXT5Texture createDXT5TextureHDR(
+            float[] rgb,
+            int width,
+            int height,
+            boolean blurMipLevels
+    ) {
+        Objects.requireNonNull(rgb, "rgb is null.");
+        ImageUtils.validate(rgb.length, width, height, 3);
+        
+        int mips = MipmapUtils.numberOfMipmaps(width, height);
 
+        int totalDXT5Size = 0;
+        for (int i = 0; i < mips; i++) {
+            totalDXT5Size += TextureCompressor.DXT5Size(
+                    MipmapUtils.mipmapSize(width, i), MipmapUtils.mipmapSize(height, i)
+            );
+        }
+
+        ByteBuffer dxt5Data = memAlloc(128 + totalDXT5Size).order(ByteOrder.LITTLE_ENDIAN);
+        try {
+            dxt5Data.put(new byte[]{
+                0x44, 0x44, 0x53, 0x20, 0x7C, 0x00, 0x00, 0x00,
+                0x07, 0x10, 0x0A, 0x00, 0x00, 0x02, 0x00, 0x00,
+                0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x0A, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x03, 0x00, 0x20, 0x00, 0x00, 0x00,
+                0x04, 0x00, 0x00, 0x00, 0x44, 0x58, 0x54, 0x35,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x08, 0x10, 0x40, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+            });
+
+            dxt5Data
+                    .putInt(DXT5Texture.WIDTH_OFFSET, width)
+                    .putInt(DXT5Texture.HEIGHT_OFFSET, height)
+                    .putInt(DXT5Texture.MIPS_OFFSET, mips);
+
+            dxt5Data.position(128);
+
+            int currentWidth = width;
+            int currentHeight = height;
+            float[] currentMip = rgb;
+
+            for (int i = 0; i < mips; i++) {
+                if (i != 0) {
+                    final int w = currentWidth;
+                    final int h = currentHeight;
+                    final float[] data = currentMip;
+                    PixelUtils.PixelStructure st = PixelUtils.getPixelStructure(w, h, 3, false);
+                    GaussianBlur.GaussianIO io = new GaussianBlur.GaussianIO() {
+                        @Override
+                        public int width() {
+                            return w;
+                        }
+
+                        @Override
+                        public int height() {
+                            return h;
+                        }
+
+                        @Override
+                        public void write(int x, int y, GaussianBlur.GaussianColor color) {
+                            data[PixelUtils.getPixelComponentIndex(st, x, y, 0)] = color.r;
+                            data[PixelUtils.getPixelComponentIndex(st, x, y, 1)] = color.g;
+                            data[PixelUtils.getPixelComponentIndex(st, x, y, 2)] = color.b;
+                        }
+
+                        @Override
+                        public void read(int x, int y, GaussianBlur.GaussianColor color) {
+                            color.r = data[PixelUtils.getPixelComponentIndex(st, x, y, 0)];
+                            color.g = data[PixelUtils.getPixelComponentIndex(st, x, y, 1)];
+                            color.b = data[PixelUtils.getPixelComponentIndex(st, x, y, 2)];
+                        }
+                    };
+                    GaussianBlur.blur(io, 50, 0.75f);
+                }
+                
+                E8Image rgbe = new E8Image(currentMip, currentWidth, currentHeight);
+                byte[] compressed = TextureCompressor
+                        .compressDXT5Fallback(rgbe.getRGBE(), currentWidth, currentHeight);
+                dxt5Data.put(compressed);
+
+                Pair<Pair<Integer, Integer>, float[]> pair = MipmapUtils
+                        .mipmapHDR(currentMip, currentWidth, currentHeight);
+                
+                currentWidth = pair.getA().getA();
+                currentHeight = pair.getA().getB();
+                currentMip = pair.getB();
+            }
+
+            dxt5Data.flip();
+
+            return new DXT5Texture(dxt5Data);
+        } catch (Throwable t) {
+            memFree(dxt5Data);
+            throw t;
+        }
+    }
+    
     public static DXT5Texture createDXT5Texture(byte[] rgba, int width, int height) {
         ImageUtils.validate(rgba, width, height, 4);
 

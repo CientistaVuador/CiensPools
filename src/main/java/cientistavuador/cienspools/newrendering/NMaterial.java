@@ -61,6 +61,7 @@ public class NMaterial {
     public static final NMaterial MIRROR;
     static {
         MIRROR = new NMaterial("Mirror", NTextures.BLANK_TEXTURE);
+        MIRROR.setNewMetallic(1f);
         MIRROR.setNewRoughness(0f);
     }
     public static final NMaterial DARK_GLASS;
@@ -95,6 +96,27 @@ public class NMaterial {
         GLASS.setNewMetallic(1f);
         GLASS.setNewRefraction(1f / 1.53f);
     }
+    public static final NMaterial ROUGH_BLACK;
+    static {
+        ROUGH_BLACK = new NMaterial("Rough Black", NTextures.BLANK_TEXTURE);
+        ROUGH_BLACK.getNewColor().set(0f, 0f, 0f, 1f);
+        ROUGH_BLACK.setNewMetallic(0f);
+        ROUGH_BLACK.setNewRoughness(1f);
+    }
+    public static final NMaterial SHINY_BLACK;
+    static {
+        SHINY_BLACK = new NMaterial("Shiny Black", NTextures.BLANK_TEXTURE);
+        SHINY_BLACK.getNewColor().set(0f, 0f, 0f, 1f);
+        SHINY_BLACK.setNewMetallic(0f);
+        SHINY_BLACK.setNewRoughness(0f);
+    }
+    public static final NMaterial GOLD;
+    static {
+        GOLD = new NMaterial("Gold", NTextures.BLANK_TEXTURE);
+        ColorUtils.setSRGBA(GOLD.getNewColor(), 255, 215, 0, 255);
+        GOLD.setNewMetallic(1f);
+        GOLD.setNewRoughness(0.6f);
+    }
     
     private final String name;
 
@@ -106,7 +128,7 @@ public class NMaterial {
     private float newMetallic = 1f;
     private float newRoughness = 1f;
     
-    private float newInverseRoughnessExponent = 4f;
+    private float newInverseRoughnessExponent = 2f;
     private float newDiffuseSpecularRatio = 0.5f;
     
     private float newHeight = 0f;

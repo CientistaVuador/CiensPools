@@ -27,6 +27,7 @@
 package cientistavuador.cienspools.util;
 
 import cientistavuador.cienspools.util.PixelUtils.PixelStructure;
+import java.util.Objects;
 
 /**
  *
@@ -92,6 +93,54 @@ public class MipmapUtils {
                 outMipmap[PixelUtils.getPixelComponentIndex(outSt, x, y, 1)] = (byte) green;
                 outMipmap[PixelUtils.getPixelComponentIndex(outSt, x, y, 2)] = (byte) blue;
                 outMipmap[PixelUtils.getPixelComponentIndex(outSt, x, y, 3)] = (byte) alpha;
+            }
+        }
+        
+        return new Pair<>(
+                new Pair<>(outSt.width(), outSt.height()),
+                outMipmap
+        );
+    }
+    
+    public static Pair<Pair<Integer, Integer>, float[]> mipmapHDR(
+            float[] rgb,
+            int width, int height
+    ) {
+        Objects.requireNonNull(rgb, "rgb is null.");
+        ImageUtils.validate(rgb.length, width, height, 3);
+        
+        int mipWidth = mipmapSize(width);
+        int mipHeight = mipmapSize(height);
+        
+        PixelStructure inSt = PixelUtils.getPixelStructure(width, height, 3, true);
+        PixelStructure outSt = PixelUtils.getPixelStructure(mipWidth, mipHeight, 3, true);
+        
+        float[] outMipmap = new float[mipWidth * mipHeight * 3];
+        
+        for (int y = 0; y < mipHeight; y++) {
+            for (int x = 0; x < mipWidth; x++) {
+                float red = 0f;
+                float green = 0f;
+                float blue = 0f;
+                
+                for (int yOffset = 0; yOffset < 2; yOffset++) {
+                    for (int xOffset = 0; xOffset < 2; xOffset++) {
+                        int totalX = (x * 2) + xOffset;
+                        int totalY = (y * 2) + yOffset;
+                        
+                        red += rgb[PixelUtils.getPixelComponentIndex(inSt, totalX, totalY, 0)];
+                        green += rgb[PixelUtils.getPixelComponentIndex(inSt, totalX, totalY, 1)];
+                        blue += rgb[PixelUtils.getPixelComponentIndex(inSt, totalX, totalY, 2)];
+                    }
+                }
+                
+                red /= 4;
+                green /= 4;
+                blue /= 4;
+                
+                outMipmap[PixelUtils.getPixelComponentIndex(outSt, x, y, 0)] = red;
+                outMipmap[PixelUtils.getPixelComponentIndex(outSt, x, y, 1)] = green;
+                outMipmap[PixelUtils.getPixelComponentIndex(outSt, x, y, 2)] = blue;
             }
         }
         

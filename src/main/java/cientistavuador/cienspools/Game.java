@@ -48,7 +48,6 @@ import cientistavuador.cienspools.newrendering.NTextures;
 import cientistavuador.cienspools.physics.PlayerController;
 import cientistavuador.cienspools.popups.BakePopup;
 import cientistavuador.cienspools.popups.ContinuePopup;
-import cientistavuador.cienspools.resourcepack.Resource;
 import cientistavuador.cienspools.text.GLFontRenderer;
 import cientistavuador.cienspools.text.GLFontSpecifications;
 import cientistavuador.cienspools.ubo.CameraUBO;
@@ -134,9 +133,7 @@ public class Game {
                 mapObjects.add(room);
 
                 roomModel.getGeometry(2).getMaterial().setNewDiffuseSpecularRatio(0.05f);
-                roomModel.getGeometry(2).getMaterial().setNewInverseRoughnessExponent(5.5f);
                 roomModel.getGeometry(1).setMaterial(NMaterial.WATER);
-                roomModel.getGeometry(0).getMaterial().setNewInverseRoughnessExponent(4f);
             }
 
             this.map = new NMap("map", mapObjects, NMap.DEFAULT_LIGHTMAP_MARGIN, 60f);
@@ -180,7 +177,7 @@ public class Game {
 
             {
                 this.boomBoxModel = N3DModelImporter
-                        .importFromJarFile("cientistavuador/cienspools/resources/models/DamagedHelmet.glb");
+                        .importFromJarFile("cientistavuador/cienspools/resources/models/BoomBox.glb");
             }
 
             {
@@ -273,9 +270,11 @@ public class Game {
             this.playerController.getCharacterController().setPosition(0f, 0.1f, 0f);
         }
 
-        this.flashlight.getPosition().set(this.camera.getPosition());
-        this.flashlight.getDirection().set(this.camera.getFront()).add(0f, -0.15f, 0f).normalize();
-
+        if (glfwGetKey(Main.WINDOW_POINTER, GLFW_KEY_R) == GLFW_PRESS) {
+            this.flashlight.getPosition().set(this.camera.getPosition());
+            this.flashlight.getDirection().set(this.camera.getFront()).add(0f, -0.15f, 0f).normalize();
+        }
+        
         this.lighter.getPosition().set(this.camera.getRight()).negate()
                 .mul(0.05f).add(this.camera.getPosition());
 
@@ -361,18 +360,14 @@ public class Game {
             this.boomBoxes.add(boomBox);
 
             HullCollisionShape hull = this.boomBoxModel.getHullCollisionShape();
-            Vector3f offset = new Vector3f(
-                    0 * Main.TO_PHYSICS_ENGINE_UNITS,
-                    0 * Main.TO_PHYSICS_ENGINE_UNITS,
-                    0 * Main.TO_PHYSICS_ENGINE_UNITS
-            );
+            Vector3f center = hull.aabbCenter(null).negate();
             CompoundCollisionShape compound = new CompoundCollisionShape();
-            compound.addChildShape(hull, offset);
+            compound.addChildShape(hull, center);
 
             boomBox.getPosition().set(
-                    offset.x * Main.FROM_PHYSICS_ENGINE_UNITS,
-                    offset.y * Main.FROM_PHYSICS_ENGINE_UNITS,
-                    offset.z * Main.FROM_PHYSICS_ENGINE_UNITS
+                    center.x * Main.FROM_PHYSICS_ENGINE_UNITS,
+                    center.y * Main.FROM_PHYSICS_ENGINE_UNITS,
+                    center.z * Main.FROM_PHYSICS_ENGINE_UNITS
             );
 
             PhysicsRigidBody rigidBody = new PhysicsRigidBody(
