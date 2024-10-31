@@ -27,6 +27,9 @@
 package cientistavuador.cienspools.newrendering;
 
 import cientistavuador.cienspools.Main;
+import cientistavuador.cienspools.resourcepack.Resource;
+import cientistavuador.cienspools.resourcepack.ResourcePackWriter.DataEntry;
+import cientistavuador.cienspools.resourcepack.ResourcePackWriter.ResourceEntry;
 import cientistavuador.cienspools.util.DXT5TextureStore;
 import cientistavuador.cienspools.util.DXT5TextureStore.DXT5Texture;
 import cientistavuador.cienspools.util.M8Image;
@@ -84,15 +87,15 @@ public class NTextures {
             throw new UncheckedIOException(ex);
         }
     }
-    
+
     public static final String BLANK_CR_CG_CB_CA_DATA = "KLUv/SCwPQIAogQNF8CnNf//b/0v/+sjvUa5JOv/b6RaNhcp19x/l0DBYS3q9vS8lmL8USjJ80e3WwEBZxKiVAYgwOMB0whwgQMhJU6ROQE=";
     public static final String BLANK_HT_RG_MT_NX_DATA = "KLUv/SCwTQIAooQNFtBnDAAApbD9NBIi0vhjX9EJ1EqzSgFRzv+PcbPiwt759SeDZ8ylf4VcG/z/++uvjw0/JOucBiDA4wHTCHCBAyElTpE5AQ==";
     public static final String BLANK_RF_EM_WT_NY_DATA = "KLUv/SCwTQIAooQNFtBnDAAApbD9NBIi0vhjX9EJ1EqzSgFRzv+PcbPiwt759SeDZ8ylf4VcG/z/++uvjw0/JOucBiDA4wHTCHCBAyElTpE5AQ==";
-    
+
     public static final NTextures BLANK_TEXTURE;
-    
+
     static {
-        
+
         try {
             DXT5Texture cr_cg_cb_ca = DXT5TextureStore.readDXT5Texture(
                     new ByteArrayInputStream(Base64.getDecoder().decode(BLANK_CR_CG_CB_CA_DATA)));
@@ -112,11 +115,18 @@ public class NTextures {
             throw new UncheckedIOException(ex);
         }
     }
-    
+
+    public static final String RESOURCE_TYPE = "texture";
+    public static final String CR_CG_CB_CA_DATA_TYPE = "application/zstd;name=cr_cg_cb_ca";
+    public static final String HT_RG_MT_NX_DATA_TYPE = "application/zstd;name=ht_rg_mt_nx";
+    public static final String AO_EM_WT_NY_DATA_TYPE = "application/zstd;name=ao_em_wt_ny";
+
     private static class WrappedTextures {
 
         public int textures = 0;
     }
+
+    private Resource associatedResource = null;
 
     private final String name;
     private final String uid;
@@ -126,10 +136,10 @@ public class NTextures {
     private final int height;
     //new: Red, Green, Blue, Alpha
     //new: Height, Roughness, Metallic, Normal X
-    //new: Refraction, Emissive, Water, Normal Y
-    private final DXT5Texture texture_r_g_b_a;
+    //new: Ao, Emissive, Water, Normal Y
+    private final DXT5Texture texture_cr_cg_cb_ca;
     private final DXT5Texture texture_ht_rg_mt_nx;
-    private final DXT5Texture texture_er_eg_eb_ny;
+    private final DXT5Texture texture_ao_em_wt_ny;
 
     private final WrappedTextures wrappedTextures = new WrappedTextures();
 
@@ -161,9 +171,9 @@ public class NTextures {
             throw new IllegalArgumentException("Textures sizes are different!");
         }
 
-        this.texture_r_g_b_a = texture_r_g_b_a;
+        this.texture_cr_cg_cb_ca = texture_r_g_b_a;
         this.texture_ht_rg_mt_nx = texture_ht_rg_mt_nx;
-        this.texture_er_eg_eb_ny = texture_er_eg_eb_ny;
+        this.texture_ao_em_wt_ny = texture_er_eg_eb_ny;
 
         if (name == null) {
             name = "Unnamed";
@@ -200,6 +210,34 @@ public class NTextures {
         });
     }
 
+    public Resource getAssociatedResource() {
+        return associatedResource;
+    }
+
+    public void setAssociatedResource(Resource associatedResource) {
+        this.associatedResource = associatedResource;
+    }
+    
+    private void writeTexture(
+            ResourceEntry entry, String type, String path, DXT5Texture texture
+    ) {
+        entry.getData().put(type, 
+                new DataEntry(path, 
+                        new ByteArrayInputStream(
+                                DXT5TextureStore.writeDXT5Texture(texture))));
+    }
+    
+    public void writeResourceEntry(ResourceEntry entry, String path) {
+        entry.setType(RESOURCE_TYPE);
+        entry.getMeta().put("blendingMode", getBlendingMode().name());
+        if (!path.isEmpty() && !path.endsWith("/")) {
+            path += "/";
+        }
+        writeTexture(entry, CR_CG_CB_CA_DATA_TYPE, path + "cr_cg_cb_ca.dds.zst", texture_cr_cg_cb_ca());
+        writeTexture(entry, HT_RG_MT_NX_DATA_TYPE, path + "ht_rg_mt_nx.dds.zst", texture_ht_rg_mt_nx());
+        writeTexture(entry, AO_EM_WT_NY_DATA_TYPE, path + "ao_em_wt_ny.dds.zst", texture_ao_em_wt_ny());
+    }
+
     public String getName() {
         return name;
     }
@@ -224,16 +262,16 @@ public class NTextures {
         return height;
     }
 
-    public DXT5Texture texture_r_g_b_a() {
-        return texture_r_g_b_a;
+    public DXT5Texture texture_cr_cg_cb_ca() {
+        return texture_cr_cg_cb_ca;
     }
 
     public DXT5Texture texture_ht_rg_mt_nx() {
         return texture_ht_rg_mt_nx;
     }
 
-    public DXT5Texture texture_er_eg_eb_ny() {
-        return texture_er_eg_eb_ny;
+    public DXT5Texture texture_ao_em_wt_ny() {
+        return texture_ao_em_wt_ny;
     }
 
     private byte[] getOrNull(WeakReference<byte[]> ref) {
@@ -252,7 +290,7 @@ public class NTextures {
             return cached;
         }
 
-        byte[] decompressed = texture_r_g_b_a().decompress();
+        byte[] decompressed = texture_cr_cg_cb_ca().decompress();
         if (NBlendingMode.OPAQUE.equals(getBlendingMode())) {
             M8Image.m8ToRGBA(decompressed, this.width, this.height);
         }
@@ -278,11 +316,11 @@ public class NTextures {
             return cached;
         }
 
-        byte[] decompressed = texture_er_eg_eb_ny().decompress();
+        byte[] decompressed = texture_ao_em_wt_ny().decompress();
         this.decompressed_er_eg_eb_ny_ref = new WeakReference<>(decompressed);
         return decompressed;
     }
-    
+
     private void validateTextures() {
         if (this.wrappedTextures.textures != 0) {
             return;
@@ -300,9 +338,9 @@ public class NTextures {
         }
 
         DXT5Texture[] texturesArray = {
-            this.texture_r_g_b_a,
+            this.texture_cr_cg_cb_ca,
             this.texture_ht_rg_mt_nx,
-            this.texture_er_eg_eb_ny
+            this.texture_ao_em_wt_ny
         };
 
         int mipLevels = MipmapUtils.numberOfMipmaps(getWidth(), getHeight());
@@ -329,7 +367,7 @@ public class NTextures {
                 );
             }
         }
-        
+
         for (int i = 0; i < texturesArray.length; i++) {
             DXT5Texture texture = texturesArray[i];
             if (internalFormat == GL_RGBA8) {
@@ -381,7 +419,7 @@ public class NTextures {
         glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_R, GL_REPEAT);
-        
+
         if (GL.getCapabilities().GL_EXT_texture_filter_anisotropic) {
             glTexParameterf(
                     GL_TEXTURE_2D_ARRAY,

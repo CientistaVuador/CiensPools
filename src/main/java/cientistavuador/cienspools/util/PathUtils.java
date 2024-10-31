@@ -36,7 +36,11 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  *
@@ -45,6 +49,55 @@ import java.util.Map;
 public class PathUtils {
     
     private static final Map<String, WeakReference<FileSystem>> cache = new HashMap<>();
+    
+    private static final String[] problematicWords = {
+        "CON", "PRN", "AUX", "NUL", 
+        "COM0", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+        "LPT0", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
+    };
+    private static final Set<String> problematicWordsSet = new HashSet<>();
+    static {
+        for (String s:problematicWords) {
+            problematicWordsSet.add(s.toUpperCase());
+            problematicWordsSet.add(s.toLowerCase());
+        }
+    }
+    
+    public static String cleanupPathName(String name) {
+        if (name == null) {
+            return null;
+        }
+        if (name.isEmpty()) {
+            return "empty";
+        }
+        
+        StringBuilder b = new StringBuilder();
+        
+        int codepoint;
+        for (int i = 0; i < name.length(); i += Character.charCount(codepoint)) {
+            codepoint = name.codePointAt(i);
+            if (!Character.isLetterOrDigit(codepoint)) {
+                b.append(' ');
+                continue;
+            }
+            b.appendCodePoint(codepoint);
+        }
+        
+        String output = Stream
+                .of(b.toString().split(" "))
+                .filter((s) -> !s.isEmpty())
+                .collect(Collectors.joining(" "));
+        
+        if (problematicWordsSet.contains(output)) {
+            output = "_" + output;
+        }
+        
+        if (output.length() > 64) {
+            output = output.substring(0, 64);
+        }
+        
+        return output;
+    }
     
     public static Path pathOf(Class<?> clazz) throws IOException {
         URL clazzOrigin = clazz.getProtectionDomain().getCodeSource().getLocation();
@@ -95,10 +148,14 @@ public class PathUtils {
         }
     }
     
-    public static FileSystem createFileSystem(Path path) throws IOException {
-        if (path.getParent() != null) {
-            Files.createDirectories(path.getParent());
+    public static void createDirectories(Path p) throws IOException {
+        if (p.getParent() != null) {
+            Files.createDirectories(p.getParent());
         }
+    }
+    
+    public static FileSystem createFileSystem(Path path) throws IOException {
+        createDirectories(path);
         Map<String, String> env = new HashMap<>();
         env.put("create", "true");
         return FileSystems.newFileSystem(path, env);

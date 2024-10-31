@@ -161,6 +161,10 @@ public class RGBA8Image {
         write(x, y, convert(r), convert(g), convert(b), convert(a));
     }
     
+    public void write(int x, int y, Vector4f color) {
+        write(x, y, color.x(), color.y(), color.z(), color.w());
+    }
+    
     public byte[] toPNG() {
         return toPNG(this.rgba, this.width, this.height);
     }

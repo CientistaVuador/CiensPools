@@ -31,6 +31,7 @@ import cientistavuador.cienspools.util.postprocess.GaussianBlur;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -647,7 +648,18 @@ public class DXT5TextureStore {
             memFree(compressed);
         }
     }
-
+    
+    public static byte[] writeDXT5Texture(DXT5Texture texture) {
+        try {
+            ByteArrayOutputStream out = new ByteArrayOutputStream(4096);
+            writeDXT5Texture(texture, out);
+            return out.toByteArray();
+        } catch (IOException ex) {
+            throw new UncheckedIOException(ex);
+        }
+    }
+        
+    
     @SuppressWarnings("UseSpecificCatch")
     public static DXT5Texture readDXT5Texture(InputStream in) throws IOException {
         ByteBuffer toDecompress;

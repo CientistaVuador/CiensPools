@@ -36,7 +36,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author Cien
  */
 public class ResourceLocator {
-
+    
     public static final ResourceLocator GLOBAL = new ResourceLocator();
     
     public static Resource get(String type, String id) {
@@ -141,43 +141,16 @@ public class ResourceLocator {
         }
         return success;
     }
-
-    protected void onResourceAdded(ResourcePack pack, Resource resource) {
-        mapResource(resource);
-    }
-
-    protected void onResourceRemoved(ResourcePack pack, Resource resource) {
-        unmapResource(resource);
-    }
-
-    protected void onIdChanged(ResourcePack p, Resource r, String oldId, String newId) {
-        removeFromIdMap(r, oldId);
-        addToIdMap(r, newId);
-    }
-
-    protected void onTypeChanged(ResourcePack p, Resource r, String oldType, String newType) {
-        removeFromTypeMap(r, oldType);
-        addToTypeMap(r, newType);
-    }
-
-    protected void onAliasAdded(ResourcePack p, Resource r, String alias) {
-        addToIdMap(r, alias);
-    }
-
-    protected void onAliasRemoved(ResourcePack p, Resource r, String alias) {
-        removeFromIdMap(r, alias);
-    }
     
     public Set<Resource> getResourcesById(String id) {
-        return ResourcePack.getResourcesById(id, this.idMap);
+        return ResourcePackUtils.getResourcesById(id, this.idMap);
     }
     
     public Set<Resource> getResourcesByType(String type) {
-        return ResourcePack.getResourcesByType(type, this.typeMap);
+        return ResourcePackUtils.getResourcesByType(type, this.typeMap);
     }
     
     public Resource getResource(String type, String id) {
-        return ResourcePack.getResource(type, id, this.idMap);
+        return ResourcePackUtils.getResource(type, id, this.idMap);
     }
-
 }

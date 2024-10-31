@@ -274,7 +274,7 @@ public class Game {
             this.flashlight.getPosition().set(this.camera.getPosition());
             this.flashlight.getDirection().set(this.camera.getFront()).add(0f, -0.15f, 0f).normalize();
         }
-        
+
         this.lighter.getPosition().set(this.camera.getRight()).negate()
                 .mul(0.05f).add(this.camera.getPosition());
 

@@ -26,6 +26,7 @@
  */
 package cientistavuador.cienspools.newrendering;
 
+import cientistavuador.cienspools.resourcepack.Resource;
 import cientistavuador.cienspools.util.ColorUtils;
 import java.util.Objects;
 import org.joml.Vector3f;
@@ -118,6 +119,10 @@ public class NMaterial {
         GOLD.setNewRoughness(0.6f);
     }
     
+    public static final String RESOURCE_TYPE = "material";
+    
+    private Resource associatedResource = null;
+    
     private final String name;
 
     private NTextures textures = NTextures.NULL_TEXTURE;
@@ -165,6 +170,16 @@ public class NMaterial {
         }
         this.textures = textures;
     }
+
+    public Resource getAssociatedResource() {
+        return associatedResource;
+    }
+
+    public void setAssociatedResource(Resource associatedResource) {
+        this.associatedResource = associatedResource;
+    }
+    
+    
 
     public String getName() {
         return name;

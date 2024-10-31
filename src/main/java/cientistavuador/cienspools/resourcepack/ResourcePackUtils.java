@@ -26,69 +26,58 @@
  */
 package cientistavuador.cienspools.resourcepack;
 
-import java.nio.file.FileSystem;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.util.Map;
+import java.util.Set;
 
 /**
  *
  * @author Cien
  */
 public class ResourcePackUtils {
-    
-    public static void validate(
-            Resource resource,
-            String type,
-            boolean validateFileSystem,
-            String[] requiredMeta,
-            String[] requiredData
-    ) {
-        if (resource == null) {
-            throw new NullPointerException("Resource is null.");
+    protected static Set<Resource> getResourcesById(String id, Map<String, Set<Resource>> idMap) {
+        if (id == null) {
+            id = "";
         }
-        if (!resource.getType().equals(type)) {
-            throw new IllegalArgumentException("Invalid resource type, expected '" + type + "', found '" + resource.getType() + "'");
+        Set<Resource> list = idMap.get(id);
+        if (list == null) {
+            return Set.of();
         }
-        if (validateFileSystem) {
-            ResourcePack pack = resource.getResourcePack();
-            if (pack == null) {
-                throw new NullPointerException("A valid file system is required but the resource has no resource pack.");
-            }
-            FileSystem fs = pack.getFileSystem();
-            if (fs == null) {
-                throw new NullPointerException("A valid file system is required but the associated file system is null.");
-            }
-            if (!fs.isOpen()) {
-                throw new IllegalArgumentException("A valid file system is required but the associated file system is closed.");
-            }
-        }
-        if (requiredMeta != null && requiredMeta.length != 0) {
-            for (String required : requiredMeta) {
-                if (!resource.getMetadata().containsKey(required)) {
-                    throw new IllegalArgumentException("Required resource metadata '" + required + "' not found.");
-                }
-            }
-        }
-        if (requiredData != null && requiredData.length != 0) {
-            for (String required : requiredData) {
-                if (!resource.getData().containsKey(required)) {
-                    throw new IllegalArgumentException("Required resource data '" + required + "' not found.");
-                }
-                String data = resource.getData().get(required);
-                if (data == null) {
-                    throw new NullPointerException("Required resource data '" + required + "' is null.");
-                }
-                if (validateFileSystem) {
-                    Path path = resource.getPath(data);
-                    if (!Files.exists(path)) {
-                        throw new IllegalArgumentException("Required resource data '" + required + "' does not exists in the file system.");
-                    }
-                }
-            }
-        }
+        return list;
     }
 
-    private ResourcePackUtils() {
+    protected static Set<Resource> getResourcesByType(String type, Map<String, Set<Resource>> typeMap) {
+        if (type == null) {
+            type = "";
+        }
+        Set<Resource> list = typeMap.get(type);
+        if (list == null) {
+            return Set.of();
+        }
+        return list;
+    }
 
+    protected static Resource getResource(String type, String id, Map<String, Set<Resource>> idMap) {
+        Set<Resource> list = getResourcesById(id, idMap);
+        if (list.isEmpty()) {
+            return null;
+        }
+        Resource highestPriority = null;
+        for (Resource other : list) {
+            if (type != null && !other.getType().equals(type)) {
+                continue;
+            }
+            if (highestPriority == null) {
+                highestPriority = other;
+                continue;
+            }
+            if (other.getPriority() > highestPriority.getPriority()) {
+                highestPriority = other;
+            }
+        }
+        return highestPriority;
+    }
+    
+    private ResourcePackUtils() {
+        
     }
 }

@@ -68,7 +68,7 @@ public class Natives {
         
     }
 
-    public static Path extract() throws IOException {
+    private static Path extract() throws IOException {
         byte[] nativesZipData;
         try (InputStream nativesZipStream = Natives.class.getResourceAsStream("natives.zip")) {
             if (nativesZipStream == null) {

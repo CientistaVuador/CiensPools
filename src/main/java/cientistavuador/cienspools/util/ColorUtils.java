@@ -46,18 +46,18 @@ public class ColorUtils {
         if (colors.size() != lights.size()) {
             throw new IllegalArgumentException("Colors and lights must have the same size!");
         }
-        
+
         outLight.zero();
         for (int i = 0; i < colors.size(); i++) {
             Vector4fc color = colors.get(i);
             Vector3fc light = lights.get(i);
-            
+
             outLight.mul(
                     (color.x() * color.w()) + (1f - color.w()),
                     (color.y() * color.w()) + (1f - color.w()),
                     (color.z() * color.w()) + (1f - color.w())
             ).mul(1f - color.w());
-            
+
             outLight.add(
                     light.x() * color.x() * color.w(),
                     light.y() * color.y() * color.w(),
@@ -65,7 +65,7 @@ public class ColorUtils {
             );
         }
     }
-    
+
     public static void blend(List<Vector4fc> colors, Vector4f outColor) {
         outColor.zero();
         if (colors == null || colors.isEmpty()) {
@@ -88,7 +88,7 @@ public class ColorUtils {
             );
         }
     }
-    
+
     public static Vector4f setSRGBA(Vector4f out, int red, int green, int blue, int alpha) {
         return out.set(
                 Math.pow(red / 255f, 2.2),
@@ -97,7 +97,7 @@ public class ColorUtils {
                 alpha / 255f
         );
     }
-    
+
     public static Vector3f setSRGB(Vector3f out, int red, int green, int blue) {
         return out.set(
                 Math.pow(red / 255f, 2.2),
@@ -105,7 +105,67 @@ public class ColorUtils {
                 Math.pow(blue / 255f, 2.2)
         );
     }
-    
+
+    public static float toLinearSpace(float c) {
+        if (c <= 0.04045f) {
+            return c / 12.92f;
+        }
+        return (float) Math.pow((c + 0.055) / 1.055, 2.4);
+    }
+
+    public static float toSRGBSpace(float c) {
+        if (c <= 0f) {
+            return 0f;
+        }
+        if (c >= 1f) {
+            return 1f;
+        }
+        if (c < 0.0031308f) {
+            return 12.92f * c;
+        }
+        return (float) ((1.055 * Math.pow(c, 0.41666)) - 0.055);
+    }
+
+    public static Vector4f toLinearSpace(Vector4f color) {
+        color.set(
+                toLinearSpace(color.x()),
+                toLinearSpace(color.y()),
+                toLinearSpace(color.z()),
+                color.w()
+        );
+        return color;
+    }
+
+    public static Vector4f toSRGBSpace(Vector4f color) {
+        color.set(
+                toSRGBSpace(color.x()),
+                toSRGBSpace(color.y()),
+                toSRGBSpace(color.z()),
+                color.w()
+        );
+        return color;
+    }
+
+    public static float mix(float a, float b, float v) {
+        return (a * (1f - v)) + (b * v);
+    }
+
+    public static void mergeEmissiveWithColor(Vector4f color, Vector4f emissive) {
+        ColorUtils.toLinearSpace(color);
+        ColorUtils.toLinearSpace(emissive);
+
+        float luminance = Math.max(Math.max(emissive.x(), emissive.y()), emissive.z());
+
+        color.set(
+                ColorUtils.mix(color.x(), emissive.x(), luminance),
+                ColorUtils.mix(color.y(), emissive.y(), luminance),
+                ColorUtils.mix(color.z(), emissive.z(), luminance)
+        );
+        emissive.set(luminance, luminance, luminance);
+        
+        ColorUtils.toSRGBSpace(color);
+    }
+
     private ColorUtils() {
 
     }
