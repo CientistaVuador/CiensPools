@@ -31,7 +31,6 @@ import cientistavuador.cienspools.debug.AabRender;
 import cientistavuador.cienspools.debug.LineRender;
 import cientistavuador.cienspools.newrendering.N3DModel;
 import cientistavuador.cienspools.newrendering.N3DModelImporter;
-import cientistavuador.cienspools.newrendering.N3DModelStore;
 import cientistavuador.cienspools.newrendering.N3DObject;
 import cientistavuador.cienspools.newrendering.N3DObjectRenderer;
 import cientistavuador.cienspools.newrendering.NCubemap;
@@ -126,10 +125,9 @@ public class Game {
 
             List<N3DObject> mapObjects = new ArrayList<>();
             {
-                N3DModel roomModel = N3DModelStore
-                        .readModel("cientistavuador/cienspools/resources/models/room.n3dm");
+                N3DModel roomModel = N3DModelImporter
+                        .importFromJarFile("cientistavuador/cienspools/resources/models/room.glb");
                 N3DObject room = new N3DObject("room", roomModel);
-                roomModel.getGeometry(2).getMaterial().setNewEmissive(20f);
                 mapObjects.add(room);
 
                 roomModel.getGeometry(2).getMaterial().setNewDiffuseSpecularRatio(0.05f);
@@ -151,8 +149,8 @@ public class Game {
             ColorUtils.setSRGB(this.lighter.getAmbient(), 233, 140, 80).mul(0.015f);
 
             {
-                N3DModel bottle = N3DModelStore
-                        .readModel("cientistavuador/cienspools/resources/models/bottle.n3dm");
+                N3DModel bottle = N3DModelImporter
+                        .importFromJarFile("cientistavuador/cienspools/resources/models/WaterBottle.glb");
                 this.waterBottle = new N3DObject("bottle", bottle);
                 this.waterBottle.setMap(this.map);
 

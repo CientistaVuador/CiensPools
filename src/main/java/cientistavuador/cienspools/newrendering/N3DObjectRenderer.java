@@ -724,6 +724,7 @@ public class N3DObjectRenderer {
                         .uniform1f(NProgram.UNIFORM_MATERIAL_WATER, material.getNewWater())
                         .uniform1f(NProgram.UNIFORM_MATERIAL_REFRACTION, material.getNewRefraction())
                         .uniform1f(NProgram.UNIFORM_MATERIAL_REFRACTION_POWER, material.getNewRefractionPower())
+                        .uniform1f(NProgram.UNIFORM_MATERIAL_AMBIENT_OCCLUSION, material.getNewAmbientOcclusion())
                         .uniform1f(NProgram.UNIFORM_MATERIAL_FRESNEL_OUTLINE, material.getNewFresnelOutline())
                         .uniform3f(NProgram.UNIFORM_MATERIAL_FRESNEL_OUTLINE_COLOR, f.x(), f.y(), f.z())
                         ;

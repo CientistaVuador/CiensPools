@@ -28,6 +28,7 @@ package cientistavuador.cienspools.newrendering;
 
 import cientistavuador.cienspools.util.MeshUtils;
 import cientistavuador.cienspools.util.Pair;
+import cientistavuador.cienspools.util.RGBA8Image;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -44,6 +45,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.joml.Matrix4f;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.assimp.*;
@@ -57,14 +60,113 @@ import org.lwjgl.system.MemoryUtil;
  */
 public class N3DModelImporter {
 
+    private static class MaterialTextures {
+
+        public final String diffuse;
+        public final String opacity;
+        public final String metallic;
+        public final String roughness;
+        public final boolean roughnessIsSpecular;
+        public final String ao;
+        public final String height;
+        public final String normal;
+        public final String emissive;
+
+        public MaterialTextures(
+                String diffuse, String opacity, String metallic, String roughness,
+                boolean roughnessIsSpecular, String ao, String height, String normal, String emissive
+        ) {
+            this.diffuse = diffuse;
+            this.opacity = opacity;
+            this.metallic = metallic;
+            this.roughness = roughness;
+            this.roughnessIsSpecular = roughnessIsSpecular;
+            this.ao = ao;
+            this.height = height;
+            this.normal = normal;
+            this.emissive = emissive;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            final MaterialTextures other = (MaterialTextures) obj;
+            if (this.roughnessIsSpecular != other.roughnessIsSpecular) {
+                return false;
+            }
+            if (!Objects.equals(this.diffuse, other.diffuse)) {
+                return false;
+            }
+            if (!Objects.equals(this.opacity, other.opacity)) {
+                return false;
+            }
+            if (!Objects.equals(this.metallic, other.metallic)) {
+                return false;
+            }
+            if (!Objects.equals(this.roughness, other.roughness)) {
+                return false;
+            }
+            if (!Objects.equals(this.ao, other.ao)) {
+                return false;
+            }
+            if (!Objects.equals(this.height, other.height)) {
+                return false;
+            }
+            if (!Objects.equals(this.normal, other.normal)) {
+                return false;
+            }
+            return Objects.equals(this.emissive, other.emissive);
+        }
+
+        @Override
+        public int hashCode() {
+            int hash = 5;
+            hash = 97 * hash + Objects.hashCode(this.diffuse);
+            hash = 97 * hash + Objects.hashCode(this.opacity);
+            hash = 97 * hash + Objects.hashCode(this.metallic);
+            hash = 97 * hash + Objects.hashCode(this.roughness);
+            hash = 97 * hash + (this.roughnessIsSpecular ? 1 : 0);
+            hash = 97 * hash + Objects.hashCode(this.ao);
+            hash = 97 * hash + Objects.hashCode(this.height);
+            hash = 97 * hash + Objects.hashCode(this.normal);
+            hash = 97 * hash + Objects.hashCode(this.emissive);
+            return hash;
+        }
+
+        @Override
+        public String toString() {
+            String[] array = {
+                "D:", this.diffuse, "|",
+                "O:", this.opacity, "|",
+                "M:", this.metallic, "|",
+                "R:", this.roughness, "|",
+                "S:", Boolean.toString(this.roughnessIsSpecular), "|",
+                "A:", this.ao, "|",
+                "H:", this.height, "|",
+                "N:", this.normal, "|",
+                "E:", this.emissive
+            };
+            return Stream.of(array).collect(Collectors.joining());
+        }
+
+    }
+
     public static double DEFAULT_TICKS_PER_SECOND = 1.0;
 
     public static final int DEFAULT_FLAGS
             = aiProcess_CalcTangentSpace
+            | aiProcess_GenSmoothNormals
             | aiProcess_Triangulate
             | aiProcess_TransformUVCoords
             | aiProcess_FindDegenerates
-            | aiProcess_GenNormals
             | aiProcess_RemoveRedundantMaterials
             | aiProcess_ImproveCacheLocality
             | aiProcess_SplitLargeMeshes
@@ -126,25 +228,25 @@ public class N3DModelImporter {
     private static N3DModel process(AIScene modelScene) {
         String error = aiGetErrorString();
         if (modelScene == null) {
-            throw new RuntimeException("Failed to import: "+error);
+            throw new RuntimeException("Failed to import: " + error);
         }
 
         try {
             if ((modelScene.mFlags() & AI_SCENE_FLAGS_INCOMPLETE) != 0) {
-                throw new RuntimeException("Failed to import: "+error);
+                throw new RuntimeException("Failed to import: " + error);
             }
 
             AINode rootNode = modelScene.mRootNode();
             if (rootNode == null) {
-                throw new RuntimeException("Failed to import: "+error);
+                throw new RuntimeException("Failed to import: " + error);
             }
-            
+
             return new N3DModelImporter(modelScene).process();
         } finally {
             aiFreeScene(modelScene);
         }
     }
-
+    
     private final ExecutorService service = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
     private final AIScene scene;
@@ -152,8 +254,10 @@ public class N3DModelImporter {
     private final List<NAnimation> loadedAnimations = new ArrayList<>();
     private final Map<Integer, String> missingMeshBones = new HashMap<>();
 
-    private final Map<String, NTexturesImporter.LoadedImage> loadedImages = new HashMap<>();
-    private final Map<Integer, NMaterial> loadedMaterials = new HashMap<>();
+    private final Map<String, RGBA8Image> images = new HashMap<>();
+    private final Map<MaterialTextures, NTextures> textures = new HashMap<>();
+    private final Map<Integer, NMaterial> materials = new HashMap<>();
+    
     private final Map<Integer, List<NGeometry>> loadedGeometries = new HashMap<>();
 
     private N3DModelImporter(AIScene scene) {
@@ -276,7 +380,7 @@ public class N3DModelImporter {
         if (totalBones.contains(nodeName)) {
             return nodeName;
         }
-        
+
         return buildMissingBone(totalBones, currentNode.mParent());
     }
 
@@ -322,320 +426,304 @@ public class N3DModelImporter {
     }
 
     private void loadImages() {
-        PointerBuffer images = this.scene.mTextures();
-        if (images == null) {
+        PointerBuffer imgs = this.scene.mTextures();
+        if (imgs == null) {
             return;
         }
 
-        List<Future<Pair<Pair<String, Integer>, NTexturesImporter.LoadedImage>>> futureImages = new ArrayList<>();
+        final List<Future<?>> futures = new ArrayList<>();
 
         int amountOfImages = this.scene.mNumTextures();
         for (int i = 0; i < amountOfImages; i++) {
             final int imageIndex = i;
 
-            AITexture tex = AITexture.createSafe(images.get(imageIndex));
+            AITexture tex = AITexture.createSafe(imgs.get(imageIndex));
             if (tex == null) {
                 continue;
             }
 
             final String fileName = tex.mFilename().dataString();
 
-            if (tex.mHeight() == 0) {
-                byte[] data = new byte[tex.mWidth()];
-                tex.pcDataCompressed().get(data);
+            futures.add(this.service.submit(() -> {
+                RGBA8Image img;
+                if (tex.mHeight() == 0) {
+                    byte[] data = new byte[tex.mWidth()];
+                    tex.pcDataCompressed().get(data);
 
-                futureImages.add(this.service.submit(() -> {
-                    return new Pair<>(new Pair<>(fileName, imageIndex), NTexturesImporter.loadImage(data));
-                }));
-            } else {
-                int width = tex.mWidth();
-                int height = tex.mHeight();
+                    img = RGBA8Image.fromPNG(data);
+                } else {
+                    int width = tex.mWidth();
+                    int height = tex.mHeight();
+                    AITexel.Buffer texels = tex.pcData();
 
-                AITexel.Buffer texels = tex.pcData();
+                    img = new RGBA8Image(width, height);
 
-                byte[] data = new byte[width * height * 4];
-
-                for (int y = 0; y < height; y++) {
-                    for (int x = 0; x < width; x++) {
-                        AITexel texel = texels.get(x + (((height - 1) - y) * width));
-
-                        data[0 + (x * 4) + (y * 4 * width)] = texel.r();
-                        data[1 + (x * 4) + (y * 4 * width)] = texel.g();
-                        data[2 + (x * 4) + (y * 4 * width)] = texel.b();
-                        data[3 + (x * 4) + (y * 4 * width)] = texel.a();
+                    for (int y = 0; y < height; y++) {
+                        for (int x = 0; x < width; x++) {
+                            AITexel texel = texels.get(x + (((height - 1) - y) * width));
+                            img.write(x, y, texel.r(), texel.g(), texel.b(), texel.a());
+                        }
                     }
                 }
-
-                NTexturesImporter.LoadedImage loaded = new NTexturesImporter.LoadedImage(width, height, data);
-
-                this.loadedImages.put(fileName, loaded);
-                this.loadedImages.put("*" + i, loaded);
-            }
+                synchronized (this.images) {
+                    this.images.put(fileName, img);
+                    this.images.put("*" + imageIndex, img);
+                }
+            }));
         }
 
-        for (Future<Pair<Pair<String, Integer>, NTexturesImporter.LoadedImage>> futurePair : futureImages) {
+        for (Future<?> f : futures) {
             try {
-                Pair<Pair<String, Integer>, NTexturesImporter.LoadedImage> pair = futurePair.get();
-                this.loadedImages.put(pair.getA().getA(), pair.getB());
-                this.loadedImages.put("*" + pair.getA().getB(), pair.getB());
+                f.get();
             } catch (InterruptedException | ExecutionException ex) {
                 throw new RuntimeException(ex);
             }
         }
     }
 
-    private NTexturesImporter.LoadedImage getMaterialTexture(AIMaterial material, int type) {
+    private String getImageOf(AIMaterial material, int type) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             AIString pathString = AIString.calloc(stack);
 
             int result = aiGetMaterialTexture(material,
-                    type,
-                    0,
-                    pathString,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    (IntBuffer) null
-            );
+                    type, 0, pathString, null, null, null, null, null, (IntBuffer) null);
 
             if (result != aiReturn_SUCCESS) {
                 return null;
             }
 
-            return this.loadedImages.get(pathString.dataString());
+            return pathString.dataString();
+        }
+    }
+
+    private MaterialTextures getMaterialTextures(AIMaterial material) {
+        String diffuse = getImageOf(material, aiTextureType_BASE_COLOR);
+        String opacity = getImageOf(material, aiTextureType_OPACITY);
+
+        String ao = getImageOf(material, aiTextureType_AMBIENT_OCCLUSION);
+        boolean roughnessIsSpecular = false;
+        String roughness = getImageOf(material, aiTextureType_DIFFUSE_ROUGHNESS);
+        String metallic = getImageOf(material, aiTextureType_METALNESS);
+
+        String height = getImageOf(material, aiTextureType_HEIGHT);
+        String normal = getImageOf(material, aiTextureType_NORMALS);
+        String emissive = getImageOf(material, aiTextureType_EMISSION_COLOR);
+
+        if (height == null) {
+            height = getImageOf(material, aiTextureType_DISPLACEMENT);
+        }
+        if (diffuse == null) {
+            diffuse = getImageOf(material, aiTextureType_DIFFUSE);
+        }
+        if (roughness == null) {
+            roughness = getImageOf(material, aiTextureType_SPECULAR);
+            if (roughness != null) {
+                roughnessIsSpecular = true;
+            }
+        }
+        if (emissive == null) {
+            emissive = getImageOf(material, aiTextureType_EMISSIVE);
+        }
+
+        return new MaterialTextures(
+                diffuse, opacity, metallic, roughness, roughnessIsSpecular,
+                ao, height, normal, emissive);
+    }
+
+    private void loadTexturesFromMaterialTextures(MaterialTextures textures) {
+        synchronized (this.textures) {
+            NTextures e = this.textures.get(textures);
+            if (e != null) {
+                return;
+            }
+        }
+        
+        RGBA8Image diffuse = this.images.get(textures.diffuse);
+        RGBA8Image opacity = this.images.get(textures.opacity);
+        RGBA8Image metallic = this.images.get(textures.metallic);
+        RGBA8Image roughness = this.images.get(textures.roughness);
+        RGBA8Image ao = this.images.get(textures.ao);
+        RGBA8Image height = this.images.get(textures.height);
+        RGBA8Image normal = this.images.get(textures.normal);
+        RGBA8Image emissive = this.images.get(textures.emissive);
+
+        int w = RGBA8Image.maxWidth(
+                diffuse, opacity, metallic, roughness, ao, height, normal, emissive);
+        int h = RGBA8Image.maxHeight(
+                diffuse, opacity, metallic, roughness, ao, height, normal, emissive);
+
+        if (w == -1 || h == -1) {
+            return;
+        }
+
+        if (diffuse == null) {
+            diffuse = new RGBA8Image(w, h);
+            diffuse.fill(255, 255, 255, 255);
+        }
+
+        diffuse = RGBA8Image.ensureSize(diffuse, w, h);
+        opacity = RGBA8Image.ensureSize(opacity, w, h);
+        metallic = RGBA8Image.ensureSize(metallic, w, h);
+        roughness = RGBA8Image.ensureSize(roughness, w, h);
+        ao = RGBA8Image.ensureSize(ao, w, h);
+        height = RGBA8Image.ensureSize(height, w, h);
+        normal = RGBA8Image.ensureSize(normal, w, h);
+        emissive = RGBA8Image.ensureSize(emissive, w, h);
+
+        if (opacity != null) {
+            diffuse = diffuse.copy();
+            diffuse.copyChannelOf(opacity, 0, 3);
+        }
+
+        if (textures.roughnessIsSpecular) {
+            roughness = roughness.copy();
+            for (int y = 0; y < roughness.getHeight(); y++) {
+                for (int x = 0; x < roughness.getWidth(); x++) {
+                    roughness.write(x, y, 0, 255 - roughness.sample(x, y, 0));
+                }
+            }
+        }
+        
+        if (metallic != null && roughness != null) {
+            if (textures.metallic.equals(textures.roughness)) {
+                RGBA8Image aoMetallicRoughness = roughness;
+                metallic = metallic.copy();
+                roughness = roughness.copy();
+                ao = new RGBA8Image(w, h);
+                ao.copyChannelOf(aoMetallicRoughness, 0, 0);
+                roughness.copyChannelOf(aoMetallicRoughness, 1, 0);
+                metallic.copyChannelOf(aoMetallicRoughness, 2, 0);
+            }
+        }
+
+        if (emissive != null) {
+            diffuse = diffuse.copy();
+            emissive = emissive.copy();
+            NTexturesImporter.bakeEmissiveIntoColor(diffuse, emissive);
+        }
+        
+        NTextures e = NTexturesImporter.create(
+                false, textures.toString(), diffuse, normal, height,
+                roughness, metallic, ao, emissive, null);
+        synchronized (this.textures) {
+            this.textures.put(textures, e);
         }
     }
 
     private void loadMaterials() {
-        PointerBuffer materials = this.scene.mMaterials();
-        if (materials == null) {
+        PointerBuffer mats = this.scene.mMaterials();
+        if (mats == null) {
             return;
         }
 
-        List<Future<Pair<Integer, NMaterial>>> futureMaterials = new ArrayList<>();
-
+        List<Future<?>> futures = new ArrayList<>();
+        
         int amountOfMaterials = this.scene.mNumMaterials();
         for (int i = 0; i < amountOfMaterials; i++) {
             final int materialIndex = i;
 
-            AIMaterial aiMaterial = AIMaterial.createSafe(materials.get(materialIndex));
+            AIMaterial aiMaterial = AIMaterial.createSafe(mats.get(materialIndex));
             if (aiMaterial == null) {
                 continue;
             }
-
-            final int diffuseIndex = 0;
-
-            final int aoIndex = 1;
-            final int roughnessIndex = 2;
-            final int metallicIndex = 3;
-
-            final int heightIndex = 4;
-            final int normalIndex = 5;
-            final int emissiveIndex = 6;
-
-            final int fallbackDispIndex = 7;
-            final int fallbackDiffuseIndex = 8;
-            final int fallbackSpecularIndex = 9;
-            final int fallbackEmissiveIndex = 10;
-            final int fallbackOpacityIndex = 11;
-
-            final NTexturesImporter.LoadedImage[] images = new NTexturesImporter.LoadedImage[12];
-
-            images[diffuseIndex] = getMaterialTexture(aiMaterial, aiTextureType_BASE_COLOR);
-
-            images[aoIndex] = getMaterialTexture(aiMaterial, aiTextureType_AMBIENT_OCCLUSION);
-            images[roughnessIndex] = getMaterialTexture(aiMaterial, aiTextureType_DIFFUSE_ROUGHNESS);
-            images[metallicIndex] = getMaterialTexture(aiMaterial, aiTextureType_METALNESS);
-
-            images[heightIndex] = getMaterialTexture(aiMaterial, aiTextureType_HEIGHT);
-            images[normalIndex] = getMaterialTexture(aiMaterial, aiTextureType_NORMALS);
-            images[emissiveIndex] = getMaterialTexture(aiMaterial, aiTextureType_EMISSION_COLOR);
-
-            images[fallbackDispIndex] = getMaterialTexture(aiMaterial, aiTextureType_DISPLACEMENT);
-            images[fallbackDiffuseIndex] = getMaterialTexture(aiMaterial, aiTextureType_DIFFUSE);
-            images[fallbackSpecularIndex] = getMaterialTexture(aiMaterial, aiTextureType_SPECULAR);
-            images[fallbackEmissiveIndex] = getMaterialTexture(aiMaterial, aiTextureType_EMISSIVE);
-            images[fallbackOpacityIndex] = getMaterialTexture(aiMaterial, aiTextureType_OPACITY);
-
-            final NMaterial material = new NMaterial("material_" + materialIndex);
-
-            //todo: configure material
-            futureMaterials.add(this.service.submit(() -> {
-                int textureWidth = -1;
-                int textureHeight = -1;
-
-                for (NTexturesImporter.LoadedImage image : images) {
-                    if (image != null) {
-                        textureWidth = Math.max(textureWidth, image.width);
-                        textureHeight = Math.max(textureHeight, image.height);
-                    }
-                }
-
-                for (int j = 0; j < images.length; j++) {
-                    NTexturesImporter.LoadedImage image = images[j];
-                    if (image != null && image.width != textureWidth && image.height != textureHeight) {
-                        images[j] = NTexturesImporter.nearestResize(image, textureWidth, textureHeight);
-                    }
-                }
-
-                if (textureWidth == -1 || textureHeight == -1) {
-                    return new Pair<>(materialIndex, material);
-                }
-
-                boolean usingSpecularMap = false;
-                boolean usingMetallicRoughness = false;
-                boolean usingAoMetallicRoughness = false;
-
-                byte[] diffuseMap = null;
-                if (images[diffuseIndex] != null) {
-                    diffuseMap = images[diffuseIndex].pixelData;
-                } else if (images[fallbackDiffuseIndex] != null) {
-                    diffuseMap = images[fallbackDiffuseIndex].pixelData;
-                }
-
-                if (images[fallbackOpacityIndex] != null) {
-                    byte[] opacityMap = images[fallbackOpacityIndex].pixelData;
-                    byte[] newDiffuseMap;
-                    if (diffuseMap != null) {
-                        newDiffuseMap = diffuseMap.clone();
-                    } else {
-                        newDiffuseMap = new byte[textureWidth * textureHeight * 4];
-                        Arrays.fill(newDiffuseMap, (byte) 255);
-                    }
-                    for (int y = 0; y < textureHeight; y++) {
-                        for (int x = 0; x < textureWidth; x++) {
-                            byte opacity = opacityMap[0 + (x * 4) + (y * textureWidth * 4)];
-                            newDiffuseMap[3 + (x * 4) + (y * textureWidth * 4)] = opacity;
-                        }
-                    }
-                    diffuseMap = newDiffuseMap;
-                }
-
-                byte[] aoMap = null;
-                if (images[aoIndex] != null) {
-                    aoMap = images[aoIndex].pixelData;
-                }
-
-                byte[] roughnessMap = null;
-                if (images[roughnessIndex] != null) {
-                    roughnessMap = images[roughnessIndex].pixelData;
-                } else if (images[fallbackSpecularIndex] != null) {
-                    roughnessMap = images[fallbackSpecularIndex].pixelData;
-                    usingSpecularMap = true;
-                }
-
-                byte[] metallicMap = null;
-                if (images[metallicIndex] != null) {
-                    metallicMap = images[metallicIndex].pixelData;
-                    if (metallicMap == roughnessMap) {
-                        usingMetallicRoughness = true;
-                        if (metallicMap == aoMap) {
-                            usingAoMetallicRoughness = true;
-                        }
-                    }
-                }
-
-                byte[] heightMap = null;
-                if (images[heightIndex] != null) {
-                    heightMap = images[heightIndex].pixelData;
-                } else if (images[fallbackDispIndex] != null) {
-                    heightMap = images[fallbackDispIndex].pixelData;
-                }
-
-                byte[] normalMap = null;
-                if (images[normalIndex] != null) {
-                    normalMap = images[normalIndex].pixelData;
-                }
-
-                byte[] emissiveMap = null;
-                if (images[emissiveIndex] != null) {
-                    emissiveMap = images[emissiveIndex].pixelData;
-                } else if (images[fallbackEmissiveIndex] != null) {
-                    emissiveMap = images[fallbackEmissiveIndex].pixelData;
-                }
-
-                int width = textureWidth;
-                int height = textureHeight;
-
-                if (usingSpecularMap) {
-                    byte[] newMap = new byte[width * height * 4];
-                    for (int y = 0; y < height; y++) {
-                        for (int x = 0; x < width; x++) {
-                            int value = roughnessMap[0 + (x * 4) + (y * width * 4)] & 0xFF;
-                            newMap[0 + (x * 4) + (y * width * 4)] = (byte) (255 - value);
-                        }
-                    }
-                    roughnessMap = newMap;
-                } else if (usingMetallicRoughness) {
-                    byte[] newAoMap = new byte[width * height * 4];
-                    byte[] newRoughnessMap = new byte[width * height * 4];
-                    byte[] newMetallicMap = new byte[width * height * 4];
-                    for (int y = 0; y < height; y++) {
-                        for (int x = 0; x < width; x++) {
-                            byte ao = roughnessMap[0 + (x * 4) + (y * width * 4)];
-                            byte ie = roughnessMap[1 + (x * 4) + (y * width * 4)];
-                            byte rf = roughnessMap[2 + (x * 4) + (y * width * 4)];
-                            newAoMap[0 + (x * 4) + (y * width * 4)] = ao;
-                            newRoughnessMap[0 + (x * 4) + (y * width * 4)] = ie;
-                            newMetallicMap[0 + (x * 4) + (y * width * 4)] = rf;
-                        }
-                    }
-                    if (usingAoMetallicRoughness) {
-                        aoMap = newAoMap;
-                    }
-                    roughnessMap = newRoughnessMap;
-                    metallicMap = newMetallicMap;
-                }
-
-                NTextures textures = NTexturesImporter.load("textures_" + materialIndex,
-                        textureWidth, textureHeight,
-                        diffuseMap,
-                        aoMap,
-                        heightMap,
-                        roughnessMap,
-                        normalMap,
-                        metallicMap,
-                        emissiveMap
-                );
-
-                material.setTextures(textures);
-
-                return new Pair<>(materialIndex, material);
+            
+            MaterialTextures t = getMaterialTextures(aiMaterial);
+            futures.add(this.service.submit(() -> {
+                loadTexturesFromMaterialTextures(t);
             }));
         }
-
-        Map<String, NTextures> loadedTextures = new HashMap<>();
-
-        for (Future<Pair<Integer, NMaterial>> futurePair : futureMaterials) {
+        
+        for (Future<?> f:futures) {
             try {
-                Pair<Integer, NMaterial> pair = futurePair.get();
-
-                int index = pair.getA();
-                NMaterial material = pair.getB();
-
-                NTextures textures = material.getTextures();
-
-                String uid = textures.getUID();
-                NTextures alreadyLoaded = loadedTextures.get(uid);
-
-                if (alreadyLoaded != null) {
-                    material.setTextures(alreadyLoaded);
-                } else {
-                    loadedTextures.put(uid, textures);
-                }
-
-                this.loadedMaterials.put(index, material);
+                f.get();
             } catch (InterruptedException | ExecutionException ex) {
                 throw new RuntimeException(ex);
             }
         }
-
+        
+        for (int i = 0; i < amountOfMaterials; i++) {
+            AIMaterial aiMaterial = AIMaterial.createSafe(mats.get(i));
+            if (aiMaterial == null) {
+                continue;
+            }
+            
+            String materialName = "Material "+Integer.toString(i);
+            
+            AIString out = AIString.create();
+            int result = aiGetMaterialString(aiMaterial, AI_MATKEY_NAME, aiTextureType_NONE, 0, out);
+            if (result == aiReturn_SUCCESS) {
+                materialName = out.dataString();
+            }
+            
+            MaterialTextures texs = getMaterialTextures(aiMaterial);
+            NTextures materialTexture = this.textures.get(texs);
+            if (materialTexture == null) {
+                materialTexture = NTextures.BLANK_TEXTURE;
+            }
+            NMaterial material = new NMaterial(materialName, materialTexture);
+            
+            float metallic = 0f;
+            if (texs.metallic != null) {
+                metallic = 1f;
+            }
+            float roughness = 0f;
+            if (texs.roughness != null) {
+                roughness = 1f;
+            }
+            float height = 0f;
+            if (texs.height != null) {
+                height = 1f;
+            }
+            float emissive = 0f;
+            if (texs.emissive != null) {
+                emissive = 1f;
+            }
+            
+            AIColor4D colorOut = AIColor4D.create();
+            
+            result = aiGetMaterialColor(aiMaterial,
+                    AI_MATKEY_BASE_COLOR, aiTextureType_NONE, 0, colorOut);
+            if (result == aiReturn_SUCCESS) {
+                material.getNewColor()
+                        .set(colorOut.r(), colorOut.g(), colorOut.b(), colorOut.a());
+            }
+            
+            result = aiGetMaterialColor(aiMaterial,
+                    AI_MATKEY_METALLIC_FACTOR, aiTextureType_NONE, 0, colorOut);
+            if (result == aiReturn_SUCCESS) {
+                metallic = colorOut.r();
+            }
+            
+            result = aiGetMaterialColor(aiMaterial,
+                    AI_MATKEY_ROUGHNESS_FACTOR, aiTextureType_NONE, 0, colorOut);
+            if (result == aiReturn_SUCCESS) {
+                roughness = colorOut.r();
+            }
+            
+            result = aiGetMaterialColor(aiMaterial,
+                    AI_MATKEY_BUMPSCALING, aiTextureType_NONE, 0, colorOut);
+            if (result == aiReturn_SUCCESS) {
+                height = colorOut.r();
+            }
+            
+            result = aiGetMaterialColor(aiMaterial,
+                    AI_MATKEY_EMISSIVE_INTENSITY, aiTextureType_NONE, 0, colorOut);
+            if (result == aiReturn_SUCCESS) {
+                emissive = colorOut.r();
+            }
+            
+            material.setNewMetallic(metallic);
+            material.setNewRoughness(roughness);
+            material.setNewHeight(height);
+            material.setNewEmissive(emissive);
+            material.setNewAmbientOcclusion(1f);
+            
+            this.materials.put(i, material);
+        }
     }
-
+    
     private void clearImages() {
-        this.loadedImages.clear();
+        this.images.clear();
     }
 
     private List<Pair<float[], String[]>> splitByMaxBones(float[] toSplit, String[] totalBones) {
@@ -731,7 +819,7 @@ public class N3DModelImporter {
             for (int boneIndex = 0; boneIndex < amountOfBones; boneIndex++) {
                 AIBone bone = AIBone.create(bones.get(boneIndex));
                 String boneName = bone.mName().dataString();
-                
+
                 meshBones.add(boneName);
 
                 int numWeights = bone.mNumWeights();
@@ -812,7 +900,7 @@ public class N3DModelImporter {
 
                 vertices[verticesIndex + NMesh.OFFSET_TEXTURE_XY + 0] = texX;
                 vertices[verticesIndex + NMesh.OFFSET_TEXTURE_XY + 1] = texY;
-                
+
                 vertices[verticesIndex + NMesh.OFFSET_NORMAL_XYZ + 0] = norX;
                 vertices[verticesIndex + NMesh.OFFSET_NORMAL_XYZ + 1] = norY;
                 vertices[verticesIndex + NMesh.OFFSET_NORMAL_XYZ + 2] = norZ;
@@ -820,7 +908,7 @@ public class N3DModelImporter {
                 vertices[verticesIndex + NMesh.OFFSET_TANGENT_XYZ + 0] = tanX;
                 vertices[verticesIndex + NMesh.OFFSET_TANGENT_XYZ + 1] = tanY;
                 vertices[verticesIndex + NMesh.OFFSET_TANGENT_XYZ + 2] = tanZ;
-                
+
                 vertices[verticesIndex + NMesh.OFFSET_BONE_IDS_XYZW + 0] = Float.intBitsToFloat(-1);
                 vertices[verticesIndex + NMesh.OFFSET_BONE_IDS_XYZW + 1] = Float.intBitsToFloat(-1);
                 vertices[verticesIndex + NMesh.OFFSET_BONE_IDS_XYZW + 2] = Float.intBitsToFloat(-1);
@@ -860,16 +948,16 @@ public class N3DModelImporter {
         List<Pair<float[], String[]>> splitMeshes = splitByMaxBones(vertices, bonesArray);
         List<NGeometry> outputGeometries = new ArrayList<>();
 
-        NMaterial material = this.loadedMaterials.get(mesh.mMaterialIndex());
+        NMaterial material = this.materials.get(mesh.mMaterialIndex());
         if (material == null) {
             material = NMaterial.NULL_MATERIAL;
         }
 
         for (int i = 0; i < splitMeshes.size(); i++) {
             Pair<float[], String[]> splitMesh = splitMeshes.get(i);
-            
+
             float[] splitMeshVertices = splitMesh.getA();
-            
+
             Pair<float[], int[]> newMesh = MeshUtils.generateIndices(splitMeshVertices, NMesh.VERTEX_SIZE);
 
             float[] finalVertices = newMesh.getA();
@@ -879,7 +967,7 @@ public class N3DModelImporter {
             if (splitMeshes.size() > 1) {
                 name += "_" + i;
             }
-            
+
             NMesh loadedMesh = new NMesh(
                     name,
                     finalVertices, finalIndices,
@@ -950,7 +1038,7 @@ public class N3DModelImporter {
     }
 
     private void clearMaterials() {
-        this.loadedMaterials.clear();
+        this.materials.clear();
     }
 
     private N3DModelNode recursiveNodeGeneration(AINode node) {
@@ -972,7 +1060,7 @@ public class N3DModelImporter {
             for (int i = 0; i < amountOfGeometries; i++) {
                 List<NGeometry> geometriesList = this.loadedGeometries.get(geometriesIndex.get(i));
                 if (geometriesList != null) {
-                    for (NGeometry geo:geometriesList) {
+                    for (NGeometry geo : geometriesList) {
                         geometries.add(new NGeometry(geo.getName(), geo.getMesh(), geo.getMaterial()));
                     }
                 }
@@ -1003,12 +1091,12 @@ public class N3DModelImporter {
     private N3DModelNode generateRootNode() {
         return recursiveNodeGeneration(this.scene.mRootNode());
     }
-    
+
     private N3DModel process() {
         try {
             loadAnimations();
             findMissingMeshBones();
-
+            
             loadImages();
             loadMaterials();
             clearImages();
@@ -1024,7 +1112,7 @@ public class N3DModelImporter {
             if (finalModel.getNumberOfAnimations() > 0) {
                 finalModel.generateAnimatedAabb();
             }
-            
+
             return finalModel;
         } finally {
             this.service.shutdownNow();

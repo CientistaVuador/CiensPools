@@ -128,7 +128,6 @@ public class N3DModel {
             aabbGenerated = true;
         }
         
-        Set<String> nodeNames = new HashSet<>();
         List<N3DModelNode> nodesList = new ArrayList<>();
         int globalNodeId = 0;
         
@@ -154,12 +153,6 @@ public class N3DModel {
 
             N3DModelNode currentNode;
             while ((currentNode = current.poll()) != null) {
-                if (nodeNames.contains(currentNode.getName())) {
-                    throw new IllegalArgumentException("This model already contains a node named "+currentNode.getName());
-                } else {
-                    nodeNames.add(currentNode.getName());
-                }
-                
                 currentNode.recalculateMatrices();
                 
                 Matrix4fc totalTransformation = currentNode.getToRootSpace();

@@ -134,8 +134,12 @@ public class NProgram {
             uniform sampler2DArray waterFrames;
             
             vec3 sampleWaterNormal(vec2 uv) {
-                vec4 waterColor = texture(waterFrames, vec3(uv, waterCounter * float(textureSize(waterFrames, 0).z)));
-                float nx = (((waterColor.r + waterColor.g + waterColor.b) / 3.0) * 2.0) - 1.0;
+                float frame = waterCounter * float(textureSize(waterFrames, 0).z);
+                vec4 waterNormalA = texture(waterFrames, vec3(uv, floor(frame)));
+                vec4 waterNormalB = texture(waterFrames, vec3(uv, ceil(frame)));
+                float a = 0.0;
+                vec4 waterColor = mix(waterNormalA, waterNormalB, modf(frame, a));
+                float nx = (waterColor.g * 2.0) - 1.0;
                 float ny = (waterColor.a * 2.0) - 1.0;
                 vec3 waterNormal = vec3(
                     nx,
@@ -176,8 +180,10 @@ public class NProgram {
                 return texture(materialTextures, vec3(uv, 1.0));
             }
             
-            vec4 rf_em_wt_ny(vec2 uv) {
-                return texture(materialTextures, vec3(uv, 2.0));
+            vec4 ao_em_wt_ny(vec2 uv) {
+                vec4 c = texture(materialTextures, vec3(uv, 2.0));
+                c[1] = toLinear(c[1]);
+                return c;
             }
             
             //lightmaps texture
@@ -269,6 +275,7 @@ public class NProgram {
                 float water;
                 float refraction;
                 float refractionPower;
+                float ambientOcclusion;
                 float fresnelOutline;
                 vec3 fresnelOutlineColor;
             };
@@ -519,7 +526,7 @@ public class NProgram {
                 }
                 
                 vec4 htrgmtnx = ht_rg_mt_nx(uv);
-                vec4 rfemwtny = rf_em_wt_ny(uv);
+                vec4 aoemwtny = ao_em_wt_ny(uv);
                 
                 vec4 color = r_g_b_a(uv) * material.color;
                 #if defined(VARIANT_ALPHA_TESTING)
@@ -529,14 +536,15 @@ public class NProgram {
                 #endif
                 float metallic = htrgmtnx[2] * material.metallic;
                 float roughness = htrgmtnx[1] * material.roughness;
-                float emissive = rfemwtny[1] * material.emissive;
-                float water = rfemwtny[2] * material.water;
-                float refraction = rfemwtny[0] * material.refraction;
+                float emissive = aoemwtny[1] * material.emissive;
+                float water = aoemwtny[2] * material.water;
+                float refraction = material.refraction;
+                float ambientOcclusion = aoemwtny[0] * material.ambientOcclusion;
                 float fresnelOutline = material.fresnelOutline;
                 vec3 fresnelOutlineColor = material.fresnelOutlineColor;
                 vec3 vertexNormal = normalize(inVertex.worldNormal);
                 float nx = (htrgmtnx[3] * 2.0) - 1.0;
-                float ny = (rfemwtny[3] * 2.0) - 1.0;
+                float ny = (aoemwtny[3] * 2.0) - 1.0;
                 vec3 normal = normalize(vec3(nx, ny, sqrt(abs(1.0 - (nx * nx) - (ny * ny)))));
                 if (enableWater) {
                     normal = mix(normal, sampleWaterNormal(uv), water);
@@ -566,12 +574,14 @@ public class NProgram {
                         outputColor.rgb += 
                             sampleLightmaps(inVertex.worldLightmapTexture, i, intensity).rgb
                             * mix(color.rgb, vec3(0.0), metallic)
-                            * lightmapAo;
+                            * lightmapAo
+                            * ambientOcclusion
+                            ;
                     }
                 }
                 
                 BlinnPhongMaterial bpMaterial = convertPBRMaterialToBlinnPhong(
-                    viewDirection, normal, color.rgb, metallic, roughness, 1.0, fresnel,
+                    viewDirection, normal, color.rgb, metallic, roughness, ambientOcclusion, fresnel,
                     material.inverseRoughnessExponent, material.diffuseSpecularRatio
                 );
                 if (!enableReflections) {
@@ -585,7 +595,8 @@ public class NProgram {
                     outputColor.rgb += calculateLight(light, bpMaterial, position, viewDirection, normal);
                 }
                 
-                outputColor.rgb += mix(ambientLight(normal) * color.rgb, vec3(0.0), metallic);
+                outputColor.rgb += 
+                        mix(ambientLight(normal) * color.rgb * ambientOcclusion, vec3(0.0), metallic);
                 outputColor.rgb += color.rgb * emissive;
                 
                 if (enableReflections) {
@@ -738,6 +749,7 @@ public class NProgram {
     public static final String UNIFORM_MATERIAL_WATER = "material.water";
     public static final String UNIFORM_MATERIAL_REFRACTION = "material.refraction";
     public static final String UNIFORM_MATERIAL_REFRACTION_POWER = "material.refractionPower";
+    public static final String UNIFORM_MATERIAL_AMBIENT_OCCLUSION = "material.ambientOcclusion";
     public static final String UNIFORM_MATERIAL_FRESNEL_OUTLINE = "material.fresnelOutline";
     public static final String UNIFORM_MATERIAL_FRESNEL_OUTLINE_COLOR = "material.fresnelOutlineColor";
     

@@ -26,19 +26,25 @@
  */
 package cientistavuador.cienspools.newrendering;
 
+import cientistavuador.cienspools.util.ColorUtils;
 import cientistavuador.cienspools.util.CryptoUtils;
 import cientistavuador.cienspools.util.DXT5TextureStore;
+import cientistavuador.cienspools.util.DXT5TextureStore.DXT5Texture;
 import cientistavuador.cienspools.util.ImageUtils;
 import cientistavuador.cienspools.util.M8Image;
+import cientistavuador.cienspools.util.Pair;
 import cientistavuador.cienspools.util.PixelUtils;
 import cientistavuador.cienspools.util.PixelUtils.PixelStructure;
+import cientistavuador.cienspools.util.RGBA8Image;
 import cientistavuador.cienspools.util.postprocess.MarginAutomata;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
+import java.util.Objects;
 import java.util.regex.Pattern;
+import org.joml.Vector4f;
 import org.lwjgl.system.MemoryUtil;
 import static org.lwjgl.stb.STBImage.*;
 import org.lwjgl.system.MemoryStack;
@@ -49,6 +55,122 @@ import org.lwjgl.system.MemoryStack;
  */
 public class NTexturesImporter {
 
+    public static NBlendingMode findBlendingMode(RGBA8Image image) {
+        Objects.requireNonNull(image, "Image is null");
+        NBlendingMode mode = NBlendingMode.OPAQUE;
+        for (int y = 0; y < image.getHeight(); y++) {
+            for (int x = 0; x < image.getWidth(); x++) {
+                int alpha = image.sample(x, y, 3);
+                if (alpha != 255 && mode.equals(NBlendingMode.OPAQUE)) {
+                    mode = NBlendingMode.ALPHA_TESTING;
+                }
+                if (alpha != 0 && alpha != 255 && mode.equals(NBlendingMode.ALPHA_TESTING)) {
+                    mode = NBlendingMode.ALPHA_BLENDING;
+                    return mode;
+                }
+            }
+        }
+        return mode;
+    }
+    
+    public static DXT5Texture create_cr_cg_cb_ca(RGBA8Image image, NBlendingMode mode) {
+        if (mode.equals(NBlendingMode.OPAQUE)) {
+            image = image.copy();
+            M8Image.rgbaToM8(image.getRGBA(), image.getWidth(), image.getHeight());
+        }
+        return DXT5TextureStore.createDXT5Texture(image.getRGBA(), image.getWidth(), image.getHeight());
+    }
+    
+    public static DXT5Texture create_ht_rg_mt_nx(
+            int defaultWidth, int defaultHeight,
+            RGBA8Image height, RGBA8Image roughness, RGBA8Image metallic, RGBA8Image normalMap
+    ) {
+        RGBA8Image compacted = RGBA8Image
+                .ofSameSize(defaultWidth, defaultHeight, height, roughness, metallic, normalMap);
+        compacted.fill(255, 255, 255, 127);
+        if (height != null) {
+            compacted.copyChannelOf(height, 0, 0);
+        }
+        if (roughness != null) {
+            compacted.copyChannelOf(roughness, 0, 1);
+        }
+        if (metallic != null) {
+            compacted.copyChannelOf(metallic, 0, 2);
+        }
+        if (normalMap != null) {
+            compacted.copyChannelOf(normalMap, 0, 3);
+        }
+        return DXT5TextureStore
+                .createDXT5Texture(compacted.getRGBA(), compacted.getWidth(), compacted.getHeight());
+    }
+    
+    public static DXT5Texture create_ao_em_wt_ny(
+            int defaultWidth, int defaultHeight,
+            RGBA8Image ambientOcclusion, RGBA8Image emissive, RGBA8Image water, RGBA8Image normalMap
+    ) {
+        RGBA8Image compacted = RGBA8Image
+                .ofSameSize(defaultWidth, defaultHeight, ambientOcclusion, emissive, water, normalMap);
+        compacted.fill(255, 255, 255, 127);
+        if (ambientOcclusion != null) {
+            compacted.copyChannelOf(ambientOcclusion, 0, 0);
+        }
+        if (emissive != null) {
+            compacted.copyChannelOf(emissive, 0, 1);
+        }
+        if (water != null) {
+            compacted.copyChannelOf(water, 0, 2);
+        }
+        if (normalMap != null) {
+            compacted.copyChannelOf(normalMap, 1, 3);
+        }
+        return DXT5TextureStore
+                .createDXT5Texture(compacted.getRGBA(), compacted.getWidth(), compacted.getHeight());
+    }
+    
+    public static void bakeEmissiveIntoColor(RGBA8Image color, RGBA8Image emissive) {
+        Objects.requireNonNull(color, "color is null.");
+        Objects.requireNonNull(emissive, "emissive is null.");
+        RGBA8Image.validateSize(emissive, color.getWidth(), color.getHeight());
+        
+        Vector4f c = new Vector4f();
+        Vector4f e = new Vector4f();
+        for (int y = 0; y < color.getHeight(); y++) {
+            for (int x = 0; x < color.getWidth(); x++) {
+                color.sample(x, y, c);
+                emissive.sample(x, y, e);
+                
+                ColorUtils.mergeEmissiveWithColor(c, e);
+                
+                color.write(x, y, c);
+                emissive.write(x, y, e);
+            }
+        }
+    }
+    
+    public static NTextures create(
+            boolean useAlphaTestingHint,
+            String name,
+            RGBA8Image color,
+            RGBA8Image normalMap,
+            RGBA8Image height, RGBA8Image roughness, RGBA8Image metallic,
+            RGBA8Image ambientOcclusion, RGBA8Image emissive, RGBA8Image water
+    ) {
+        Objects.requireNonNull(color, "Color is null.");
+        int defaultWidth = color.getWidth();
+        int defaultHeight = color.getHeight();
+        NBlendingMode optimalBlendingMode = findBlendingMode(color);
+        if (useAlphaTestingHint 
+                && optimalBlendingMode.equals(NBlendingMode.ALPHA_BLENDING)) {
+            optimalBlendingMode = NBlendingMode.ALPHA_TESTING;
+        }
+        DXT5Texture cr_cg_cb_ca = create_cr_cg_cb_ca(color, optimalBlendingMode);
+        DXT5Texture ht_rg_mt_nx = create_ht_rg_mt_nx(defaultWidth, defaultHeight,
+                height, roughness, metallic, normalMap);
+        DXT5Texture ao_em_wt_ny = create_ao_em_wt_ny(defaultWidth, defaultHeight,
+                ambientOcclusion, emissive, water, normalMap);
+        return new NTextures(name, optimalBlendingMode, cr_cg_cb_ca, ht_rg_mt_nx, ao_em_wt_ny);
+    }
+    
     public static final float MINIMUM_AMBIENT_OCCLUSION = 0.5f;
 
     private static byte[] loadFromJarOrNull(String path) throws FileNotFoundException, IOException {

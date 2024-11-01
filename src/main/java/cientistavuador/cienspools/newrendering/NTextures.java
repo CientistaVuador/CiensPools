@@ -63,7 +63,7 @@ public class NTextures {
 
     public static final String ERROR_CR_CG_CB_CA_DATA = "KLUv/aDwVQUA9AIA0oUPGMCnNd7//+r/0890pNcol2T9xZau2d22Un93FxVR8bd2d/d/axFieLBnPd0YzJij/JI4TfXTwIoQDhnMWgEIAIXnA3BykD/4qf358w9Q/lD/AwgJJM4VB+zWAUwAAAj/AQD8/zkQAiUBAJAAAAUFUFARRBFEF7gXuKqqqqoEAF0Fel7/AU/y/zP1OqAuEA==";
     public static final String ERROR_HT_RG_MT_NX_DATA = "KLUv/aDwVQUAVAIAksQNFdBdA4AKeMBEAKKkVBxtUTmLlUtUCrXWeu21/0/pyZDRk+oX/zn8e5H9txXh5X/x4IsZ/zxOqQUA2v5n5gsgJJA4VxywWwdEAAAAAQD9/5NPIEUAAAABAO1VOQAC";
-    public static final String ERROR_ER_EG_EB_NY_DATA = "KLUv/aDwVQUALAIAkoQMFMBrDv/D/I9YrqzKzPdv1ZBak0Skd3f/N80iDQm2rJ+rwYy14xGjKdE/A6MknFHJWgEFANr+Z+YLICSQOFccsFsHRAAAAAEA/f+TTyBFAAAAAQDtVTkAAg==";
+    public static final String ERROR_AO_EM_WT_NY_DATA = "KLUv/aDwVQUALAIAkoQMFMBrDv/D/I9YrqzKzPdv1ZBak0Skd3f/N80iDQm2rJ+rwYy14xGjKdE/A6MknFHJWgEFANr+Z+YLICSQOFccsFsHRAAAAAEA/f+TTyBFAAAAAQDtVTkAAg==";
 
     public static final NTextures NULL_TEXTURE;
 
@@ -73,15 +73,15 @@ public class NTextures {
                     new ByteArrayInputStream(Base64.getDecoder().decode(ERROR_CR_CG_CB_CA_DATA)));
             DXT5Texture ht_rg_mt_nx = DXT5TextureStore.readDXT5Texture(
                     new ByteArrayInputStream(Base64.getDecoder().decode(ERROR_HT_RG_MT_NX_DATA)));
-            DXT5Texture rf_em_wt_ny = DXT5TextureStore.readDXT5Texture(
-                    new ByteArrayInputStream(Base64.getDecoder().decode(ERROR_ER_EG_EB_NY_DATA)));
+            DXT5Texture ao_em_wt_ny = DXT5TextureStore.readDXT5Texture(
+                    new ByteArrayInputStream(Base64.getDecoder().decode(ERROR_AO_EM_WT_NY_DATA)));
 
             NULL_TEXTURE = new NTextures(
                     "Error/Null/Empty Texture",
                     "Error/Null/Empty Texture",
                     NBlendingMode.OPAQUE,
                     false,
-                    cr_cg_cb_ca, ht_rg_mt_nx, rf_em_wt_ny
+                    cr_cg_cb_ca, ht_rg_mt_nx, ao_em_wt_ny
             );
         } catch (IOException ex) {
             throw new UncheckedIOException(ex);
@@ -90,7 +90,7 @@ public class NTextures {
 
     public static final String BLANK_CR_CG_CB_CA_DATA = "KLUv/SCwPQIAogQNF8CnNf//b/0v/+sjvUa5JOv/b6RaNhcp19x/l0DBYS3q9vS8lmL8USjJ80e3WwEBZxKiVAYgwOMB0whwgQMhJU6ROQE=";
     public static final String BLANK_HT_RG_MT_NX_DATA = "KLUv/SCwTQIAooQNFtBnDAAApbD9NBIi0vhjX9EJ1EqzSgFRzv+PcbPiwt759SeDZ8ylf4VcG/z/++uvjw0/JOucBiDA4wHTCHCBAyElTpE5AQ==";
-    public static final String BLANK_RF_EM_WT_NY_DATA = "KLUv/SCwTQIAooQNFtBnDAAApbD9NBIi0vhjX9EJ1EqzSgFRzv+PcbPiwt759SeDZ8ylf4VcG/z/++uvjw0/JOucBiDA4wHTCHCBAyElTpE5AQ==";
+    public static final String BLANK_AO_EM_WT_NY_DATA = "KLUv/SCwTQIAooQNFtBnDAAApbD9NBIi0vhjX9EJ1EqzSgFRzv+PcbPiwt759SeDZ8ylf4VcG/z/++uvjw0/JOucBiDA4wHTCHCBAyElTpE5AQ==";
 
     public static final NTextures BLANK_TEXTURE;
 
@@ -101,15 +101,15 @@ public class NTextures {
                     new ByteArrayInputStream(Base64.getDecoder().decode(BLANK_CR_CG_CB_CA_DATA)));
             DXT5Texture ht_rg_mt_nx = DXT5TextureStore.readDXT5Texture(
                     new ByteArrayInputStream(Base64.getDecoder().decode(BLANK_HT_RG_MT_NX_DATA)));
-            DXT5Texture rf_em_wt_ny = DXT5TextureStore.readDXT5Texture(
-                    new ByteArrayInputStream(Base64.getDecoder().decode(BLANK_RF_EM_WT_NY_DATA)));
+            DXT5Texture ao_em_wt_ny = DXT5TextureStore.readDXT5Texture(
+                    new ByteArrayInputStream(Base64.getDecoder().decode(BLANK_AO_EM_WT_NY_DATA)));
 
             BLANK_TEXTURE = new NTextures(
                     "Blank Texture",
                     "Blank Texture",
                     NBlendingMode.OPAQUE,
                     false,
-                    cr_cg_cb_ca, ht_rg_mt_nx, rf_em_wt_ny
+                    cr_cg_cb_ca, ht_rg_mt_nx, ao_em_wt_ny
             );
         } catch (IOException ex) {
             throw new UncheckedIOException(ex);
@@ -147,6 +147,16 @@ public class NTextures {
     private WeakReference<byte[]> decompressed_ht_rg_mt_nx_ref = null;
     private WeakReference<byte[]> decompressed_er_eg_eb_ny_ref = null;
 
+    public NTextures(
+            String name,
+            NBlendingMode blendingMode,
+            DXT5Texture texture_cr_cg_cb_ca,
+            DXT5Texture texture_ht_rg_mt_nx,
+            DXT5Texture texture_ao_em_wt_ny
+    ) {
+        this(name, null, blendingMode, false, texture_cr_cg_cb_ca, texture_ht_rg_mt_nx, texture_ao_em_wt_ny);
+    }
+    
     public NTextures(
             String name,
             String uid,
@@ -229,6 +239,7 @@ public class NTextures {
     
     public void writeResourceEntry(ResourceEntry entry, String path) {
         entry.setType(RESOURCE_TYPE);
+        entry.getMeta().put("name", getName());
         entry.getMeta().put("blendingMode", getBlendingMode().name());
         if (!path.isEmpty() && !path.endsWith("/")) {
             path += "/";

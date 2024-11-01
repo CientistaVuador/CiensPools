@@ -164,6 +164,7 @@ public class ColorUtils {
         emissive.set(luminance, luminance, luminance);
         
         ColorUtils.toSRGBSpace(color);
+        ColorUtils.toSRGBSpace(emissive);
     }
 
     private ColorUtils() {
