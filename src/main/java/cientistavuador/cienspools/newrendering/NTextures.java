@@ -30,17 +30,21 @@ import cientistavuador.cienspools.Main;
 import cientistavuador.cienspools.resourcepack.Resource;
 import cientistavuador.cienspools.resourcepack.ResourcePackWriter.DataEntry;
 import cientistavuador.cienspools.resourcepack.ResourcePackWriter.ResourceEntry;
+import cientistavuador.cienspools.resourcepack.ResourceRW;
 import cientistavuador.cienspools.util.DXT5TextureStore;
 import cientistavuador.cienspools.util.DXT5TextureStore.DXT5Texture;
 import cientistavuador.cienspools.util.M8Image;
 import cientistavuador.cienspools.util.MipmapUtils;
 import cientistavuador.cienspools.util.ObjectCleaner;
 import cientistavuador.cienspools.util.StringUtils;
+import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Base64;
 import java.util.Objects;
 import java.util.UUID;
@@ -59,11 +63,9 @@ import static org.lwjgl.system.MemoryUtil.*;
  */
 public class NTextures {
 
-    private static final AtomicLong textureIds = new AtomicLong();
-
-    public static final String ERROR_CR_CG_CB_CA_DATA = "KLUv/aDwVQUA9AIA0oUPGMCnNd7//+r/0890pNcol2T9xZau2d22Un93FxVR8bd2d/d/axFieLBnPd0YzJij/JI4TfXTwIoQDhnMWgEIAIXnA3BykD/4qf358w9Q/lD/AwgJJM4VB+zWAUwAAAj/AQD8/zkQAiUBAJAAAAUFUFARRBFEF7gXuKqqqqoEAF0Fel7/AU/y/zP1OqAuEA==";
-    public static final String ERROR_HT_RG_MT_NX_DATA = "KLUv/aDwVQUAVAIAksQNFdBdA4AKeMBEAKKkVBxtUTmLlUtUCrXWeu21/0/pyZDRk+oX/zn8e5H9txXh5X/x4IsZ/zxOqQUA2v5n5gsgJJA4VxywWwdEAAAAAQD9/5NPIEUAAAABAO1VOQAC";
-    public static final String ERROR_AO_EM_WT_NY_DATA = "KLUv/aDwVQUALAIAkoQMFMBrDv/D/I9YrqzKzPdv1ZBak0Skd3f/N80iDQm2rJ+rwYy14xGjKdE/A6MknFHJWgEFANr+Z+YLICSQOFccsFsHRAAAAAEA/f+TTyBFAAAAAQDtVTkAAg==";
+    public static final String ERROR_CR_CG_CB_CA_DATA = "KLUv/aDwVQEAvQMAgoYSGcBrDn5V/R//n//xyqWOjLN/YHhkdo1dOwXvvZcpmZK4xA1DFP3+37b33tMWbfm3rYMUG+pyF84MpigLeumxqsYHBj4Q4hgzORcNAF2Bn9cf+CT/z+TrgT4AqEN+UAAsaD9fVFB+qAoEAAcQEkicKw7YrQM=";
+    public static final String ERROR_HT_RG_MT_NX_DATA = "KLUv/aDwVQEAVQIAcsQNFdBdAwAADZgIQJSUiqMtKueISDeQFNZae++9/1/r6pATnOsXPzo8hLL9Oybj5cEP3pzxU/TWCgUAuqpm5gsgJJA4V4x4Sxg=";
+    public static final String ERROR_AO_EM_WT_NY_DATA = "KLUv/aDwVQEAVQIAcsQNFdBdAwAADZgIQJSUiqMtKueISDeQFNZae++9/1/r6pATnOsXPzo8hLL9Oybj5cEP3pzxU/TWCgUAuqpm5gsgJJA4V4x4Sxg=";
 
     public static final NTextures NULL_TEXTURE;
 
@@ -116,27 +118,91 @@ public class NTextures {
         }
     }
 
-    public static final String RESOURCE_TYPE = "texture";
-    public static final String CR_CG_CB_CA_DATA_TYPE = "application/zstd;name=cr_cg_cb_ca";
-    public static final String HT_RG_MT_NX_DATA_TYPE = "application/zstd;name=ht_rg_mt_nx";
-    public static final String AO_EM_WT_NY_DATA_TYPE = "application/zstd;name=ao_em_wt_ny";
+    public static final ResourceRW<NTextures> RESOURCES = new ResourceRW<NTextures>(true) {
+        public static final String RESOURCE_TYPE = "texture";
+        public static final String CR_CG_CB_CA_DATA_TYPE = "application/zstd;name=cr_cg_cb_ca";
+        public static final String HT_RG_MT_NX_DATA_TYPE = "application/zstd;name=ht_rg_mt_nx";
+        public static final String AO_EM_WT_NY_DATA_TYPE = "application/zstd;name=ao_em_wt_ny";
+
+        @Override
+        public String getResourceType() {
+            return RESOURCE_TYPE;
+        }
+
+        private DXT5Texture readTexture(Resource r, String type) throws IOException {
+            Path p = r.getData().get(type);
+            if (p == null) {
+                return null;
+            }
+            try (BufferedInputStream in = new BufferedInputStream(Files.newInputStream(p))) {
+                return DXT5TextureStore.readDXT5Texture(in);
+            }
+        }
+        
+        @Override
+        public NTextures readResource(Resource r) throws IOException {
+            if (r == null) {
+                return NTextures.NULL_TEXTURE;
+            }
+            NBlendingMode mode;
+            try {
+                mode = NBlendingMode.valueOf(r.getMeta().get("blendingMode"));
+            } catch (NullPointerException | IllegalArgumentException ex) {
+                mode = NBlendingMode.OPAQUE;
+            }
+            
+            DXT5Texture texture_cr_cg_cb_ca = readTexture(r, CR_CG_CB_CA_DATA_TYPE);
+            DXT5Texture texture_ht_rg_mt_nx = readTexture(r, HT_RG_MT_NX_DATA_TYPE);
+            DXT5Texture texture_ao_em_wt_ny = readTexture(r, AO_EM_WT_NY_DATA_TYPE);
+            
+            return new NTextures(
+                    r.getId(), mode,
+                    texture_cr_cg_cb_ca,
+                    texture_ht_rg_mt_nx,
+                    texture_ao_em_wt_ny
+            );
+        }
+
+        private void writeTexture(
+                ResourceEntry entry, String type, String path, DXT5Texture texture
+        ) {
+            entry.getData().put(type,
+                    new DataEntry(path,
+                            new ByteArrayInputStream(
+                                    DXT5TextureStore.writeDXT5Texture(texture))));
+        }
+
+        @Override
+        public void writeResource(NTextures obj, ResourceEntry entry, String path) throws IOException {
+            entry.setType(RESOURCE_TYPE);
+            entry.setId(obj.getName());
+            entry.getMeta().put("blendingMode", obj.getBlendingMode().name());
+            if (!path.isEmpty() && !path.endsWith("/")) {
+                path += "/";
+            }
+            writeTexture(entry, CR_CG_CB_CA_DATA_TYPE,
+                    path + "cr_cg_cb_ca.dds.zst", obj.texture_cr_cg_cb_ca());
+            writeTexture(entry, HT_RG_MT_NX_DATA_TYPE,
+                    path + "ht_rg_mt_nx.dds.zst", obj.texture_ht_rg_mt_nx());
+            writeTexture(entry, AO_EM_WT_NY_DATA_TYPE,
+                    path + "ao_em_wt_ny.dds.zst", obj.texture_ao_em_wt_ny());
+        }
+        
+    };
+
+    private static final AtomicLong textureIds = new AtomicLong();
 
     private static class WrappedTextures {
 
         public int textures = 0;
     }
-
-    private Resource associatedResource = null;
-
+    
     private final String name;
     private final String uid;
     private final NBlendingMode blendingMode;
     private final boolean heightMapSupported;
     private final int width;
     private final int height;
-    //new: Red, Green, Blue, Alpha
-    //new: Height, Roughness, Metallic, Normal X
-    //new: Ao, Emissive, Water, Normal Y
     private final DXT5Texture texture_cr_cg_cb_ca;
     private final DXT5Texture texture_ht_rg_mt_nx;
     private final DXT5Texture texture_ao_em_wt_ny;
@@ -156,7 +222,7 @@ public class NTextures {
     ) {
         this(name, null, blendingMode, false, texture_cr_cg_cb_ca, texture_ht_rg_mt_nx, texture_ao_em_wt_ny);
     }
-    
+
     public NTextures(
             String name,
             String uid,
@@ -219,36 +285,7 @@ public class NTextures {
             });
         });
     }
-
-    public Resource getAssociatedResource() {
-        return associatedResource;
-    }
-
-    public void setAssociatedResource(Resource associatedResource) {
-        this.associatedResource = associatedResource;
-    }
     
-    private void writeTexture(
-            ResourceEntry entry, String type, String path, DXT5Texture texture
-    ) {
-        entry.getData().put(type, 
-                new DataEntry(path, 
-                        new ByteArrayInputStream(
-                                DXT5TextureStore.writeDXT5Texture(texture))));
-    }
-    
-    public void writeResourceEntry(ResourceEntry entry, String path) {
-        entry.setType(RESOURCE_TYPE);
-        entry.getMeta().put("name", getName());
-        entry.getMeta().put("blendingMode", getBlendingMode().name());
-        if (!path.isEmpty() && !path.endsWith("/")) {
-            path += "/";
-        }
-        writeTexture(entry, CR_CG_CB_CA_DATA_TYPE, path + "cr_cg_cb_ca.dds.zst", texture_cr_cg_cb_ca());
-        writeTexture(entry, HT_RG_MT_NX_DATA_TYPE, path + "ht_rg_mt_nx.dds.zst", texture_ht_rg_mt_nx());
-        writeTexture(entry, AO_EM_WT_NY_DATA_TYPE, path + "ao_em_wt_ny.dds.zst", texture_ao_em_wt_ny());
-    }
-
     public String getName() {
         return name;
     }

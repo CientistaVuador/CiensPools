@@ -144,7 +144,7 @@ public class ResourcePackWriter implements AutoCloseable {
 
         public void setType(String type) {
             if (type == null) {
-                type = "unknown";
+                type = "null";
             }
             this.type = type;
         }

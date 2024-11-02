@@ -36,7 +36,7 @@ import java.util.Set;
 public class ResourcePackUtils {
     protected static Set<Resource> getResourcesById(String id, Map<String, Set<Resource>> idMap) {
         if (id == null) {
-            id = "";
+            id = "null";
         }
         Set<Resource> list = idMap.get(id);
         if (list == null) {
@@ -47,7 +47,7 @@ public class ResourcePackUtils {
 
     protected static Set<Resource> getResourcesByType(String type, Map<String, Set<Resource>> typeMap) {
         if (type == null) {
-            type = "";
+            type = "null";
         }
         Set<Resource> list = typeMap.get(type);
         if (list == null) {

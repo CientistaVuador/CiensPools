@@ -47,6 +47,9 @@ import cientistavuador.cienspools.newrendering.NTextures;
 import cientistavuador.cienspools.physics.PlayerController;
 import cientistavuador.cienspools.popups.BakePopup;
 import cientistavuador.cienspools.popups.ContinuePopup;
+import cientistavuador.cienspools.resourcepack.ResourcePackReader;
+import cientistavuador.cienspools.resourcepack.ResourcePackWriter;
+import cientistavuador.cienspools.resourcepack.ResourcePackWriter.ResourceEntry;
 import cientistavuador.cienspools.text.GLFontRenderer;
 import cientistavuador.cienspools.text.GLFontSpecifications;
 import cientistavuador.cienspools.ubo.CameraUBO;
@@ -67,12 +70,16 @@ import com.simsilica.mathd.Vec3d;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import static org.lwjgl.glfw.GLFW.*;
+import org.xml.sax.SAXException;
 
 /**
  *
@@ -129,7 +136,7 @@ public class Game {
                         .importFromJarFile("cientistavuador/cienspools/resources/models/room.glb");
                 N3DObject room = new N3DObject("room", roomModel);
                 mapObjects.add(room);
-
+                
                 roomModel.getGeometry(2).getMaterial().setNewDiffuseSpecularRatio(0.05f);
                 roomModel.getGeometry(1).setMaterial(NMaterial.WATER);
             }
@@ -188,7 +195,7 @@ public class Game {
                 //this.boomBoxes.add(cube);
             }
         } catch (IOException ex) {
-            throw new UncheckedIOException(ex);
+            throw new RuntimeException(ex);
         }
 
         Scene.EmissiveLight emissive = new Scene.EmissiveLight();

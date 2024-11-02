@@ -213,13 +213,6 @@ public class NMaterial {
         meta.put("fresnelOutlineColor.r", Float.toString(getNewFresnelOutlineColor().x()));
         meta.put("fresnelOutlineColor.g", Float.toString(getNewFresnelOutlineColor().y()));
         meta.put("fresnelOutlineColor.b", Float.toString(getNewFresnelOutlineColor().z()));
-        
-        Resource resourceTexture = getTextures().getAssociatedResource();
-        if (resourceTexture == null) {
-            meta.remove("texture");
-        } else {
-            meta.put("texture", resourceTexture.getId());
-        }
     }
 
     public String getName() {

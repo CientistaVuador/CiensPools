@@ -26,6 +26,7 @@
  */
 package cientistavuador.cienspools.newrendering;
 
+import cientistavuador.cienspools.resourcepack.Resource;
 import cientistavuador.cienspools.util.MeshUtils;
 import cientistavuador.cienspools.util.Pair;
 import cientistavuador.cienspools.util.RGBA8Image;
@@ -603,7 +604,8 @@ public class N3DModelImporter {
         }
         
         NTextures e = NTexturesImporter.create(
-                false, textures.toString(), diffuse, normal, height,
+                false, Resource.generateRandomId(textures.toString()),
+                diffuse, normal, height,
                 roughness, metallic, ao, emissive, null);
         synchronized (this.textures) {
             this.textures.put(textures, e);
@@ -660,7 +662,7 @@ public class N3DModelImporter {
             if (materialTexture == null) {
                 materialTexture = NTextures.BLANK_TEXTURE;
             }
-            NMaterial material = new NMaterial(materialName, materialTexture);
+            NMaterial material = new NMaterial(Resource.generateRandomId(materialName), materialTexture);
             
             float metallic = 0f;
             if (texs.metallic != null) {
