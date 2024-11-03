@@ -119,14 +119,13 @@ public class NTextures {
     }
 
     public static final ResourceRW<NTextures> RESOURCES = new ResourceRW<NTextures>(true) {
-        public static final String RESOURCE_TYPE = "texture";
         public static final String CR_CG_CB_CA_DATA_TYPE = "application/zstd;name=cr_cg_cb_ca";
         public static final String HT_RG_MT_NX_DATA_TYPE = "application/zstd;name=ht_rg_mt_nx";
         public static final String AO_EM_WT_NY_DATA_TYPE = "application/zstd;name=ao_em_wt_ny";
-
+        
         @Override
         public String getResourceType() {
-            return RESOURCE_TYPE;
+            return "texture";
         }
 
         private DXT5Texture readTexture(Resource r, String type) throws IOException {
@@ -174,7 +173,7 @@ public class NTextures {
 
         @Override
         public void writeResource(NTextures obj, ResourceEntry entry, String path) throws IOException {
-            entry.setType(RESOURCE_TYPE);
+            entry.setType(getResourceType());
             entry.setId(obj.getName());
             entry.getMeta().put("blendingMode", obj.getBlendingMode().name());
             if (!path.isEmpty() && !path.endsWith("/")) {

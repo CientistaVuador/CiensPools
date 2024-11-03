@@ -31,6 +31,7 @@ import cientistavuador.cienspools.debug.AabRender;
 import cientistavuador.cienspools.debug.LineRender;
 import cientistavuador.cienspools.newrendering.N3DModel;
 import cientistavuador.cienspools.newrendering.N3DModelImporter;
+import cientistavuador.cienspools.newrendering.N3DModelNode;
 import cientistavuador.cienspools.newrendering.N3DObject;
 import cientistavuador.cienspools.newrendering.N3DObjectRenderer;
 import cientistavuador.cienspools.newrendering.NCubemap;
@@ -47,7 +48,6 @@ import cientistavuador.cienspools.newrendering.NTextures;
 import cientistavuador.cienspools.physics.PlayerController;
 import cientistavuador.cienspools.popups.BakePopup;
 import cientistavuador.cienspools.popups.ContinuePopup;
-import cientistavuador.cienspools.resourcepack.ResourcePackReader;
 import cientistavuador.cienspools.resourcepack.ResourcePackWriter;
 import cientistavuador.cienspools.resourcepack.ResourcePackWriter.ResourceEntry;
 import cientistavuador.cienspools.text.GLFontRenderer;
@@ -76,10 +76,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import static org.lwjgl.glfw.GLFW.*;
-import org.xml.sax.SAXException;
 
 /**
  *
@@ -158,6 +155,11 @@ public class Game {
             {
                 N3DModel bottle = N3DModelImporter
                         .importFromJarFile("cientistavuador/cienspools/resources/models/WaterBottle.glb");
+                try (ResourcePackWriter w = new ResourcePackWriter(Path.of("a.zip"))) {
+                    ResourceEntry e = new ResourceEntry();
+                    N3DModel.RESOURCES.writeResource(bottle, e, "model");
+                    w.writeResourceEntry(e);
+                }
                 this.waterBottle = new N3DObject("bottle", bottle);
                 this.waterBottle.setMap(this.map);
 
@@ -237,7 +239,6 @@ public class Game {
     }
 
     public void start() {
-
         NTextures.NULL_TEXTURE.textures();
         NCubemap.NULL_CUBEMAP.cubemap();
         NLightmaps.NULL_LIGHTMAPS.lightmaps();

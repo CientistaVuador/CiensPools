@@ -27,16 +27,32 @@
 package cientistavuador.cienspools.newrendering;
 
 import cientistavuador.cienspools.Main;
+import cientistavuador.cienspools.resourcepack.Resource;
+import cientistavuador.cienspools.resourcepack.ResourcePackWriter;
+import cientistavuador.cienspools.resourcepack.ResourcePackWriter.DataEntry;
+import cientistavuador.cienspools.resourcepack.ResourceRW;
 import cientistavuador.cienspools.util.CryptoUtils;
+import cientistavuador.cienspools.util.MeshStore;
 import cientistavuador.cienspools.util.StringUtils;
 import cientistavuador.cienspools.util.MeshUtils;
 import cientistavuador.cienspools.util.ObjectCleaner;
 import cientistavuador.cienspools.util.raycast.BVH;
+import cientistavuador.cienspools.util.raycast.BVHStore;
 import java.awt.Color;
+import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
 import org.lwjgl.opengl.GL;
@@ -49,6 +65,107 @@ import org.lwjgl.opengl.KHRDebug;
  */
 public class NMesh {
 
+    public static final ResourceRW<NMesh> RESOURCES = new ResourceRW<NMesh>(true) {
+        public static final String MESH_DATA_TYPE = "application/gzip;name=mesh";
+        public static final String BVH_DATA_TYPE = "application/gzip;name=bvh";
+        public static final String BONES_DATA_TYPE = "text/plain;name=bones";
+        
+        @Override
+        public String getResourceType() {
+            return "mesh";
+        }
+        
+        @Override
+        public NMesh readResource(Resource r) throws IOException {
+            Map<String, String> meta = r.getMeta();
+            String minX = meta.get("min.x");
+            String minY = meta.get("min.y");
+            String minZ = meta.get("min.z");
+            String maxX = meta.get("min.x");
+            String maxY = meta.get("min.y");
+            String maxZ = meta.get("min.z");
+            Vector3f min = null;
+            Vector3f max = null;
+            if (minX != null && minY != null && minZ != null 
+                    && maxX != null && maxY != null && maxZ != null) {
+                min = new Vector3f(
+                        Float.parseFloat(minX), Float.parseFloat(minY), Float.parseFloat(minZ)
+                );
+                max = new Vector3f(
+                        Float.parseFloat(maxX), Float.parseFloat(maxY), Float.parseFloat(maxZ)
+                );
+            }
+            Path meshPath = r.getData().get(MESH_DATA_TYPE);
+            if (meshPath == null) {
+                throw new IOException("Mesh file not found.");
+            }
+            MeshStore.MeshStoreOutput out;
+            try (BufferedInputStream in = new BufferedInputStream(Files.newInputStream(meshPath))) {
+                out = MeshStore.decode(in);
+            }
+            
+            Path bonesPath = r.getData().get(BONES_DATA_TYPE);
+            String[] bones = null;
+            if (bonesPath != null) {
+                bones = Files.readAllLines(bonesPath, StandardCharsets.UTF_8).toArray(String[]::new);
+            }
+            
+            float[] vertices = out.vertices();
+            int[] indices = out.indices();
+            
+            NMesh mesh = new NMesh(r.getId(), vertices, indices, bones, min, max);
+            
+            Path bvhPath = r.getData().get(BVH_DATA_TYPE);
+            BVH bvh;
+            if (bvhPath != null) {
+                try (BufferedInputStream in = new BufferedInputStream(Files.newInputStream(bvhPath))) {
+                    bvh = BVHStore.readBVH(
+                            in, vertices, indices, NMesh.VERTEX_SIZE, NMesh.OFFSET_POSITION_XYZ, mesh);
+                }
+                mesh.setBVH(bvh);
+            } else {
+                mesh.generateBVH();
+            }
+            
+            return mesh;
+        }
+        
+        @Override
+        public void writeResource(NMesh obj, ResourcePackWriter.ResourceEntry entry, String path) throws IOException {
+            obj.generateBVH();
+            
+            entry.setType(getResourceType());
+            entry.setId(obj.getName());
+            if (!path.isEmpty() && !path.endsWith("/")) {
+                path += "/";
+            }
+            Map<String, String> meta = entry.getMeta();
+            meta.put("min.x", Float.toString(obj.getAabbMin().x()));
+            meta.put("min.y", Float.toString(obj.getAabbMin().y()));
+            meta.put("min.z", Float.toString(obj.getAabbMin().z()));
+            meta.put("max.x", Float.toString(obj.getAabbMax().x()));
+            meta.put("max.y", Float.toString(obj.getAabbMax().y()));
+            meta.put("max.z", Float.toString(obj.getAabbMax().z()));
+            
+            Map<String, DataEntry> data = entry.getData();
+            data.put(MESH_DATA_TYPE, new DataEntry(path + "mesh.msh",
+                    new ByteArrayInputStream(
+                            MeshStore.encode(obj.getVertices(), NMesh.VERTEX_SIZE, obj.getIndices()))));
+            data.put(BVH_DATA_TYPE, new DataEntry(path + "boundingVolumeHierarchy.bvh",
+                    new ByteArrayInputStream(BVHStore.writeBVH(obj.getBVH()))));
+            
+            if (obj.getNumberOfBones() != 0) {
+                List<String> bones = new ArrayList<>();
+                for (int i = 0; i < obj.getNumberOfBones(); i++) {
+                    bones.add(obj.getBone(i));
+                }
+                String bonesString = bones.stream().collect(Collectors.joining("\n"));
+                data.put(BONES_DATA_TYPE, new DataEntry(path + "bones.txt",
+                        new ByteArrayInputStream(bonesString.getBytes(StandardCharsets.UTF_8))));
+            }
+        }
+    };
+    
     private static final AtomicLong meshIds = new AtomicLong();
 
     public static final int MAX_AMOUNT_OF_BONES = 64;
@@ -169,6 +286,15 @@ public class NMesh {
         calculateMeshColor();
         registerForCleaning();
     }
+    
+    public NMesh(
+            String name,
+            float[] vertices, int[] indices,
+            String[] bones,
+            Vector3fc min, Vector3fc max
+    ) {
+        this(name, vertices, indices, bones, min, max, null);
+    }
 
     public NMesh(String name, float[] vertices, int[] indices, String[] bones) {
         this(name, vertices, indices, bones, null, null, null);
@@ -232,7 +358,7 @@ public class NMesh {
         return this.indices;
     }
 
-    public int getAmountOfBones() {
+    public int getNumberOfBones() {
         return this.bones.length;
     }
 

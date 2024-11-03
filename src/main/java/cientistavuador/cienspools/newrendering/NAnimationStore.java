@@ -26,11 +26,13 @@
  */
 package cientistavuador.cienspools.newrendering;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -92,6 +94,16 @@ public class NAnimationStore {
         
         out.flush();
         compressedOutput.finish();
+    }
+    
+    public static byte[] writeAnimation(NAnimation animation) {
+        try {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            writeAnimation(animation, out);
+            return out.toByteArray();
+        } catch (IOException ex) {
+            throw new UncheckedIOException(ex);
+        }
     }
     
     private static String readString(ObjectInputStream in) throws IOException {

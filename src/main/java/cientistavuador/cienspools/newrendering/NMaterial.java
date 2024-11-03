@@ -28,7 +28,9 @@ package cientistavuador.cienspools.newrendering;
 
 import cientistavuador.cienspools.resourcepack.Resource;
 import cientistavuador.cienspools.resourcepack.ResourcePackWriter.ResourceEntry;
+import cientistavuador.cienspools.resourcepack.ResourceRW;
 import cientistavuador.cienspools.util.ColorUtils;
+import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;
 import org.joml.Vector3f;
@@ -41,7 +43,7 @@ import org.joml.Vector4fc;
  * @author Cien
  */
 public class NMaterial {
-    
+
     public static final Vector4fc DEFAULT_DIFFUSE_COLOR = new Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
     public static final Vector3fc DEFAULT_SPECULAR_COLOR = new Vector3f(1.0f, 1.0f, 1.0f);
     public static final Vector3fc DEFAULT_EMISSIVE_COLOR = new Vector3f(1.2f, 1.2f, 1.2f);
@@ -60,14 +62,16 @@ public class NMaterial {
         NULL_MATERIAL.getReflectionColor().set(0f, 0f, 0f);
         NULL_MATERIAL.setParallaxHeightCoefficient(0f);
     }
-    
+
     public static final NMaterial MIRROR;
+
     static {
         MIRROR = new NMaterial("Mirror", NTextures.BLANK_TEXTURE);
         MIRROR.setNewMetallic(1f);
         MIRROR.setNewRoughness(0f);
     }
     public static final NMaterial DARK_GLASS;
+
     static {
         DARK_GLASS = new NMaterial("Dark Glass", NTextures.BLANK_TEXTURE);
         DARK_GLASS.getNewColor().set(0.0075f, 0.0075f, 0.0075f, 0.7f);
@@ -75,6 +79,7 @@ public class NMaterial {
         DARK_GLASS.setNewRoughness(0f);
     }
     public static final NMaterial WATER;
+
     static {
         WATER = new NMaterial("Water", NTextures.BLANK_TEXTURE);
         WATER.getNewColor().set(0.005f, 0.005f, 0.0075f, 0.50f);
@@ -84,6 +89,7 @@ public class NMaterial {
         WATER.setNewWater(1f);
     }
     public static final NMaterial ORANGE_JUICE;
+
     static {
         ORANGE_JUICE = new NMaterial("Orange Juice", NTextures.BLANK_TEXTURE);
         ColorUtils.setSRGBA(ORANGE_JUICE.getNewColor(), 255, 92, 0, 255);
@@ -92,6 +98,7 @@ public class NMaterial {
         ORANGE_JUICE.setNewWater(0.5f);
     }
     public static final NMaterial GLASS;
+
     static {
         GLASS = new NMaterial("Glass", NTextures.BLANK_TEXTURE);
         GLASS.getNewColor().set(0.94f, 0.95f, 0.96f, 0.25f);
@@ -100,6 +107,7 @@ public class NMaterial {
         GLASS.setNewRefraction(1f / 1.53f);
     }
     public static final NMaterial ROUGH_BLACK;
+
     static {
         ROUGH_BLACK = new NMaterial("Rough Black", NTextures.BLANK_TEXTURE);
         ROUGH_BLACK.getNewColor().set(0f, 0f, 0f, 1f);
@@ -107,6 +115,7 @@ public class NMaterial {
         ROUGH_BLACK.setNewRoughness(1f);
     }
     public static final NMaterial SHINY_BLACK;
+
     static {
         SHINY_BLACK = new NMaterial("Shiny Black", NTextures.BLANK_TEXTURE);
         SHINY_BLACK.getNewColor().set(0f, 0f, 0f, 1f);
@@ -114,41 +123,147 @@ public class NMaterial {
         SHINY_BLACK.setNewRoughness(0f);
     }
     public static final NMaterial GOLD;
+
     static {
         GOLD = new NMaterial("Gold", NTextures.BLANK_TEXTURE);
         ColorUtils.setSRGBA(GOLD.getNewColor(), 255, 215, 0, 255);
         GOLD.setNewMetallic(1f);
         GOLD.setNewRoughness(0.6f);
     }
-    
-    public static final String RESOURCE_TYPE = "material";
-    
-    private Resource associatedResource = null;
-    
+
+    public static final ResourceRW<NMaterial> RESOURCES = new ResourceRW<NMaterial>(true) {
+        @Override
+        public String getResourceType() {
+            return "material";
+        }
+        
+        private float readString(String s, float defaultValue) {
+            if (s == null) {
+                return defaultValue;
+            }
+            try {
+                return Float.parseFloat(s);
+            } catch (NumberFormatException ex) {
+                return defaultValue;
+            }
+        }
+        
+        @Override
+        public NMaterial readResource(Resource r) throws IOException {
+            if (r == null) {
+                return NMaterial.NULL_MATERIAL;
+            }
+            
+            NMaterial material = new NMaterial(r.getId());
+            
+            Map<String, String> meta = r.getMeta();
+            
+            material.getNewColor().set(
+                    readString(meta.get("color.r"), material.getNewColor().x()),
+                    readString(meta.get("color.g"), material.getNewColor().y()),
+                    readString(meta.get("color.b"), material.getNewColor().z()),
+                    readString(meta.get("color.a"), material.getNewColor().w())
+            );
+            
+            material.setNewMetallic(readString(meta.get("metallic"), material.getNewMetallic()));
+            material.setNewRoughness(readString(meta.get("roughness"), material.getNewRoughness()));
+            
+            material.setNewInverseRoughnessExponent(
+                    readString(meta.get("inverseRoughnessExponent"), material.getNewInverseRoughnessExponent())
+            );
+            material.setNewDiffuseSpecularRatio(
+                    readString(meta.get("diffuseSpecularRatio"), material.getNewDiffuseSpecularRatio())
+            );
+            
+            material.setNewHeight(
+                    readString(meta.get("height"), material.getNewHeight()));
+            material.setNewHeightMinLayers(
+                    readString(meta.get("heightMinLayers"), material.getNewHeightMinLayers()));
+            material.setNewHeightMaxLayers(
+                    readString(meta.get("heightMaxLayers"), material.getNewHeightMaxLayers()));
+            
+            material.setNewEmissive(
+                    readString(meta.get("emissive"), material.getNewEmissive()));
+            material.setNewWater(
+                    readString(meta.get("water"), material.getNewWater()));
+            material.setNewRefraction(
+                    readString(meta.get("refraction"), material.getNewRefraction()));
+            material.setNewRefractionPower(
+                    readString(meta.get("refractionPower"), material.getNewRefractionPower()));
+            
+            material.setNewFresnelOutline(
+                    readString(meta.get("fresnelOutline"), material.getNewFresnelOutline()));
+            material.getNewFresnelOutlineColor().set(
+                    readString(meta.get("fresnelOutlineColor.r"), material.getNewFresnelOutlineColor().x()),
+                    readString(meta.get("fresnelOutlineColor.g"), material.getNewFresnelOutlineColor().y()),
+                    readString(meta.get("fresnelOutlineColor.b"), material.getNewFresnelOutlineColor().z())
+            );
+            
+            material.setTextures(NTextures.RESOURCES.get(meta.get("texture")));
+            
+            return material;
+        }
+
+        @Override
+        public void writeResource(NMaterial obj, ResourceEntry entry, String path) throws IOException {
+            entry.setType(getResourceType());
+            entry.setId(obj.getName());
+
+            Map<String, String> meta = entry.getMeta();
+            
+            meta.put("color.r", Float.toString(obj.getNewColor().x()));
+            meta.put("color.g", Float.toString(obj.getNewColor().y()));
+            meta.put("color.b", Float.toString(obj.getNewColor().z()));
+            meta.put("color.a", Float.toString(obj.getNewColor().w()));
+
+            meta.put("metallic", Float.toString(obj.getNewMetallic()));
+            meta.put("roughness", Float.toString(obj.getNewRoughness()));
+
+            meta.put("inverseRoughnessExponent", Float.toString(obj.getNewInverseRoughnessExponent()));
+            meta.put("diffuseSpecularRatio", Float.toString(obj.getNewDiffuseSpecularRatio()));
+
+            meta.put("height", Float.toString(obj.getNewHeight()));
+            meta.put("heightMinLayers", Float.toString(obj.getNewHeightMinLayers()));
+            meta.put("heightMaxLayers", Float.toString(obj.getNewHeightMaxLayers()));
+
+            meta.put("emissive", Float.toString(obj.getNewEmissive()));
+            meta.put("water", Float.toString(obj.getNewWater()));
+            meta.put("refraction", Float.toString(obj.getNewRefraction()));
+            meta.put("refractionPower", Float.toString(obj.getNewRefractionPower()));
+
+            meta.put("fresnelOutline", Float.toString(obj.getNewFresnelOutline()));
+            meta.put("fresnelOutlineColor.r", Float.toString(obj.getNewFresnelOutlineColor().x()));
+            meta.put("fresnelOutlineColor.g", Float.toString(obj.getNewFresnelOutlineColor().y()));
+            meta.put("fresnelOutlineColor.b", Float.toString(obj.getNewFresnelOutlineColor().z()));
+            
+            meta.put("texture", obj.getTextures().getName());
+        }
+    };
+
     private final String name;
-    
+
     private final Vector4f newColor = new Vector4f(1f, 1f, 1f, 1f);
-    
+
     private float newMetallic = 0f;
     private float newRoughness = 1f;
-    
+
     private float newInverseRoughnessExponent = 2f;
     private float newDiffuseSpecularRatio = 0.5f;
-    
+
     private float newHeight = 0f;
     private float newHeightMinLayers = 8f;
     private float newHeightMaxLayers = 32f;
-    
+
     private float newEmissive = 0f;
     private float newWater = 0f;
     private float newRefraction = 0f;
     private float newRefractionPower = 0.25f;
-    
+
     private float newAmbientOcclusion = 1f;
-    
+
     private float newFresnelOutline = 0f;
     private final Vector3f newFresnelOutlineColor = new Vector3f(0f, 1f, 0f);
-    
+
     private NTextures textures = NTextures.NULL_TEXTURE;
 
     private final Vector4f diffuseColor = new Vector4f(DEFAULT_DIFFUSE_COLOR);
@@ -174,47 +289,6 @@ public class NMaterial {
         this.textures = textures;
     }
 
-    public Resource getAssociatedResource() {
-        return associatedResource;
-    }
-
-    public void setAssociatedResource(Resource associatedResource) {
-        this.associatedResource = associatedResource;
-    }
-    
-    public void writeResourceEntry(ResourceEntry entry) {
-        entry.setType(RESOURCE_TYPE);
-        
-        Map<String, String> meta = entry.getMeta();
-        
-        meta.put("name", getName());
-        
-        meta.put("color.r", Float.toString(getNewColor().x()));
-        meta.put("color.g", Float.toString(getNewColor().y()));
-        meta.put("color.b", Float.toString(getNewColor().z()));
-        meta.put("color.a", Float.toString(getNewColor().w()));
-        
-        meta.put("metallic", Float.toString(getNewMetallic()));
-        meta.put("roughness", Float.toString(getNewRoughness()));
-        
-        meta.put("inverseRoughnessExponent", Float.toString(getNewInverseRoughnessExponent()));
-        meta.put("diffuseSpecularRatio", Float.toString(getNewDiffuseSpecularRatio()));
-        
-        meta.put("height", Float.toString(getNewHeight()));
-        meta.put("heightMinLayers", Float.toString(getNewHeightMinLayers()));
-        meta.put("heightMaxLayers", Float.toString(getNewHeightMaxLayers()));
-        
-        meta.put("emissive", Float.toString(getNewEmissive()));
-        meta.put("water", Float.toString(getNewWater()));
-        meta.put("refraction", Float.toString(getNewRefraction()));
-        meta.put("refractionPower", Float.toString(getNewRefractionPower()));
-        
-        meta.put("fresnelOutline", Float.toString(getNewFresnelOutline()));
-        meta.put("fresnelOutlineColor.r", Float.toString(getNewFresnelOutlineColor().x()));
-        meta.put("fresnelOutlineColor.g", Float.toString(getNewFresnelOutlineColor().y()));
-        meta.put("fresnelOutlineColor.b", Float.toString(getNewFresnelOutlineColor().z()));
-    }
-
     public String getName() {
         return name;
     }
@@ -230,7 +304,7 @@ public class NMaterial {
     public void setNewMetallic(float newMetallic) {
         this.newMetallic = newMetallic;
     }
-    
+
     public float getNewRoughness() {
         return newRoughness;
     }
@@ -306,7 +380,7 @@ public class NMaterial {
     public float getNewRefractionPower() {
         return newRefractionPower;
     }
-    
+
     public void setNewRefractionPower(float newRefractionPower) {
         this.newRefractionPower = newRefractionPower;
     }
@@ -318,7 +392,7 @@ public class NMaterial {
     public void setNewAmbientOcclusion(float newAmbientOcclusion) {
         this.newAmbientOcclusion = newAmbientOcclusion;
     }
-    
+
     public float getNewFresnelOutline() {
         return newFresnelOutline;
     }
@@ -326,11 +400,11 @@ public class NMaterial {
     public void setNewFresnelOutline(float newFresnelOutline) {
         this.newFresnelOutline = newFresnelOutline;
     }
-    
+
     public Vector3f getNewFresnelOutlineColor() {
         return newFresnelOutlineColor;
     }
-    
+
     public NTextures getTextures() {
         return textures;
     }
@@ -341,7 +415,7 @@ public class NMaterial {
         }
         this.textures = textures;
     }
-    
+
     public Vector4f getDiffuseColor() {
         return diffuseColor;
     }
@@ -432,14 +506,14 @@ public class NMaterial {
     public NBlendingMode getBlendingMode() {
         NBlendingMode mode = this.textures.getBlendingMode();
         float materialAlpha = this.newColor.w();
-        
+
         if (materialAlpha != 1f && NBlendingMode.OPAQUE.equals(mode)) {
             mode = NBlendingMode.ALPHA_BLENDING;
         }
-        
+
         return mode;
     }
-    
+
     public boolean isInvisible() {
         return this.diffuseColor.w() <= 0f;
     }

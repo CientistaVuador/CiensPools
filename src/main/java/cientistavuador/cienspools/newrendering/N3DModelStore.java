@@ -715,7 +715,7 @@ public class N3DModelStore {
             storeMesh.max = new Vector3f(mesh.getAabbMax());
 
             storeMesh.bones = new ArrayList<>();
-            for (int j = 0; j < mesh.getAmountOfBones(); j++) {
+            for (int j = 0; j < mesh.getNumberOfBones(); j++) {
                 String bone = mesh.getBone(j);
                 StoreBone storeBone = store.bonesObjectMap.get(bone);
                 if (storeBone != null) {

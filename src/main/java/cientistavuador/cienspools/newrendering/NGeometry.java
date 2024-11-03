@@ -27,6 +27,11 @@
 package cientistavuador.cienspools.newrendering;
 
 import static cientistavuador.cienspools.newrendering.NMesh.MAX_AMOUNT_OF_BONE_WEIGHTS;
+import cientistavuador.cienspools.resourcepack.Resource;
+import cientistavuador.cienspools.resourcepack.ResourcePackWriter;
+import cientistavuador.cienspools.resourcepack.ResourceRW;
+import java.io.IOException;
+import java.util.Map;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
 import org.joml.Vector3f;
@@ -38,6 +43,56 @@ import org.joml.Vector3fc;
  */
 public class NGeometry {
 
+    public static final ResourceRW<NGeometry> RESOURCES = new ResourceRW<NGeometry>(true) {
+        @Override
+        public String getResourceType() {
+            return "geometry";
+        }
+        
+        @Override
+        public NGeometry readResource(Resource r) throws IOException {
+            Map<String, String> meta = r.getMeta();
+            String animatedMinX = meta.get("animatedMin.x");
+            String animatedMinY = meta.get("animatedMin.y");
+            String animatedMinZ = meta.get("animatedMin.z");
+            String animatedMaxX = meta.get("animatedMax.x");
+            String animatedMaxY = meta.get("animatedMax.y");
+            String animatedMaxZ = meta.get("animatedMax.z");
+            Vector3f animatedMin = null;
+            Vector3f animatedMax = null;
+            if (animatedMinX != null && animatedMinY != null && animatedMinZ != null 
+                    && animatedMaxX != null && animatedMaxY != null && animatedMaxZ != null) {
+                animatedMin = new Vector3f(
+                        Float.parseFloat(animatedMinX), Float.parseFloat(animatedMinY), Float.parseFloat(animatedMinZ) 
+                );
+                animatedMax = new Vector3f(
+                        Float.parseFloat(animatedMaxX), Float.parseFloat(animatedMaxY), Float.parseFloat(animatedMaxZ) 
+                );
+            }
+            return new NGeometry(
+                    r.getId(),
+                    NMesh.RESOURCES.get(meta.get("mesh")),
+                    NMaterial.RESOURCES.get(meta.get("material")),
+                    animatedMin, animatedMax
+            );
+        }
+        
+        @Override
+        public void writeResource(NGeometry obj, ResourcePackWriter.ResourceEntry entry, String path) throws IOException {
+            entry.setType(getResourceType());
+            entry.setId(obj.getName());
+            Map<String, String> meta = entry.getMeta();
+            meta.put("mesh", obj.getMesh().getName());
+            meta.put("material", obj.getMaterial().getName());
+            meta.put("animatedMin.x", Float.toString(obj.getAnimatedAabbMin().x()));
+            meta.put("animatedMin.y", Float.toString(obj.getAnimatedAabbMin().y()));
+            meta.put("animatedMin.z", Float.toString(obj.getAnimatedAabbMin().z()));
+            meta.put("animatedMax.x", Float.toString(obj.getAnimatedAabbMax().x()));
+            meta.put("animatedMax.y", Float.toString(obj.getAnimatedAabbMax().y()));
+            meta.put("animatedMax.z", Float.toString(obj.getAnimatedAabbMax().z()));
+        }
+    };
+    
     private N3DModel model = null;
     private int globalId = -1;
     private N3DModelNode parent = null;

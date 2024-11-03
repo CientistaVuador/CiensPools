@@ -26,11 +26,13 @@
  */
 package cientistavuador.cienspools.util;
 
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -73,6 +75,16 @@ public class MeshStore {
         new MeshStore(vertices, vertexSize, indices, output).encode();
     }
 
+    public static byte[] encode(float[] vertices, int vertexSize, int[] indices) {
+        try {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            encode(vertices, vertexSize, indices, out);
+            return out.toByteArray();
+        } catch (IOException ex) {
+            throw new UncheckedIOException(ex);
+        }
+    }
+    
     public static MeshStoreOutput decode(InputStream input) throws IOException {
         return new MeshStore(input).decode();
     }

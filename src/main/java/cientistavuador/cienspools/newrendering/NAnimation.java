@@ -26,6 +26,13 @@
  */
 package cientistavuador.cienspools.newrendering;
 
+import cientistavuador.cienspools.resourcepack.Resource;
+import cientistavuador.cienspools.resourcepack.ResourcePackWriter;
+import cientistavuador.cienspools.resourcepack.ResourceRW;
+import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -35,6 +42,35 @@ import java.util.Map;
  */
 public class NAnimation {
 
+    public static ResourceRW<NAnimation> RESOURCES = new ResourceRW<NAnimation>(true) {
+        public static final String ANIMATION_DATA_TYPE = "application/gzip;name=animation";
+        
+        @Override
+        public String getResourceType() {
+            return "animation";
+        }
+        
+        @Override
+        public NAnimation readResource(Resource r) throws IOException {
+            try (BufferedInputStream in = new BufferedInputStream(
+                    Files.newInputStream(r.getData().get(ANIMATION_DATA_TYPE)))) {
+                return NAnimationStore.readAnimation(in);
+            }
+        }
+        
+        @Override
+        public void writeResource(NAnimation obj, ResourcePackWriter.ResourceEntry entry, String path) throws IOException {
+            entry.setType(getResourceType());
+            entry.setId(obj.getName());
+            if (!path.isEmpty() && !path.endsWith("/")) {
+                path += "/";
+            }
+            entry.getData().put(ANIMATION_DATA_TYPE, 
+                    new ResourcePackWriter.DataEntry(path + "animation.anm",
+                            new ByteArrayInputStream(NAnimationStore.writeAnimation(obj))));
+        }
+    };
+    
     private final String name;
     private final float duration;
     private final NBoneAnimation[] boneAnimations;

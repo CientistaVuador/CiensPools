@@ -26,11 +26,17 @@
  */
 package cientistavuador.cienspools.newrendering;
 
-import cientistavuador.cienspools.Main;
+import cientistavuador.cienspools.resourcepack.Resource;
+import cientistavuador.cienspools.resourcepack.ResourcePackWriter;
+import cientistavuador.cienspools.resourcepack.ResourcePackWriter.DataEntry;
+import cientistavuador.cienspools.resourcepack.ResourceRW;
 import cientistavuador.cienspools.util.MeshUtils;
 import com.jme3.bullet.collision.shapes.HullCollisionShape;
-import com.jme3.bullet.util.DebugShapeFactory;
-import java.nio.FloatBuffer;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -40,15 +46,97 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.joml.Matrix4fc;
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
+import org.xml.sax.SAXException;
 
 /**
  *
  * @author Cien
  */
 public class N3DModel {
+
+    public static final ResourceRW<N3DModel> RESOURCES = new ResourceRW<N3DModel>(true) {
+        public static final String ANIMATIONS_DATA_TYPE = "text/plain;name=animations";
+        public static final String SCENEGRAPH_DATA_TYPE = "application/xml;name=scenegraph";
+
+        @Override
+        public String getResourceType() {
+            return "model";
+        }
+
+        @Override
+        public N3DModel readResource(Resource r) throws IOException {
+            Vector3f min = new Vector3f();
+            Vector3f max = new Vector3f();
+            Vector3f animatedMin = new Vector3f();
+            Vector3f animatedMax = new Vector3f();
+            Map<String, String> meta = r.getMeta();
+            if (!ResourceRW.readVector3f(meta, min, "min", false, null) 
+                    || !ResourceRW.readVector3f(meta, max, "max", false, null)) {
+                min = null;
+                max = null;
+            }
+            if (!ResourceRW.readVector3f(meta, animatedMin, "animatedMin", false, null) 
+                    || !ResourceRW.readVector3f(meta, animatedMax, "animatedMax", false, null)) {
+                animatedMin = null;
+                animatedMax = null;
+            }
+            NAnimation[] animations = null;
+            Path animationsPath = r.getData().get(ANIMATIONS_DATA_TYPE);
+            if (animationsPath != null) {
+                animations = Files.readAllLines(animationsPath)
+                        .stream()
+                        .map(s -> NAnimation.RESOURCES.get(s))
+                        .toArray(NAnimation[]::new);
+            }
+            N3DModelNode rootNode;
+            try {
+                rootNode = N3DModelNode
+                        .fromXML(Files.readString(r.getData().get(SCENEGRAPH_DATA_TYPE)));
+            } catch (SAXException ex) {
+                throw new IOException(ex);
+            }
+            return new N3DModel(r.getId(), rootNode, animations, min, max, animatedMin, animatedMax);
+        }
+
+        @Override
+        public void writeResource(N3DModel obj, ResourcePackWriter.ResourceEntry entry, String path) throws IOException {
+            entry.setType(getResourceType());
+            entry.setId(obj.getName());
+            if (!path.isEmpty() && !path.endsWith("/")) {
+                path += "/";
+            }
+            Map<String, String> meta = entry.getMeta();
+            ResourceRW.writeVector3f(meta, obj.getAabbMin(), "min", false);
+            ResourceRW.writeVector3f(meta, obj.getAabbMax(), "max", false);
+            if (obj.isAnimatedAabbGenerated()) {
+                ResourceRW.writeVector3f(meta, obj.getAnimatedAabbMin(), "animatedMin", false);
+                ResourceRW.writeVector3f(meta, obj.getAnimatedAabbMax(), "animatedMax", false);
+            }
+            Map<String, DataEntry> data = entry.getData();
+            if (obj.getNumberOfAnimations() != 0) {
+                List<NAnimation> animations = new ArrayList<>();
+                for (int i = 0; i < obj.getNumberOfAnimations(); i++) {
+                    animations.add(obj.getAnimation(i));
+                }
+                String animationsIds = animations
+                        .stream()
+                        .map(NAnimation::getName)
+                        .collect(Collectors.joining("\n"));
+                data.put(ANIMATIONS_DATA_TYPE,
+                        new DataEntry(path + "animations.txt",
+                                new ByteArrayInputStream(
+                                        animationsIds.getBytes(StandardCharsets.UTF_8))));
+            }
+            String asXML = N3DModelNode.toXML(obj.getRootNode());
+            data.put(SCENEGRAPH_DATA_TYPE,
+                    new DataEntry(path + "scenegraph.xml",
+                            new ByteArrayInputStream(asXML.getBytes(StandardCharsets.UTF_8))));
+        }
+    };
 
     private final String name;
     private final N3DModelNode rootNode;
@@ -61,7 +149,7 @@ public class N3DModel {
 
     private final N3DModelNode[] nodes;
     private final Map<String, Integer> nodesMap = new HashMap<>();
-    
+
     private final String[] bones;
     private final NMesh[] meshes;
     private final NTextures[] textures;
@@ -72,10 +160,10 @@ public class N3DModel {
     private final Vector3f animatedAabbMax = new Vector3f();
     private final Vector3f animatedAabbCenter = new Vector3f();
     private boolean animatedAabbGenerated = false;
-    
+
     private final int indicesCount;
     private final int verticesCount;
-    
+
     private HullCollisionShape hullCollisionShape;
 
     public N3DModel(
@@ -127,13 +215,13 @@ public class N3DModel {
 
             aabbGenerated = true;
         }
-        
+
         List<N3DModelNode> nodesList = new ArrayList<>();
         int globalNodeId = 0;
-        
+
         List<NGeometry> geometriesList = new ArrayList<>();
         int globalGeometryId = 0;
-        
+
         Set<String> boneList = new HashSet<>();
         Set<NMesh> meshList = new HashSet<>();
         Set<NTextures> texturesList = new HashSet<>();
@@ -141,11 +229,11 @@ public class N3DModel {
 
         Queue<N3DModelNode> current = new ArrayDeque<>();
         Queue<N3DModelNode> next = new ArrayDeque<>();
-        
+
         rootNode.configure(this, globalNodeId, null, 0);
         globalNodeId++;
         nodesList.add(rootNode);
-        
+
         current.add(rootNode);
 
         do {
@@ -154,7 +242,7 @@ public class N3DModel {
             N3DModelNode currentNode;
             while ((currentNode = current.poll()) != null) {
                 currentNode.recalculateMatrices();
-                
+
                 Matrix4fc totalTransformation = currentNode.getToRootSpace();
 
                 for (int geometryIndex = 0; geometryIndex < currentNode.getNumberOfGeometries(); geometryIndex++) {
@@ -162,7 +250,7 @@ public class N3DModel {
                     g.configure(this, globalGeometryId, currentNode, geometryIndex);
                     globalGeometryId++;
                     geometriesList.add(g);
-                    
+
                     NMesh mesh = g.getMesh();
                     NMaterial material = g.getMaterial();
                     NTextures materialTextures = material.getTextures();
@@ -179,7 +267,7 @@ public class N3DModel {
                         texturesList.add(materialTextures);
                     }
 
-                    int bonesLength = mesh.getAmountOfBones();
+                    int bonesLength = mesh.getNumberOfBones();
                     for (int i = 0; i < bonesLength; i++) {
                         String boneName = mesh.getBone(i);
                         if (!boneList.contains(boneName)) {
@@ -219,7 +307,7 @@ public class N3DModel {
                     child.configure(this, globalNodeId, currentNode, i);
                     globalNodeId++;
                     nodesList.add(child);
-                    
+
                     next.add(child);
                 }
             }
@@ -242,7 +330,7 @@ public class N3DModel {
         this.aabbMin.set(minX, minY, minZ);
         this.aabbMax.set(maxX, maxY, maxZ);
         this.aabbCenter.set(this.aabbMin).add(this.aabbMax).mul(0.5f);
-        
+
         if (animatedMin == null || animatedMax == null) {
             this.animatedAabbMin.set(this.aabbMin);
             this.animatedAabbMax.set(this.aabbMax);
@@ -434,29 +522,29 @@ public class N3DModel {
     public int getVerticesCount() {
         return verticesCount;
     }
-    
+
     public void load() {
-        for (NTextures t:this.textures) {
+        for (NTextures t : this.textures) {
             t.textures();
         }
-        
-        for (NMesh m:this.meshes) {
+
+        for (NMesh m : this.meshes) {
             m.getVBO();
             m.getEBO();
             m.getVAO();
         }
     }
-    
+
     public void freeEverything() {
-        for (NTextures t:this.textures) {
+        for (NTextures t : this.textures) {
             t.manualFree();
         }
-        
-        for (NMesh m:this.meshes) {
+
+        for (NMesh m : this.meshes) {
             m.manualFree();
         }
     }
-    
+
     public HullCollisionShape getHullCollisionShape() {
         if (this.hullCollisionShape != null) {
             return this.hullCollisionShape;
@@ -474,5 +562,5 @@ public class N3DModel {
                 vertices, indices, matrices, NMesh.VERTEX_SIZE, NMesh.OFFSET_POSITION_XYZ);
         return this.hullCollisionShape;
     }
-    
+
 }

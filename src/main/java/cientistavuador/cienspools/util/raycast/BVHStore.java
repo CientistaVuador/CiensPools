@@ -26,11 +26,13 @@
  */
 package cientistavuador.cienspools.util.raycast;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 import org.joml.Vector3fc;
@@ -96,6 +98,16 @@ public class BVHStore {
         
         out.flush();
         zipOut.finish();
+    }
+    
+    public static byte[] writeBVH(BVH bvh) {
+        try {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            writeBVH(out, bvh);
+            return out.toByteArray();
+        } catch (IOException ex) {
+            throw new UncheckedIOException(ex);
+        }
     }
     
     private static BVH recursiveReadBVH(ObjectInputStream in, float[] vertices, int[] indices, int vertexSize, int xyzOffset, Object userObject) throws IOException {

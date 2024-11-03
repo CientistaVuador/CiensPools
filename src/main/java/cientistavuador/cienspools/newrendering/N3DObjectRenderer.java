@@ -824,10 +824,10 @@ public class N3DObjectRenderer {
             }
 
             if (animator != lastAnimator 
-                    || (animator == null && mesh.getAmountOfBones() != 0) 
+                    || (animator == null && mesh.getNumberOfBones() != 0) 
                     || !mesh.equals(lastMesh)
                     ) {
-                for (int boneIndex = 0; boneIndex < mesh.getAmountOfBones(); boneIndex++) {
+                for (int boneIndex = 0; boneIndex < mesh.getNumberOfBones(); boneIndex++) {
                     String bone = mesh.getBone(boneIndex);
 
                     if (animator != null) {

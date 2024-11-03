@@ -280,7 +280,7 @@ public class N3DModelImporter {
 
             List<NBoneAnimation> boneAnimations = new ArrayList<>();
 
-            String name = sceneAnimation.mName().dataString();
+            String name = Resource.generateRandomId(sceneAnimation.mName().dataString());
 
             double tps = sceneAnimation.mTicksPerSecond();
             if (tps == 0.0) {
@@ -969,15 +969,15 @@ public class N3DModelImporter {
             if (splitMeshes.size() > 1) {
                 name += "_" + i;
             }
-
+            
             NMesh loadedMesh = new NMesh(
-                    name,
+                    Resource.generateRandomId(name),
                     finalVertices, finalIndices,
                     splitMesh.getB()
             );
             loadedMesh.generateBVH();
 
-            outputGeometries.add(new NGeometry(meshName, loadedMesh, material));
+            outputGeometries.add(new NGeometry(Resource.generateRandomId(name+" Geometry"), loadedMesh, material));
         }
 
         return new Pair<>(
@@ -1104,10 +1104,18 @@ public class N3DModelImporter {
             clearImages();
             loadMeshes();
             clearMaterials();
-
+            
+            N3DModelNode rootNode = generateRootNode();
+            
+            String name = this.scene.mName().dataString();
+            if (name.isEmpty()) {
+                name = rootNode.getName();
+            }
+            name = Resource.generateRandomId(name);
+            
             N3DModel finalModel = new N3DModel(
-                    this.scene.mName().dataString(),
-                    generateRootNode(),
+                    name,
+                    rootNode,
                     this.loadedAnimations.toArray(NAnimation[]::new)
             );
 
