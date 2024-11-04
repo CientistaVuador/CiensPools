@@ -94,7 +94,7 @@ public class ResourcePackReader {
         Path previewPath = null;
         if (preview != null) {
             previewPath = fs.getPath(preview);
-            if (!Files.isRegularFile(licensePath)) {
+            if (!Files.isRegularFile(previewPath)) {
                 previewPath = null;
             }
         }

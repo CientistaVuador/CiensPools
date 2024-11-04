@@ -31,7 +31,6 @@ import cientistavuador.cienspools.debug.AabRender;
 import cientistavuador.cienspools.debug.LineRender;
 import cientistavuador.cienspools.newrendering.N3DModel;
 import cientistavuador.cienspools.newrendering.N3DModelImporter;
-import cientistavuador.cienspools.newrendering.N3DModelNode;
 import cientistavuador.cienspools.newrendering.N3DObject;
 import cientistavuador.cienspools.newrendering.N3DObjectRenderer;
 import cientistavuador.cienspools.newrendering.NCubemap;
@@ -48,8 +47,6 @@ import cientistavuador.cienspools.newrendering.NTextures;
 import cientistavuador.cienspools.physics.PlayerController;
 import cientistavuador.cienspools.popups.BakePopup;
 import cientistavuador.cienspools.popups.ContinuePopup;
-import cientistavuador.cienspools.resourcepack.ResourcePackWriter;
-import cientistavuador.cienspools.resourcepack.ResourcePackWriter.ResourceEntry;
 import cientistavuador.cienspools.text.GLFontRenderer;
 import cientistavuador.cienspools.text.GLFontSpecifications;
 import cientistavuador.cienspools.ubo.CameraUBO;
@@ -95,10 +92,13 @@ public class Game {
 
     private final NCubemap skybox;
     private final String[] cubemapNames = {
-        "cubemap"
+        "big_pool",
+        "big_pool_refraction"
     };
     private final NCubemapBox[] cubemapInfos = {
-        new NCubemapBox(-0.0, 1.62, 0.08, -5.05, -5.05, -5.12, 5.05, 5.05, 5.12)
+        new NCubemapBox(4.68, 2.89, -0.68, -11.06, -0.15, -7.09, 20.47, 10.10, 5.06),
+        new NCubemapBox(4.07, -0.33, -0.56, -2.29, -1.07, -5.08, 9.69, 0.00, 3.02)
+
     };
 
     private NCubemaps cubemaps;
@@ -106,7 +106,6 @@ public class Game {
     private NMap map;
     private NMap nextMap;
 
-    private final N3DObject waterBottle;
     private final N3DModel boomBoxModel;
     private final List<N3DObject> boomBoxes = new ArrayList<>();
 
@@ -123,22 +122,29 @@ public class Game {
     private final PlayerController playerController = new PlayerController();
 
     {
+        this.playerController.getCharacterController().setPosition(16.72f, 0f, 12.76f);
+        this.camera.setRotation(0f, -180f, 0f);
+
+        NLight.NDirectionalLight sun = new NLight.NDirectionalLight("sun");
+        sun.getDiffuse().set(20f);
+        sun.getSpecular().set(3f);
+        sun.getAmbient().set(0.1f);
+        sun.setDynamic(false);
+        sun.getDirection().set(-0.5f, -0.75f, -0.45f).normalize();
+        this.lights.add(sun);
+
         try {
             this.skybox = NCubemapStore
                     .readCubemap("cientistavuador/cienspools/resources/cubemaps/skybox.cbm");
-
+            
             List<N3DObject> mapObjects = new ArrayList<>();
             {
-                N3DModel roomModel = N3DModelImporter
-                        .importFromJarFile("cientistavuador/cienspools/resources/models/room.glb");
+                N3DModel roomModel = N3DModel.RESOURCES.get("[031E114E9B854953|9E778413412CA407]Surface");
                 N3DObject room = new N3DObject("room", roomModel);
                 mapObjects.add(room);
-                
-                roomModel.getGeometry(2).getMaterial().setNewDiffuseSpecularRatio(0.05f);
-                roomModel.getGeometry(1).setMaterial(NMaterial.WATER);
             }
 
-            this.map = new NMap("map", mapObjects, NMap.DEFAULT_LIGHTMAP_MARGIN, 60f);
+            this.map = new NMap("map", mapObjects, NMap.DEFAULT_LIGHTMAP_MARGIN, 45f);
             this.map.setLightmaps(NLightmapsStore
                     .readLightmaps("cientistavuador/cienspools/resources/lightmaps/lightmap.lit"));
 
@@ -153,56 +159,11 @@ public class Game {
             ColorUtils.setSRGB(this.lighter.getAmbient(), 233, 140, 80).mul(0.015f);
 
             {
-                N3DModel bottle = N3DModelImporter
-                        .importFromJarFile("cientistavuador/cienspools/resources/models/WaterBottle.glb");
-                try (ResourcePackWriter w = new ResourcePackWriter(Path.of("a.zip"))) {
-                    ResourceEntry e = new ResourceEntry();
-                    N3DModel.RESOURCES.writeResource(bottle, e, "model");
-                    w.writeResourceEntry(e);
-                }
-                this.waterBottle = new N3DObject("bottle", bottle);
-                this.waterBottle.setMap(this.map);
-
-                this.waterBottle.getPosition().set(0, -4, 0);
-                this.waterBottle.getScale().set(7f);
-
-                PhysicsRigidBody rigidBody = new PhysicsRigidBody(
-                        bottle.getHullCollisionShape(), 0f
-                );
-                rigidBody.setPhysicsLocation(new com.jme3.math.Vector3f(
-                        (float) this.waterBottle.getPosition().x() * Main.TO_PHYSICS_ENGINE_UNITS,
-                        (float) this.waterBottle.getPosition().y() * Main.TO_PHYSICS_ENGINE_UNITS,
-                        (float) this.waterBottle.getPosition().z() * Main.TO_PHYSICS_ENGINE_UNITS
-                ));
-                rigidBody.setPhysicsScale(new com.jme3.math.Vector3f(
-                        this.waterBottle.getScale().x(),
-                        this.waterBottle.getScale().y(),
-                        this.waterBottle.getScale().z()
-                ));
-                this.physicsSpace.addCollisionObject(rigidBody);
-            }
-
-            {
-                this.boomBoxModel = N3DModelImporter
-                        .importFromJarFile("cientistavuador/cienspools/resources/models/BoomBox.glb");
-            }
-
-            {
-                N3DModel cubeModel = N3DModelImporter
-                        .importFromJarFile("cientistavuador/cienspools/resources/models/cube.glb");
-                N3DObject cube = new N3DObject("cube", cubeModel);
-                cube.getScale().set(0.01f);
-                cube.getN3DModel().getGeometry(0).setMaterial(NMaterial.GLASS);
-                cube.setMap(this.map);
-                //this.boomBoxes.add(cube);
+                this.boomBoxModel = N3DModel.RESOURCES.get("[D48EAA8D455A4B57|A34C2F1CE3B5D2C7]BoomBox");
             }
         } catch (IOException ex) {
             throw new RuntimeException(ex);
         }
-
-        Scene.EmissiveLight emissive = new Scene.EmissiveLight();
-        emissive.setEmissiveRaysPerSample(256);
-        this.scene.getLights().add(emissive);
 
         for (NLight light : this.lights) {
             if (light.isDynamic()) {
@@ -216,8 +177,8 @@ public class Game {
             for (String name : this.cubemapNames) {
                 cubemapsList.add(NCubemapStore.readCubemap("cientistavuador/cienspools/resources/cubemaps/" + name + ".cbm"));
             }
-        } catch (IOException ex) {
-            throw new UncheckedIOException(ex);
+        } catch (NullPointerException | IOException ex) {
+            ex.printStackTrace();
         }
         this.cubemaps = new NCubemaps(this.skybox, cubemapsList);
         this.map.setCubemaps(this.cubemaps);
@@ -229,9 +190,6 @@ public class Game {
         this.physicsSpace.addCollisionObject(new PhysicsRigidBody(this.map.getMeshCollision(), 0f));
         this.physicsSpace.setAccuracy(1f / 480f);
         this.physicsSpace.setMaxSubSteps(16);
-
-        this.map.getLightmaps().setIntensity(0, 1f);
-        this.cubemaps.getCubemap(0).setIntensity(1f);
     }
 
     private Game() {
@@ -276,10 +234,8 @@ public class Game {
             this.playerController.getCharacterController().setPosition(0f, 0.1f, 0f);
         }
 
-        if (glfwGetKey(Main.WINDOW_POINTER, GLFW_KEY_R) == GLFW_PRESS) {
-            this.flashlight.getPosition().set(this.camera.getPosition());
-            this.flashlight.getDirection().set(this.camera.getFront()).add(0f, -0.15f, 0f).normalize();
-        }
+        this.flashlight.getPosition().set(this.camera.getPosition());
+        this.flashlight.getDirection().set(this.camera.getFront()).add(0f, -0.15f, 0f).normalize();
 
         this.lighter.getPosition().set(this.camera.getRight()).negate()
                 .mul(0.05f).add(this.camera.getPosition());
@@ -308,7 +264,6 @@ public class Game {
         for (int i = 0; i < this.map.getNumberOfObjects(); i++) {
             N3DObjectRenderer.queueRender(this.map.getObject(i));
         }
-        N3DObjectRenderer.queueRender(this.waterBottle);
         for (N3DObject boomBox : this.boomBoxes) {
             N3DObjectRenderer.queueRender(boomBox);
         }

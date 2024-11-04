@@ -29,6 +29,7 @@ package cientistavuador.cienspools.newrendering;
 import cientistavuador.cienspools.resourcepack.Resource;
 import cientistavuador.cienspools.resourcepack.ResourcePackWriter;
 import cientistavuador.cienspools.resourcepack.ResourcePackWriter.DataEntry;
+import cientistavuador.cienspools.resourcepack.ResourcePackWriter.ResourceEntry;
 import cientistavuador.cienspools.resourcepack.ResourceRW;
 import cientistavuador.cienspools.util.MeshUtils;
 import com.jme3.bullet.collision.shapes.HullCollisionShape;
@@ -57,6 +58,67 @@ import org.xml.sax.SAXException;
  * @author Cien
  */
 public class N3DModel {
+    
+    public static final void writeModelResourcePack(N3DModel model, Path path) throws IOException {
+        if (Files.isRegularFile(path)) {
+            Files.delete(path);
+        }
+        try (ResourcePackWriter w = new ResourcePackWriter(path)) {
+            for (int i = 0; i < model.getNumberOfAnimations(); i++) {
+                NAnimation animation = model.getAnimation(i);
+                String p = w.getPathFromId("animations", animation.getName());
+                if (p == null) {
+                    continue;
+                }
+                ResourceEntry e = new ResourceEntry();
+                NAnimation.RESOURCES.writeResource(animation, e, p);
+                w.writeResourceEntry(e);
+            }
+            for (int i = 0; i < model.getNumberOfTextures(); i++) {
+                NTextures texture = model.getTextures(i);
+                String p = w.getPathFromId("textures", texture.getName());
+                if (p == null) {
+                    continue;
+                }
+                ResourceEntry e = new ResourceEntry();
+                NTextures.RESOURCES.writeResource(texture, e, p);
+                w.writeResourceEntry(e);
+            }
+            for (int i = 0; i < model.getNumberOfMaterials(); i++) {
+                NMaterial mat = model.getMaterial(i);
+                String p = w.getPathFromId("materials", mat.getName());
+                if (p == null) {
+                    continue;
+                }
+                ResourceEntry e = new ResourceEntry();
+                NMaterial.RESOURCES.writeResource(mat, e, p);
+                w.writeResourceEntry(e);
+            }
+            for (int i = 0; i < model.getNumberOfMeshes(); i++) {
+                NMesh mesh = model.getMesh(i);
+                String p = w.getPathFromId("meshes", mesh.getName());
+                if (p == null) {
+                    continue;
+                }
+                ResourceEntry e = new ResourceEntry();
+                NMesh.RESOURCES.writeResource(mesh, e, p);
+                w.writeResourceEntry(e);
+            }
+            for (int i = 0; i < model.getNumberOfGeometries(); i++) {
+                NGeometry geo = model.getGeometry(i);
+                String p = w.getPathFromId("geometries", geo.getName());
+                if (p == null) {
+                    continue;
+                }
+                ResourceEntry e = new ResourceEntry();
+                NGeometry.RESOURCES.writeResource(geo, e, p);
+                w.writeResourceEntry(e);
+            }
+            ResourceEntry e = new ResourceEntry();
+            N3DModel.RESOURCES.writeResource(model, e, "model");
+            w.writeResourceEntry(e);
+        }
+    }
 
     public static final ResourceRW<N3DModel> RESOURCES = new ResourceRW<N3DModel>(true) {
         public static final String ANIMATIONS_DATA_TYPE = "text/plain;name=animations";
@@ -74,12 +136,12 @@ public class N3DModel {
             Vector3f animatedMin = new Vector3f();
             Vector3f animatedMax = new Vector3f();
             Map<String, String> meta = r.getMeta();
-            if (!ResourceRW.readVector3f(meta, min, "min", false, null) 
+            if (!ResourceRW.readVector3f(meta, min, "min", false, null)
                     || !ResourceRW.readVector3f(meta, max, "max", false, null)) {
                 min = null;
                 max = null;
             }
-            if (!ResourceRW.readVector3f(meta, animatedMin, "animatedMin", false, null) 
+            if (!ResourceRW.readVector3f(meta, animatedMin, "animatedMin", false, null)
                     || !ResourceRW.readVector3f(meta, animatedMax, "animatedMax", false, null)) {
                 animatedMin = null;
                 animatedMax = null;

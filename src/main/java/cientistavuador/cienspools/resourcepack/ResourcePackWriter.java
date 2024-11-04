@@ -97,7 +97,7 @@ public class ResourcePackWriter implements AutoCloseable {
         public void setLicense(DataEntry license) {
             this.license = license;
         }
-        
+
         public DataEntry getPreview() {
             return preview;
         }
@@ -206,7 +206,7 @@ public class ResourcePackWriter implements AutoCloseable {
         this.xmlWriter = new BufferedWriter(
                 new OutputStreamWriter(
                         Files.newOutputStream(
-                                this.fileSystem.getPath(ResourcePackReader.RESOURCE_PACK_XML)), 
+                                this.fileSystem.getPath(ResourcePackReader.RESOURCE_PACK_XML)),
                         StandardCharsets.UTF_8));
         this.xmlWriter.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
         this.xmlWriter.newLine();
@@ -220,6 +220,24 @@ public class ResourcePackWriter implements AutoCloseable {
 
     public FileSystem getFileSystem() {
         return fileSystem;
+    }
+
+    public String getPathFromId(String path, String id) {
+        if (!path.isEmpty() && !path.endsWith("/")) {
+            path += "/";
+        }
+        String name = new Resource.IDSyntax(id).name();
+        if (!name.isEmpty()) {
+            String planA = path + PathUtils.cleanupPathName(name);
+            if (!Files.exists(getFileSystem().getPath(planA))) {
+                return planA;
+            }
+        }
+        String planB = path + PathUtils.cleanupPathName(id);
+        if (!Files.exists(getFileSystem().getPath(planB))) {
+            return planB;
+        }
+        return null;
     }
 
     private Path createPathAndWrite(DataEntry entry) throws IOException {

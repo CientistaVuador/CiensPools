@@ -78,22 +78,12 @@ public class NMesh {
         @Override
         public NMesh readResource(Resource r) throws IOException {
             Map<String, String> meta = r.getMeta();
-            String minX = meta.get("min.x");
-            String minY = meta.get("min.y");
-            String minZ = meta.get("min.z");
-            String maxX = meta.get("min.x");
-            String maxY = meta.get("min.y");
-            String maxZ = meta.get("min.z");
-            Vector3f min = null;
-            Vector3f max = null;
-            if (minX != null && minY != null && minZ != null 
-                    && maxX != null && maxY != null && maxZ != null) {
-                min = new Vector3f(
-                        Float.parseFloat(minX), Float.parseFloat(minY), Float.parseFloat(minZ)
-                );
-                max = new Vector3f(
-                        Float.parseFloat(maxX), Float.parseFloat(maxY), Float.parseFloat(maxZ)
-                );
+            Vector3f min = new Vector3f();
+            Vector3f max = new Vector3f();
+            if (!ResourceRW.readVector3f(meta, min, "min", false, null) 
+                    || !ResourceRW.readVector3f(meta, max, "max", false, null)) {
+                min = null;
+                max = null;
             }
             Path meshPath = r.getData().get(MESH_DATA_TYPE);
             if (meshPath == null) {
@@ -140,12 +130,8 @@ public class NMesh {
                 path += "/";
             }
             Map<String, String> meta = entry.getMeta();
-            meta.put("min.x", Float.toString(obj.getAabbMin().x()));
-            meta.put("min.y", Float.toString(obj.getAabbMin().y()));
-            meta.put("min.z", Float.toString(obj.getAabbMin().z()));
-            meta.put("max.x", Float.toString(obj.getAabbMax().x()));
-            meta.put("max.y", Float.toString(obj.getAabbMax().y()));
-            meta.put("max.z", Float.toString(obj.getAabbMax().z()));
+            ResourceRW.writeVector3f(meta, obj.getAabbMin(), "min", false);
+            ResourceRW.writeVector3f(meta, obj.getAabbMax(), "max", false);
             
             Map<String, DataEntry> data = entry.getData();
             data.put(MESH_DATA_TYPE, new DataEntry(path + "mesh.msh",

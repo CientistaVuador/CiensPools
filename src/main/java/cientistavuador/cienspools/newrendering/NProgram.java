@@ -180,9 +180,9 @@ public class NProgram {
                 return texture(materialTextures, vec3(uv, 1.0));
             }
             
-            vec4 ao_em_wt_ny(vec2 uv) {
+            vec4 em_ao_wt_ny(vec2 uv) {
                 vec4 c = texture(materialTextures, vec3(uv, 2.0));
-                c[1] = toLinear(c[1]);
+                c[0] = toLinear(c[0]);
                 return c;
             }
             
@@ -340,7 +340,13 @@ public class NProgram {
                 float afterDepth = currentDepth - currentLayerDepth;
                 float beforeDepth = (1.0 - ht_rg_mt_nx(previousUv)[0]) - currentLayerDepth + layerDepth;
                 
-                float weight = afterDepth / (afterDepth - beforeDepth);
+                float deltaDepth = afterDepth - beforeDepth;
+                float weight;
+                if (deltaDepth > 0.00001) {
+                    weight = afterDepth / (afterDepth - beforeDepth);
+                } else {
+                    weight = 1.0;
+                }
                 vec2 finalUv = (previousUv * weight) + (currentUv * (1.0 - weight));
                 
                 return finalUv;
@@ -526,7 +532,7 @@ public class NProgram {
                 }
                 
                 vec4 htrgmtnx = ht_rg_mt_nx(uv);
-                vec4 aoemwtny = ao_em_wt_ny(uv);
+                vec4 emaowtny = em_ao_wt_ny(uv);
                 
                 vec4 color = r_g_b_a(uv) * material.color;
                 #if defined(VARIANT_ALPHA_TESTING)
@@ -536,15 +542,15 @@ public class NProgram {
                 #endif
                 float metallic = htrgmtnx[2] * material.metallic;
                 float roughness = htrgmtnx[1] * material.roughness;
-                float emissive = aoemwtny[1] * material.emissive;
-                float water = aoemwtny[2] * material.water;
+                float emissive = emaowtny[0] * material.emissive;
+                float water = emaowtny[2] * material.water;
                 float refraction = material.refraction;
-                float ambientOcclusion = aoemwtny[0] * material.ambientOcclusion;
+                float ambientOcclusion = emaowtny[1] * material.ambientOcclusion;
                 float fresnelOutline = material.fresnelOutline;
                 vec3 fresnelOutlineColor = material.fresnelOutlineColor;
                 vec3 vertexNormal = normalize(inVertex.worldNormal);
                 float nx = (htrgmtnx[3] * 2.0) - 1.0;
-                float ny = (aoemwtny[3] * 2.0) - 1.0;
+                float ny = (emaowtny[3] * 2.0) - 1.0;
                 vec3 normal = normalize(vec3(nx, ny, sqrt(abs(1.0 - (nx * nx) - (ny * ny)))));
                 if (enableWater) {
                     normal = mix(normal, sampleWaterNormal(uv), water);

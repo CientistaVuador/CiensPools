@@ -48,26 +48,16 @@ public class NGeometry {
         public String getResourceType() {
             return "geometry";
         }
-        
+
         @Override
         public NGeometry readResource(Resource r) throws IOException {
             Map<String, String> meta = r.getMeta();
-            String animatedMinX = meta.get("animatedMin.x");
-            String animatedMinY = meta.get("animatedMin.y");
-            String animatedMinZ = meta.get("animatedMin.z");
-            String animatedMaxX = meta.get("animatedMax.x");
-            String animatedMaxY = meta.get("animatedMax.y");
-            String animatedMaxZ = meta.get("animatedMax.z");
-            Vector3f animatedMin = null;
-            Vector3f animatedMax = null;
-            if (animatedMinX != null && animatedMinY != null && animatedMinZ != null 
-                    && animatedMaxX != null && animatedMaxY != null && animatedMaxZ != null) {
-                animatedMin = new Vector3f(
-                        Float.parseFloat(animatedMinX), Float.parseFloat(animatedMinY), Float.parseFloat(animatedMinZ) 
-                );
-                animatedMax = new Vector3f(
-                        Float.parseFloat(animatedMaxX), Float.parseFloat(animatedMaxY), Float.parseFloat(animatedMaxZ) 
-                );
+            Vector3f animatedMin = new Vector3f();
+            Vector3f animatedMax = new Vector3f();
+            if (!ResourceRW.readVector3f(meta, animatedMin, "animatedMin", false, null) 
+                    || !ResourceRW.readVector3f(meta, animatedMax, "animatedMax", false, null)) {
+                animatedMin = null;
+                animatedMax = null;
             }
             return new NGeometry(
                     r.getId(),
@@ -76,7 +66,7 @@ public class NGeometry {
                     animatedMin, animatedMax
             );
         }
-        
+
         @Override
         public void writeResource(NGeometry obj, ResourcePackWriter.ResourceEntry entry, String path) throws IOException {
             entry.setType(getResourceType());
@@ -84,15 +74,13 @@ public class NGeometry {
             Map<String, String> meta = entry.getMeta();
             meta.put("mesh", obj.getMesh().getName());
             meta.put("material", obj.getMaterial().getName());
-            meta.put("animatedMin.x", Float.toString(obj.getAnimatedAabbMin().x()));
-            meta.put("animatedMin.y", Float.toString(obj.getAnimatedAabbMin().y()));
-            meta.put("animatedMin.z", Float.toString(obj.getAnimatedAabbMin().z()));
-            meta.put("animatedMax.x", Float.toString(obj.getAnimatedAabbMax().x()));
-            meta.put("animatedMax.y", Float.toString(obj.getAnimatedAabbMax().y()));
-            meta.put("animatedMax.z", Float.toString(obj.getAnimatedAabbMax().z()));
+            if (obj.isAnimatedAabbGenerated()) {
+                ResourceRW.writeVector3f(meta, obj.getAnimatedAabbMin(), "animatedMin", false);
+                ResourceRW.writeVector3f(meta, obj.getAnimatedAabbMax(), "animatedMax", false);
+            }
         }
     };
-    
+
     private N3DModel model = null;
     private int globalId = -1;
     private N3DModelNode parent = null;
@@ -297,5 +285,5 @@ public class NGeometry {
     public boolean isAnimatedAabbGenerated() {
         return animatedAabbGenerated;
     }
-    
+
 }

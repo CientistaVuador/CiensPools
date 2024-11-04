@@ -104,18 +104,18 @@ public class NTexturesImporter {
                 .createDXT5Texture(compacted.getRGBA(), compacted.getWidth(), compacted.getHeight());
     }
     
-    public static DXT5Texture create_ao_em_wt_ny(
+    public static DXT5Texture create_em_ao_wt_ny(
             int defaultWidth, int defaultHeight,
-            RGBA8Image ambientOcclusion, RGBA8Image emissive, RGBA8Image water, RGBA8Image normalMap
+            RGBA8Image emissive, RGBA8Image ambientOcclusion, RGBA8Image water, RGBA8Image normalMap
     ) {
         RGBA8Image compacted = RGBA8Image
                 .ofSameSize(defaultWidth, defaultHeight, ambientOcclusion, emissive, water, normalMap);
         compacted.fill(255, 255, 255, 127);
-        if (ambientOcclusion != null) {
-            compacted.copyChannelOf(ambientOcclusion, 0, 0);
-        }
         if (emissive != null) {
-            compacted.copyChannelOf(emissive, 0, 1);
+            compacted.copyChannelOf(emissive, 0, 0);
+        }
+        if (ambientOcclusion != null) {
+            compacted.copyChannelOf(ambientOcclusion, 0, 1);
         }
         if (water != null) {
             compacted.copyChannelOf(water, 0, 2);
@@ -153,7 +153,7 @@ public class NTexturesImporter {
             RGBA8Image color,
             RGBA8Image normalMap,
             RGBA8Image height, RGBA8Image roughness, RGBA8Image metallic,
-            RGBA8Image ambientOcclusion, RGBA8Image emissive, RGBA8Image water
+            RGBA8Image emissive, RGBA8Image ambientOcclusion, RGBA8Image water
     ) {
         Objects.requireNonNull(color, "Color is null.");
         int defaultWidth = color.getWidth();
@@ -166,9 +166,9 @@ public class NTexturesImporter {
         DXT5Texture cr_cg_cb_ca = create_cr_cg_cb_ca(color, optimalBlendingMode);
         DXT5Texture ht_rg_mt_nx = create_ht_rg_mt_nx(defaultWidth, defaultHeight,
                 height, roughness, metallic, normalMap);
-        DXT5Texture ao_em_wt_ny = create_ao_em_wt_ny(defaultWidth, defaultHeight,
-                ambientOcclusion, emissive, water, normalMap);
-        return new NTextures(name, optimalBlendingMode, cr_cg_cb_ca, ht_rg_mt_nx, ao_em_wt_ny);
+        DXT5Texture em_ao_wt_ny = create_em_ao_wt_ny(defaultWidth, defaultHeight,
+                emissive, ambientOcclusion, water, normalMap);
+        return new NTextures(name, optimalBlendingMode, cr_cg_cb_ca, ht_rg_mt_nx, em_ao_wt_ny);
     }
     
     public static final float MINIMUM_AMBIENT_OCCLUSION = 0.5f;

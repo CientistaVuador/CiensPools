@@ -96,6 +96,10 @@ public class PathUtils {
             output = output.substring(0, 64);
         }
         
+        if (output.isEmpty()) {
+            output = "_";
+        }
+        
         return output;
     }
     

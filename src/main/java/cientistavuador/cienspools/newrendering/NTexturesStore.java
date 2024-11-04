@@ -83,7 +83,7 @@ public class NTexturesStore {
         
         writeTexture("r_g_b_a."+DXT5TextureStore.EXTENSION, out, textures.texture_cr_cg_cb_ca());
         writeTexture("ht_rg_mt_nx."+DXT5TextureStore.EXTENSION, out, textures.texture_ht_rg_mt_nx());
-        writeTexture("er_eg_eb_ny."+DXT5TextureStore.EXTENSION, out, textures.texture_ao_em_wt_ny());
+        writeTexture("er_eg_eb_ny."+DXT5TextureStore.EXTENSION, out, textures.texture_em_ao_wt_ny());
         
         out.finish();
     }

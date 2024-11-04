@@ -46,9 +46,9 @@ public class PlayerController {
 
     public static final float EYE_OFFSET = -0.15f;
 
-    public static final float WALK_SPEED = 4f;
+    public static final float WALK_SPEED = 3.5f;
     public static final float CROUCH_SPEED = 1.35f;
-    public static final float CLIFF_SPEED = 2f;
+    public static final float CLIFF_SPEED = 1.75f;
 
     public static final float JUMP_SPEED = 6.5f;
     public static final float CROUCH_JUMP_SPEED = JUMP_SPEED;

@@ -247,7 +247,7 @@ public class N3DModelImporter {
             aiFreeScene(modelScene);
         }
     }
-    
+
     private final ExecutorService service = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
     private final AIScene scene;
@@ -258,7 +258,7 @@ public class N3DModelImporter {
     private final Map<String, RGBA8Image> images = new HashMap<>();
     private final Map<MaterialTextures, NTextures> textures = new HashMap<>();
     private final Map<Integer, NMaterial> materials = new HashMap<>();
-    
+
     private final Map<Integer, List<NGeometry>> loadedGeometries = new HashMap<>();
 
     private N3DModelImporter(AIScene scene) {
@@ -531,14 +531,14 @@ public class N3DModelImporter {
                 ao, height, normal, emissive);
     }
 
-    private void loadTexturesFromMaterialTextures(MaterialTextures textures) {
+    private void loadTexturesFromMaterialTextures(AIMaterial material, MaterialTextures textures) {
         synchronized (this.textures) {
             NTextures e = this.textures.get(textures);
             if (e != null) {
                 return;
             }
         }
-        
+
         RGBA8Image diffuse = this.images.get(textures.diffuse);
         RGBA8Image opacity = this.images.get(textures.opacity);
         RGBA8Image metallic = this.images.get(textures.metallic);
@@ -584,7 +584,7 @@ public class N3DModelImporter {
                 }
             }
         }
-        
+
         if (metallic != null && roughness != null) {
             if (textures.metallic.equals(textures.roughness)) {
                 RGBA8Image aoMetallicRoughness = roughness;
@@ -602,11 +602,18 @@ public class N3DModelImporter {
             emissive = emissive.copy();
             NTexturesImporter.bakeEmissiveIntoColor(diffuse, emissive);
         }
+
+        String name = null;
+        AIString out = AIString.create();
+        int result = aiGetMaterialString(material, AI_MATKEY_NAME, aiTextureType_NONE, 0, out);
+        if (result == aiReturn_SUCCESS) {
+            name = "Texture of "+out.dataString();
+        }
         
         NTextures e = NTexturesImporter.create(
-                false, Resource.generateRandomId(textures.toString()),
+                false, Resource.generateRandomId(name),
                 diffuse, normal, height,
-                roughness, metallic, ao, emissive, null);
+                roughness, metallic, emissive, ao, null);
         synchronized (this.textures) {
             this.textures.put(textures, e);
         }
@@ -619,7 +626,7 @@ public class N3DModelImporter {
         }
 
         List<Future<?>> futures = new ArrayList<>();
-        
+
         int amountOfMaterials = this.scene.mNumMaterials();
         for (int i = 0; i < amountOfMaterials; i++) {
             final int materialIndex = i;
@@ -628,42 +635,42 @@ public class N3DModelImporter {
             if (aiMaterial == null) {
                 continue;
             }
-            
+
             MaterialTextures t = getMaterialTextures(aiMaterial);
             futures.add(this.service.submit(() -> {
-                loadTexturesFromMaterialTextures(t);
+                loadTexturesFromMaterialTextures(aiMaterial, t);
             }));
         }
-        
-        for (Future<?> f:futures) {
+
+        for (Future<?> f : futures) {
             try {
                 f.get();
             } catch (InterruptedException | ExecutionException ex) {
                 throw new RuntimeException(ex);
             }
         }
-        
+
         for (int i = 0; i < amountOfMaterials; i++) {
             AIMaterial aiMaterial = AIMaterial.createSafe(mats.get(i));
             if (aiMaterial == null) {
                 continue;
             }
-            
-            String materialName = "Material "+Integer.toString(i);
-            
+
+            String materialName = "Material " + Integer.toString(i);
+
             AIString out = AIString.create();
             int result = aiGetMaterialString(aiMaterial, AI_MATKEY_NAME, aiTextureType_NONE, 0, out);
             if (result == aiReturn_SUCCESS) {
                 materialName = out.dataString();
             }
-            
+
             MaterialTextures texs = getMaterialTextures(aiMaterial);
             NTextures materialTexture = this.textures.get(texs);
             if (materialTexture == null) {
                 materialTexture = NTextures.BLANK_TEXTURE;
             }
             NMaterial material = new NMaterial(Resource.generateRandomId(materialName), materialTexture);
-            
+
             float metallic = 0f;
             if (texs.metallic != null) {
                 metallic = 1f;
@@ -680,50 +687,50 @@ public class N3DModelImporter {
             if (texs.emissive != null) {
                 emissive = 1f;
             }
-            
+
             AIColor4D colorOut = AIColor4D.create();
-            
+
             result = aiGetMaterialColor(aiMaterial,
                     AI_MATKEY_BASE_COLOR, aiTextureType_NONE, 0, colorOut);
             if (result == aiReturn_SUCCESS) {
                 material.getNewColor()
                         .set(colorOut.r(), colorOut.g(), colorOut.b(), colorOut.a());
             }
-            
+
             result = aiGetMaterialColor(aiMaterial,
                     AI_MATKEY_METALLIC_FACTOR, aiTextureType_NONE, 0, colorOut);
             if (result == aiReturn_SUCCESS) {
                 metallic = colorOut.r();
             }
-            
+
             result = aiGetMaterialColor(aiMaterial,
                     AI_MATKEY_ROUGHNESS_FACTOR, aiTextureType_NONE, 0, colorOut);
             if (result == aiReturn_SUCCESS) {
                 roughness = colorOut.r();
             }
-            
+
             result = aiGetMaterialColor(aiMaterial,
                     AI_MATKEY_BUMPSCALING, aiTextureType_NONE, 0, colorOut);
             if (result == aiReturn_SUCCESS) {
                 height = colorOut.r();
             }
-            
+
             result = aiGetMaterialColor(aiMaterial,
                     AI_MATKEY_EMISSIVE_INTENSITY, aiTextureType_NONE, 0, colorOut);
             if (result == aiReturn_SUCCESS) {
                 emissive = colorOut.r();
             }
-            
+
             material.setNewMetallic(metallic);
             material.setNewRoughness(roughness);
             material.setNewHeight(height);
             material.setNewEmissive(emissive);
             material.setNewAmbientOcclusion(1f);
-            
+
             this.materials.put(i, material);
         }
     }
-    
+
     private void clearImages() {
         this.images.clear();
     }
@@ -969,7 +976,7 @@ public class N3DModelImporter {
             if (splitMeshes.size() > 1) {
                 name += "_" + i;
             }
-            
+
             NMesh loadedMesh = new NMesh(
                     Resource.generateRandomId(name),
                     finalVertices, finalIndices,
@@ -977,7 +984,7 @@ public class N3DModelImporter {
             );
             loadedMesh.generateBVH();
 
-            outputGeometries.add(new NGeometry(Resource.generateRandomId(name+" Geometry"), loadedMesh, material));
+            outputGeometries.add(new NGeometry(Resource.generateRandomId(name + " Geometry"), loadedMesh, material));
         }
 
         return new Pair<>(
@@ -1098,21 +1105,21 @@ public class N3DModelImporter {
         try {
             loadAnimations();
             findMissingMeshBones();
-            
+
             loadImages();
             loadMaterials();
             clearImages();
             loadMeshes();
             clearMaterials();
-            
+
             N3DModelNode rootNode = generateRootNode();
-            
+
             String name = this.scene.mName().dataString();
             if (name.isEmpty()) {
                 name = rootNode.getName();
             }
             name = Resource.generateRandomId(name);
-            
+
             N3DModel finalModel = new N3DModel(
                     name,
                     rootNode,
