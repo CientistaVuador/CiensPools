@@ -226,7 +226,9 @@ public class MeshData {
     private final int[] indices;
     private final CompletableFuture<BVH> futureBvh;
 
+    @Deprecated
     private final boolean lightmapSupport;
+    @Deprecated
     private final List<LightmapMesh> lightmapMeshes = new ArrayList<>();
 
     private BVH bvh = null;
@@ -368,10 +370,12 @@ public class MeshData {
         return this.bvh;
     }
 
+    @Deprecated
     public boolean hasLightmapSupport() {
         return this.lightmapSupport;
     }
     
+    @Deprecated
     public LightmapMesh getLightmapMesh(float pixelToWorldRatio, float scaleX, float scaleY, float scaleZ) {
         if (!hasLightmapSupport()) {
             return null;
@@ -390,12 +394,14 @@ public class MeshData {
         return null;
     }
     
+    @Deprecated
     public LightmapMesh[] getLightmapMeshes() {
         synchronized (this.lightmapMeshes) {
             return this.lightmapMeshes.toArray(LightmapMesh[]::new);
         }
     }
     
+    @Deprecated
     public LightmapMesh scheduleLightmapMesh(float pixelToWorldRatio, float scaleX, float scaleY, float scaleZ) {
         if (!hasLightmapSupport()) {
             throw new UnsupportedOperationException("MeshData "+this.name+" has no support for lightmaps.");

@@ -28,6 +28,7 @@ package cientistavuador.cienspools.newrendering;
 
 import cientistavuador.cienspools.util.DXT5TextureStore;
 import cientistavuador.cienspools.util.DXT5TextureStore.DXT5Texture;
+import cientistavuador.cienspools.util.RGBA8Image;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
@@ -182,8 +183,8 @@ public class NCubemapImporter {
     }
 
     public static NCubemap loadFromImage(String name, byte[] image, boolean srgb) {
-        NTexturesImporter.LoadedImage img = NTexturesImporter.loadImage(image);
-        return load(name, img.width, img.height, img.pixelData, srgb);
+        RGBA8Image img = RGBA8Image.fromPNG(image);
+        return load(name, img.getWidth(), img.getHeight(), img.getRGBA(), srgb);
     }
 
     public static NCubemap loadFromJar(String path, boolean srgb) {

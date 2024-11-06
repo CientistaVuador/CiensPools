@@ -29,7 +29,6 @@ package cientistavuador.cienspools;
 import cientistavuador.cienspools.natives.Natives;
 import cientistavuador.cienspools.newrendering.N3DModel;
 import cientistavuador.cienspools.newrendering.N3DModelImporter;
-import cientistavuador.cienspools.newrendering.N3DModelStore;
 import cientistavuador.cienspools.newrendering.NCubemap;
 import cientistavuador.cienspools.newrendering.NCubemapImporter;
 import cientistavuador.cienspools.newrendering.NCubemapStore;
@@ -238,9 +237,7 @@ public class MainWrapper {
         System.out.println("Writing to File...");
         try {
             Path outputFile = path.toAbsolutePath().getParent().resolve(path.getFileName() + ".n3dm");
-            try (BufferedOutputStream outBuffer = new BufferedOutputStream(Files.newOutputStream(outputFile))) {
-                N3DModelStore.writeModel(model, outBuffer);
-            }
+            N3DModel.writeModelResourcePack(model, outputFile);
         } catch (IOException ex) {
             ex.printStackTrace(System.out);
             return;

@@ -709,33 +709,33 @@ public class N3DObjectRenderer {
             }
 
             {
-                Vector4fc c = material.getNewColor();
-                Vector3fc f = material.getNewFresnelOutlineColor();
+                Vector4fc c = material.getColor();
+                Vector3fc f = material.getFresnelOutlineColor();
                 variant
                         .uniform4f(NProgram.UNIFORM_MATERIAL_COLOR, c.x(), c.y(), c.z(), c.w())
-                        .uniform1f(NProgram.UNIFORM_MATERIAL_METALLIC, material.getNewMetallic())
-                        .uniform1f(NProgram.UNIFORM_MATERIAL_ROUGHNESS, material.getNewRoughness())
-                        .uniform1f(NProgram.UNIFORM_MATERIAL_INVERSE_ROUGHNESS_EXPONENT, material.getNewInverseRoughnessExponent())
-                        .uniform1f(NProgram.UNIFORM_MATERIAL_DIFFUSE_SPECULAR_RATIO, material.getNewDiffuseSpecularRatio())
-                        .uniform1f(NProgram.UNIFORM_MATERIAL_HEIGHT, material.getNewHeight())
-                        .uniform1f(NProgram.UNIFORM_MATERIAL_HEIGHT_MIN_LAYERS, material.getNewHeightMinLayers())
-                        .uniform1f(NProgram.UNIFORM_MATERIAL_HEIGHT_MAX_LAYERS, material.getNewHeightMaxLayers())
-                        .uniform1f(NProgram.UNIFORM_MATERIAL_EMISSIVE, material.getNewEmissive())
-                        .uniform1f(NProgram.UNIFORM_MATERIAL_WATER, material.getNewWater())
-                        .uniform1f(NProgram.UNIFORM_MATERIAL_REFRACTION, material.getNewRefraction())
-                        .uniform1f(NProgram.UNIFORM_MATERIAL_REFRACTION_POWER, material.getNewRefractionPower())
-                        .uniform1f(NProgram.UNIFORM_MATERIAL_AMBIENT_OCCLUSION, material.getNewAmbientOcclusion())
-                        .uniform1f(NProgram.UNIFORM_MATERIAL_FRESNEL_OUTLINE, material.getNewFresnelOutline())
+                        .uniform1f(NProgram.UNIFORM_MATERIAL_METALLIC, material.getMetallic())
+                        .uniform1f(NProgram.UNIFORM_MATERIAL_ROUGHNESS, material.getRoughness())
+                        .uniform1f(NProgram.UNIFORM_MATERIAL_INVERSE_ROUGHNESS_EXPONENT, material.getInverseRoughnessExponent())
+                        .uniform1f(NProgram.UNIFORM_MATERIAL_DIFFUSE_SPECULAR_RATIO, material.getDiffuseSpecularRatio())
+                        .uniform1f(NProgram.UNIFORM_MATERIAL_HEIGHT, material.getHeight())
+                        .uniform1f(NProgram.UNIFORM_MATERIAL_HEIGHT_MIN_LAYERS, material.getHeightMinLayers())
+                        .uniform1f(NProgram.UNIFORM_MATERIAL_HEIGHT_MAX_LAYERS, material.getHeightMaxLayers())
+                        .uniform1f(NProgram.UNIFORM_MATERIAL_EMISSIVE, material.getEmissive())
+                        .uniform1f(NProgram.UNIFORM_MATERIAL_WATER, material.getWater())
+                        .uniform1f(NProgram.UNIFORM_MATERIAL_REFRACTION, material.getRefraction())
+                        .uniform1f(NProgram.UNIFORM_MATERIAL_REFRACTION_POWER, material.getRefractionPower())
+                        .uniform1f(NProgram.UNIFORM_MATERIAL_AMBIENT_OCCLUSION, material.getAmbientOcclusion())
+                        .uniform1f(NProgram.UNIFORM_MATERIAL_FRESNEL_OUTLINE, material.getFresnelOutline())
                         .uniform3f(NProgram.UNIFORM_MATERIAL_FRESNEL_OUTLINE_COLOR, f.x(), f.y(), f.z())
                         ;
                 
                 variant
                         .uniform1i(NProgram.UNIFORM_ENABLE_REFRACTIONS,
-                                (material.getNewRefraction() == 0f ? 0 : 1))
+                                (material.getRefraction() == 0f ? 0 : 1))
                         .uniform1i(NProgram.UNIFORM_ENABLE_PARALLAX_MAPPING, 
-                                (material.getNewHeight() == 0f ? 0 : 1))
+                                (material.getHeight() == 0f ? 0 : 1))
                         .uniform1i(NProgram.UNIFORM_ENABLE_WATER, 
-                                (material.getNewWater() == 0f ? 0 : 1))
+                                (material.getWater() == 0f ? 0 : 1))
                         ;
             }
             

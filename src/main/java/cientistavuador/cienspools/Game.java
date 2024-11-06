@@ -30,7 +30,6 @@ import cientistavuador.cienspools.camera.FreeCamera;
 import cientistavuador.cienspools.debug.AabRender;
 import cientistavuador.cienspools.debug.LineRender;
 import cientistavuador.cienspools.newrendering.N3DModel;
-import cientistavuador.cienspools.newrendering.N3DModelImporter;
 import cientistavuador.cienspools.newrendering.N3DObject;
 import cientistavuador.cienspools.newrendering.N3DObjectRenderer;
 import cientistavuador.cienspools.newrendering.NCubemap;
@@ -42,7 +41,6 @@ import cientistavuador.cienspools.newrendering.NLight;
 import cientistavuador.cienspools.newrendering.NLightmaps;
 import cientistavuador.cienspools.newrendering.NLightmapsStore;
 import cientistavuador.cienspools.newrendering.NMap;
-import cientistavuador.cienspools.newrendering.NMaterial;
 import cientistavuador.cienspools.newrendering.NTextures;
 import cientistavuador.cienspools.physics.PlayerController;
 import cientistavuador.cienspools.popups.BakePopup;
@@ -67,7 +65,6 @@ import com.simsilica.mathd.Vec3d;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -93,12 +90,17 @@ public class Game {
     private final NCubemap skybox;
     private final String[] cubemapNames = {
         "big_pool",
-        "big_pool_refraction"
+        "big_pool_refraction",
+        "spawn",
+        "exit",
+        "exit_refraction"
     };
     private final NCubemapBox[] cubemapInfos = {
         new NCubemapBox(4.68, 2.89, -0.68, -11.06, -0.15, -7.09, 20.47, 10.10, 5.06),
-        new NCubemapBox(4.07, -0.33, -0.56, -2.29, -1.07, -5.08, 9.69, 0.00, 3.02)
-
+        new NCubemapBox(4.07, -0.33, -0.56, -2.29, -1.07, -5.08, 9.69, 0.00, 3.02),
+        new NCubemapBox(3.23, 2.20, 12.92, -11.22, -0.05, 7.91, 19.79, 10.59, 18.04),
+        new NCubemapBox(-0.15, 2.54, -14.83, -11.11, -0.03, -19.12, 19.56, 10.09, -10.06),
+        new NCubemapBox(0.21, -0.39, -17.53, -11.14, -1.00, -16.03, 19.62, -0.09, -19.09)
     };
 
     private NCubemaps cubemaps;
@@ -107,6 +109,7 @@ public class Game {
     private NMap nextMap;
 
     private final N3DModel boomBoxModel;
+    private final N3DObject selector;
     private final List<N3DObject> boomBoxes = new ArrayList<>();
 
     private final NLight.NSpotLight flashlight = new NLight.NSpotLight("flashlight");
@@ -116,7 +119,7 @@ public class Game {
 
     private boolean ambientCubeDebug = false;
     private boolean debugCollision = false;
-
+    
     private final PhysicsSpace physicsSpace = new PhysicsSpace(PhysicsSpace.BroadphaseType.DBVT);
     private final PhysicsSpaceDebugger physicsSpaceDebugger = new PhysicsSpaceDebugger(this.physicsSpace);
     private final PlayerController playerController = new PlayerController();
@@ -150,7 +153,7 @@ public class Game {
 
             this.flashlight.setInnerConeAngle(10f);
             this.flashlight.setOuterConeAngle(40f);
-            this.flashlight.setDiffuseSpecularAmbient(100f, 4f, 0.0f);
+            this.flashlight.setDiffuseSpecularAmbient(50f, 10f, 0.1f);
             this.flashlight.setRange(20f);
             this.flashlight.setSize(0.25f);
 
@@ -160,6 +163,7 @@ public class Game {
 
             {
                 this.boomBoxModel = N3DModel.RESOURCES.get("[D48EAA8D455A4B57|A34C2F1CE3B5D2C7]BoomBox");
+                this.selector = new N3DObject("selector", boomBoxModel);
             }
         } catch (IOException ex) {
             throw new RuntimeException(ex);
@@ -197,6 +201,8 @@ public class Game {
     }
 
     public void start() {
+        
+        
         NTextures.NULL_TEXTURE.textures();
         NCubemap.NULL_CUBEMAP.cubemap();
         NLightmaps.NULL_LIGHTMAPS.lightmaps();
@@ -255,7 +261,9 @@ public class Game {
                     this.camera.getProjection(), this.camera.getView(), this.camera.getPosition()
             );
         }
-
+        
+        this.selector.getPosition().set(this.camera.getPosition()).add(this.camera.getFront());
+        
         if (this.debugCollision) {
             this.physicsSpaceDebugger.pushToDebugRenderer(
                     this.camera.getProjection(), this.camera.getView(), this.camera.getPosition());
@@ -267,6 +275,7 @@ public class Game {
         for (N3DObject boomBox : this.boomBoxes) {
             N3DObjectRenderer.queueRender(boomBox);
         }
+        N3DObjectRenderer.queueRender(selector);
 
         N3DObjectRenderer.render(this.camera, this.lights, this.cubemaps);
 
@@ -505,6 +514,11 @@ public class Game {
         }
         if (key == GLFW_KEY_V && action == GLFW_PRESS) {
             this.playerController.getCharacterController().setNoclipEnabled(!this.playerController.getCharacterController().isNoclipEnabled());
+        }
+        if (key == GLFW_KEY_R && action == GLFW_PRESS) {
+            System.out.println(this.selector.getPosition().x());
+            System.out.println(this.selector.getPosition().y());
+            System.out.println(this.selector.getPosition().z());
         }
     }
 

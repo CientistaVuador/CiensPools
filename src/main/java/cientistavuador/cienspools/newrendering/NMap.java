@@ -808,11 +808,9 @@ public class NMap {
             b = (float) Math.pow(b, 2.2);
 
             if (emissive) {
-                Vector3f materialEmissive = material.getEmissiveColor();
-
-                r *= materialEmissive.x();
-                g *= materialEmissive.y();
-                b *= materialEmissive.z();
+                r *= material.getEmissive();
+                g *= material.getEmissive();
+                b *= material.getEmissive();
             } else {
                 a = ((textureData[pixelIndex + 3] & 0xFF) / 255f);
             }

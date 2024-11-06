@@ -24,17 +24,16 @@
  *
  * For more information, please refer to <https://unlicense.org>
  */
-package cientistavuador.cienspools.newrendering;
+package cientistavuador.cienspools.editor;
 
 /**
  *
  * @author Cien
  */
-public class NUtils {
+public class Gizmo {
     
-    
-    
-    private NUtils() {
+    public Gizmo() {
         
     }
+    
 }

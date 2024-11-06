@@ -745,20 +745,18 @@ public class Main {
                 double sleep = (1.0 / FRAMERATE_LIMIT) - tpf;
                 if (sleep > 0) {
                     long sleepStart = System.nanoTime();
-                    long sleepMs = ((long) (sleep * 1000.0)) - 1000;
+                    long sleepMs = ((long) (sleep * 1000.0)) - 1;
                     if (sleepMs > 0) {
                         try {
                             Thread.sleep(sleepMs);
-                        } catch (InterruptedException ex) {
-                            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
-                        }
+                        } catch (InterruptedException ex) {}
                     }
                     while (((System.nanoTime() - sleepStart) / 1E9d) < sleep) {
                         Thread.onSpinWait();
                     }
                 }
             }
-
+            
             if (Main.EXIT_SIGNAL) {
                 glfwMakeContextCurrent(0);
                 glfwDestroyWindow(Main.WINDOW_POINTER);

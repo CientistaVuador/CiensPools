@@ -86,7 +86,7 @@ public class N3DModel {
             }
             for (int i = 0; i < model.getNumberOfMaterials(); i++) {
                 NMaterial mat = model.getMaterial(i);
-                String p = w.getPathFromId("materials", mat.getName());
+                String p = w.getPathFromId("materials", mat.getId());
                 if (p == null) {
                     continue;
                 }

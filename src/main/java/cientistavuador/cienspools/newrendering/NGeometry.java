@@ -73,7 +73,7 @@ public class NGeometry {
             entry.setId(obj.getName());
             Map<String, String> meta = entry.getMeta();
             meta.put("mesh", obj.getMesh().getName());
-            meta.put("material", obj.getMaterial().getName());
+            meta.put("material", obj.getMaterial().getId());
             if (obj.isAnimatedAabbGenerated()) {
                 ResourceRW.writeVector3f(meta, obj.getAnimatedAabbMin(), "animatedMin", false);
                 ResourceRW.writeVector3f(meta, obj.getAnimatedAabbMax(), "animatedMax", false);

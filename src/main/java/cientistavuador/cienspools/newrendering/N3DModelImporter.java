@@ -693,7 +693,7 @@ public class N3DModelImporter {
             result = aiGetMaterialColor(aiMaterial,
                     AI_MATKEY_BASE_COLOR, aiTextureType_NONE, 0, colorOut);
             if (result == aiReturn_SUCCESS) {
-                material.getNewColor()
+                material.getColor()
                         .set(colorOut.r(), colorOut.g(), colorOut.b(), colorOut.a());
             }
 
@@ -721,11 +721,11 @@ public class N3DModelImporter {
                 emissive = colorOut.r();
             }
 
-            material.setNewMetallic(metallic);
-            material.setNewRoughness(roughness);
-            material.setNewHeight(height);
-            material.setNewEmissive(emissive);
-            material.setNewAmbientOcclusion(1f);
+            material.setMetallic(metallic);
+            material.setRoughness(roughness);
+            material.setHeight(height);
+            material.setEmissive(emissive);
+            material.setAmbientOcclusion(1f);
 
             this.materials.put(i, material);
         }
