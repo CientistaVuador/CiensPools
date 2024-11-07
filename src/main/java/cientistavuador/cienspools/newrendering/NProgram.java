@@ -39,8 +39,6 @@ import java.util.Map;
 public class NProgram {
     
     public static final float FRESNEL_BALANCE = 0.05f;
-    public static final float DIFFUSE_BALANCE = 0.50f;
-    public static final float MAX_SHININESS = 16384f;
     
     public static final int MAX_AMOUNT_OF_LIGHTS = 24;
     public static final int MAX_AMOUNT_OF_LIGHTMAPS = 32;
@@ -673,9 +671,7 @@ public class NProgram {
         new ProgramCompiler.ShaderConstant("RGBE_BASE", E8Image.BASE),
         new ProgramCompiler.ShaderConstant("RGBE_MAX_EXPONENT", E8Image.MAX_EXPONENT),
         new ProgramCompiler.ShaderConstant("RGBE_BIAS", E8Image.BIAS),
-        new ProgramCompiler.ShaderConstant("FRESNEL_BALANCE", FRESNEL_BALANCE),
-        new ProgramCompiler.ShaderConstant("DIFFUSE_BALANCE", DIFFUSE_BALANCE),
-        new ProgramCompiler.ShaderConstant("MAX_SHININESS", MAX_SHININESS)
+        new ProgramCompiler.ShaderConstant("FRESNEL_BALANCE", FRESNEL_BALANCE)
     };
 
     static {

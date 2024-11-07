@@ -29,6 +29,7 @@ package cientistavuador.cienspools;
 import cientistavuador.cienspools.camera.FreeCamera;
 import cientistavuador.cienspools.debug.AabRender;
 import cientistavuador.cienspools.debug.LineRender;
+import cientistavuador.cienspools.editor.Gizmo;
 import cientistavuador.cienspools.newrendering.N3DModel;
 import cientistavuador.cienspools.newrendering.N3DObject;
 import cientistavuador.cienspools.newrendering.N3DObjectRenderer;
@@ -70,7 +71,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import org.joml.Intersectionf;
 import static org.lwjgl.glfw.GLFW.*;
+import static org.lwjgl.opengl.GL33C.*;
 
 /**
  *
@@ -108,6 +111,8 @@ public class Game {
     private NMap map;
     private NMap nextMap;
 
+    private final Gizmo gizmo = new Gizmo();
+
     private final N3DModel boomBoxModel;
     private final N3DObject selector;
     private final List<N3DObject> boomBoxes = new ArrayList<>();
@@ -119,14 +124,21 @@ public class Game {
 
     private boolean ambientCubeDebug = false;
     private boolean debugCollision = false;
-    
+
     private final PhysicsSpace physicsSpace = new PhysicsSpace(PhysicsSpace.BroadphaseType.DBVT);
     private final PhysicsSpaceDebugger physicsSpaceDebugger = new PhysicsSpaceDebugger(this.physicsSpace);
     private final PlayerController playerController = new PlayerController();
 
     {
+        System.out.println(Intersectionf
+                .intersectRayPlane(
+                        0f, 0f, 0f, 0f, 1f, 0f,
+                        0f, 10f, 0f, 0f, 1f, 0f,
+                        0.001f));
+
         this.playerController.getCharacterController().setPosition(16.72f, 0f, 12.76f);
-        this.camera.setRotation(0f, -180f, 0f);
+
+        this.gizmo.setCamera(this.camera);
 
         NLight.NDirectionalLight sun = new NLight.NDirectionalLight("sun");
         sun.getDiffuse().set(20f);
@@ -139,7 +151,7 @@ public class Game {
         try {
             this.skybox = NCubemapStore
                     .readCubemap("cientistavuador/cienspools/resources/cubemaps/skybox.cbm");
-            
+
             List<N3DObject> mapObjects = new ArrayList<>();
             {
                 N3DModel roomModel = N3DModel.RESOURCES.get("[031E114E9B854953|9E778413412CA407]Surface");
@@ -163,7 +175,10 @@ public class Game {
 
             {
                 this.boomBoxModel = N3DModel.RESOURCES.get("[D48EAA8D455A4B57|A34C2F1CE3B5D2C7]BoomBox");
+                this.gizmo.getExtents().set(this.boomBoxModel.getAabbExtents());
+                this.gizmo.getScale().set(40f);
                 this.selector = new N3DObject("selector", boomBoxModel);
+                this.selector.setMap(this.map);
             }
         } catch (IOException ex) {
             throw new RuntimeException(ex);
@@ -201,8 +216,7 @@ public class Game {
     }
 
     public void start() {
-        
-        
+
         NTextures.NULL_TEXTURE.textures();
         NCubemap.NULL_CUBEMAP.cubemap();
         NLightmaps.NULL_LIGHTMAPS.lightmaps();
@@ -261,9 +275,13 @@ public class Game {
                     this.camera.getProjection(), this.camera.getView(), this.camera.getPosition()
             );
         }
-        
-        this.selector.getPosition().set(this.camera.getPosition()).add(this.camera.getFront());
-        
+
+        this.selector.getPosition().set(this.gizmo.getPosition());
+        this.selector.getRotation().identity()
+                .rotateXYZ(
+                        this.gizmo.getRotation().x(), this.gizmo.getRotation().y(), this.gizmo.getRotation().z());
+        this.selector.getScale().set(this.gizmo.getScale());
+
         if (this.debugCollision) {
             this.physicsSpaceDebugger.pushToDebugRenderer(
                     this.camera.getProjection(), this.camera.getView(), this.camera.getPosition());
@@ -282,6 +300,9 @@ public class Game {
         AabRender.renderQueue(this.camera);
         LineRender.renderQueue(this.camera);
         DebugRenderer.render();
+
+        glClear(GL_DEPTH_BUFFER_BIT);
+        this.gizmo.render();
 
         if (this.status != null) {
             if (!this.status.getTask().isDone()) {
@@ -315,6 +336,10 @@ public class Game {
 
     public void mouseCursorMoved(double x, double y) {
         this.camera.mouseCursorMoved(x, y);
+    }
+
+    public void mouseCursorMovedNormalized(float normalizedX, float normalizedZ) {
+        this.gizmo.onMouseCursorMoved(normalizedX, normalizedZ);
     }
 
     public void windowSizeChanged(int width, int height) {
@@ -523,6 +548,11 @@ public class Game {
     }
 
     public void mouseCallback(long window, int button, int action, int mods) {
-
+        if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+            this.gizmo.onMouseButtonClick(Main.MOUSE_X, Main.MOUSE_Y);
+        }
+        if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
+            this.gizmo.onMouseButtonRelease(Main.MOUSE_X, Main.MOUSE_Y);
+        }
     }
 }

@@ -36,9 +36,15 @@ import cientistavuador.cienspools.resources.mesh.MeshData;
 public class Geometries {
     
     public static final MeshData DEBUG_SPHERE;
+    public static final MeshData TRANSLATE_GIZMO;
     
     static {
-        DEBUG_SPHERE = GeometriesLoader.load(new MeshConfiguration("debug_sphere.obj", false, false, 0f, 0, 0f)).get("debug_sphere.obj");
+        DEBUG_SPHERE = GeometriesLoader.load(
+                new MeshConfiguration("debug_sphere.obj", false, false, 0f, 0, 0f))
+                .get("debug_sphere.obj");
+        TRANSLATE_GIZMO = GeometriesLoader.load(
+                new MeshConfiguration("translate_gizmo.obj", false, false, 0f, 0, 0f))
+                .get("translate_gizmo.obj");
     }
     
     public static void init() {

@@ -39,6 +39,7 @@ import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
+import org.joml.Vector4f;
 
 /**
  *
@@ -147,9 +148,14 @@ public class Geometry {
     private final Matrix3f normalModel = new Matrix3f();
     private final Matrix3f inverseNormalModel = new Matrix3f();
     
+    private final Vector4f colorHint = new Vector4f();
+    
+    @Deprecated
     private int lightmapTextureHint = Textures.EMPTY_LIGHTMAP;
+    @Deprecated
     private MeshData.LightmapMesh lightmapMesh = null;
     
+    @Deprecated
     private float lightmapScale = 1f;
     
     public Geometry(MeshData mesh) {
@@ -183,26 +189,36 @@ public class Geometry {
         this.normalModel.invert(this.inverseNormalModel);
     }
 
+    public Vector4f getColorHint() {
+        return colorHint;
+    }
+
+    @Deprecated
     public int getLightmapTextureHint() {
         return lightmapTextureHint;
     }
 
+    @Deprecated
     public void setLightmapTextureHint(int lightmapTextureHint) {
         this.lightmapTextureHint = lightmapTextureHint;
     }
 
+    @Deprecated
     public MeshData.LightmapMesh getLightmapMesh() {
         return lightmapMesh;
     }
 
+    @Deprecated
     public void setLightmapMesh(MeshData.LightmapMesh lightmapMesh) {
         this.lightmapMesh = lightmapMesh;
     }
 
+    @Deprecated
     public float getLightmapScale() {
         return lightmapScale;
     }
 
+    @Deprecated
     public void setLightmapScale(float lightmapScale) {
         this.lightmapScale = lightmapScale;
     }

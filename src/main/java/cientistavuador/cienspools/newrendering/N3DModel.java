@@ -208,6 +208,7 @@ public class N3DModel {
     private final Vector3f aabbMin = new Vector3f();
     private final Vector3f aabbMax = new Vector3f();
     private final Vector3f aabbCenter = new Vector3f();
+    private final Vector3f aabbExtents = new Vector3f();
 
     private final N3DModelNode[] nodes;
     private final Map<String, Integer> nodesMap = new HashMap<>();
@@ -392,6 +393,7 @@ public class N3DModel {
         this.aabbMin.set(minX, minY, minZ);
         this.aabbMax.set(maxX, maxY, maxZ);
         this.aabbCenter.set(this.aabbMin).add(this.aabbMax).mul(0.5f);
+        this.aabbExtents.set(this.aabbMax).sub(this.aabbMin);
 
         if (animatedMin == null || animatedMax == null) {
             this.animatedAabbMin.set(this.aabbMin);
@@ -463,6 +465,10 @@ public class N3DModel {
         return aabbCenter;
     }
 
+    public Vector3f getAabbExtents() {
+        return aabbExtents;
+    }
+    
     public int getNumberOfNodes() {
         return this.nodes.length;
     }

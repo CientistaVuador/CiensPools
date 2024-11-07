@@ -28,6 +28,7 @@ package cientistavuador.cienspools;
 
 import cientistavuador.cienspools.debug.AabRender;
 import cientistavuador.cienspools.debug.LineRender;
+import cientistavuador.cienspools.editor.Gizmo;
 import cientistavuador.cienspools.sound.SoundSystem;
 import cientistavuador.cienspools.geometry.Geometries;
 import cientistavuador.cienspools.newrendering.NProgram;
@@ -55,8 +56,6 @@ import java.nio.ByteBuffer;
 import java.nio.DoubleBuffer;
 import java.nio.IntBuffer;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.joml.Vector3f;
 import org.lwjgl.PointerBuffer;
 import static org.lwjgl.glfw.GLFW.*;
@@ -507,6 +506,7 @@ public class Main {
 
         TextureCompressor.init();
         
+        Gizmo.init();
         ResourceLoader.init();
         Water.init();
         DebugRenderer.init();
@@ -538,6 +538,15 @@ public class Main {
 
         glfwSetCursorPosCallback(WINDOW_POINTER, (window, x, y) -> {
             Game.get().mouseCursorMoved(x, y);
+            
+            double mX = x;
+            double mY = y;
+            mY = Main.HEIGHT - mY;
+            mX /= Main.WIDTH;
+            mY /= Main.HEIGHT;
+            mX = (mX * 2.0) - 1.0;
+            mY = (mY * 2.0) - 1.0;
+            Game.get().mouseCursorMovedNormalized((float)mX, (float)mY);
         });
 
         glfwSetKeyCallback(WINDOW_POINTER, (window, key, scancode, action, mods) -> {
@@ -749,14 +758,15 @@ public class Main {
                     if (sleepMs > 0) {
                         try {
                             Thread.sleep(sleepMs);
-                        } catch (InterruptedException ex) {}
+                        } catch (InterruptedException ex) {
+                        }
                     }
                     while (((System.nanoTime() - sleepStart) / 1E9d) < sleep) {
                         Thread.onSpinWait();
                     }
                 }
             }
-            
+
             if (Main.EXIT_SIGNAL) {
                 glfwMakeContextCurrent(0);
                 glfwDestroyWindow(Main.WINDOW_POINTER);
