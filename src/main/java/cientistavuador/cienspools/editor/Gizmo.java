@@ -31,9 +31,9 @@ import cientistavuador.cienspools.geometry.Geometries;
 import cientistavuador.cienspools.geometry.Geometry;
 import cientistavuador.cienspools.util.BetterUniformSetter;
 import cientistavuador.cienspools.util.ProgramCompiler;
+import cientistavuador.cienspools.util.raycast.RayResult;
 import org.joml.Intersectiond;
 import org.joml.Matrix4f;
-import org.joml.Vector2f;
 import org.joml.Vector3d;
 import org.joml.Vector3f;
 import static org.lwjgl.opengl.GL33C.*;
@@ -99,26 +99,77 @@ public class Gizmo {
 
     private final Vector3d gizmoPlanePosition = new Vector3d();
     private final Vector3d gizmoPlaneOffset = new Vector3d();
+    private final Vector3f gizmoPlaneScaleOffset = new Vector3f();
 
-    private final Vector3f extents = new Vector3f(1f);
-
-    private GizmoState state = GizmoState.TRANSLATING;
+    private GizmoState state = GizmoState.INACTIVE;
     private final Vector3d position = new Vector3d();
     private final Vector3f rotation = new Vector3f();
     private final Vector3f scale = new Vector3f(1f);
 
+    private float translationPrecision = 100f;
+    private float rotationPrecision = 64f;
+    private float scalingPrecision = 100f;
+
     private final Matrix4f recycledModel = new Matrix4f();
 
+    private final Matrix4f localRotationModelPitch = new Matrix4f();
+    private final Matrix4f localRotationModelYaw = new Matrix4f();
+    private final Matrix4f localRotationModelRoll = new Matrix4f();
+
+    private boolean holdingRightClick = false;
     private int hoverAxis = -1;
     private int selectedAxis = -1;
+
     private final Geometry translateGizmoX = new Geometry(Geometries.TRANSLATE_GIZMO);
     private final Geometry translateGizmoY = new Geometry(Geometries.TRANSLATE_GIZMO);
     private final Geometry translateGizmoZ = new Geometry(Geometries.TRANSLATE_GIZMO);
+
+    private final Geometry rotateGizmoXPitch = new Geometry(Geometries.ROTATE_GIZMO);
+    private final Geometry rotateGizmoYYaw = new Geometry(Geometries.ROTATE_GIZMO);
+    private final Geometry rotateGizmoZRoll = new Geometry(Geometries.ROTATE_GIZMO);
+
+    private final Geometry scaleGizmoX = new Geometry(Geometries.SCALE_GIZMO);
+    private final Geometry scaleGizmoY = new Geometry(Geometries.SCALE_GIZMO);
+    private final Geometry scaleGizmoZ = new Geometry(Geometries.SCALE_GIZMO);
 
     public Gizmo() {
         this.translateGizmoX.getColorHint().set(1f, 0f, 0f, 1f);
         this.translateGizmoY.getColorHint().set(0f, 1f, 0f, 1f);
         this.translateGizmoZ.getColorHint().set(0f, 0f, 1f, 1f);
+        this.rotateGizmoXPitch.getColorHint().set(1f, 0f, 0f, 1f);
+        this.rotateGizmoYYaw.getColorHint().set(0f, 1f, 0f, 1f);
+        this.rotateGizmoZRoll.getColorHint().set(0f, 0f, 1f, 1f);
+        this.scaleGizmoX.getColorHint().set(1f, 0f, 0f, 1f);
+        this.scaleGizmoY.getColorHint().set(0f, 1f, 0f, 1f);
+        this.scaleGizmoZ.getColorHint().set(0f, 0f, 1f, 1f);
+
+        setLocalRotationMatrices();
+    }
+
+    private void setLocalRotationMatrices() {
+        this.localRotationModelPitch
+                .identity()
+                .translate(0f, 0f, 0.8f)
+                .rotateXYZ(
+                        (float) Math.toRadians(90f),
+                        0f,
+                        0f
+                );
+        this.localRotationModelYaw
+                .identity()
+                .translate(0f, 0f, 0.4f)
+                .rotateXYZ(
+                        0f,
+                        (float) Math.toRadians(90f),
+                        (float) Math.toRadians(90f)
+                );
+        this.localRotationModelRoll
+                .identity()
+                .rotateXYZ(
+                        (float) Math.toRadians(90f),
+                        0f,
+                        (float) Math.toRadians(90f)
+                );
     }
 
     public Camera getCamera() {
@@ -127,10 +178,6 @@ public class Gizmo {
 
     public void setCamera(Camera camera) {
         this.camera = camera;
-    }
-
-    public Vector3f getExtents() {
-        return extents;
     }
 
     public GizmoState getState() {
@@ -157,18 +204,35 @@ public class Gizmo {
         return scale;
     }
 
-    private boolean testGeometry(Geometry geo) {
-        return Geometry.fastTestRay(
-                ZERO, this.cameraRayDirection,
-                Float.POSITIVE_INFINITY, geo
-        );
+    public float getTranslationPrecision() {
+        return translationPrecision;
     }
 
-    private void updateModelMatrix(float scale, Geometry geo, int axis) {
+    public void setTranslationPrecision(float translationPrecision) {
+        this.translationPrecision = translationPrecision;
+    }
+
+    public float getRotationPrecision() {
+        return rotationPrecision;
+    }
+
+    public void setRotationPrecision(float rotationPrecision) {
+        this.rotationPrecision = rotationPrecision;
+    }
+
+    public float getScalingPrecision() {
+        return scalingPrecision;
+    }
+
+    public void setScalingPrecision(float scalingPrecision) {
+        this.scalingPrecision = scalingPrecision;
+    }
+
+    private void updateTranslationModelMatrix(float scale, Geometry geo, int axis) {
         Matrix4f model = this.recycledModel;
-        float xOffset = (getScale().x() * (getExtents().x() * 0.5f)) * (axis == 0 ? 1f : 0f);
-        float yOffset = (getScale().y() * (getExtents().y() * 0.5f)) * (axis == 1 ? 1f : 0f);
-        float zOffset = (getScale().z() * (getExtents().z() * 0.5f)) * (axis == 2 ? 1f : 0f);
+        float xOffset = getScale().x() * 0.5f * (axis == 0 ? 1f : 0f);
+        float yOffset = getScale().y() * 0.5f * (axis == 1 ? 1f : 0f);
+        float zOffset = getScale().z() * 0.5f * (axis == 2 ? 1f : 0f);
         model
                 .identity()
                 .translate(
@@ -188,26 +252,132 @@ public class Gizmo {
         geo.setModel(model);
     }
 
+    private void updateRotationModelMatrix(float scale, Geometry geo, int axis) {
+        Matrix4f model = this.recycledModel;
+        float radius = Math.max(Math.max(
+                Math.abs(getScale().x() * 0.5f),
+                Math.abs(getScale().y() * 0.5f)),
+                Math.abs(getScale().z() * 0.5f)
+        );
+        model
+                .identity()
+                .translate(
+                        (float) (getPosition().x() - getCamera().getPosition().x()),
+                        (float) (getPosition().y() - getCamera().getPosition().y()),
+                        (float) (getPosition().z() - getCamera().getPosition().z())
+                );
+        switch (axis) {
+            case 0 -> {
+                model
+                        .rotateXYZ(
+                                getRotation().x(),
+                                0f,
+                                0f
+                        )
+                        .translate(0f, 0f, radius)
+                        .scale(scale);
+                model.mul(this.localRotationModelPitch);
+            }
+            case 1 -> {
+                model
+                        .rotateXYZ(
+                                getRotation().x(),
+                                getRotation().y(),
+                                0f
+                        )
+                        .translate(0f, 0f, radius)
+                        .scale(scale);
+                model.mul(this.localRotationModelYaw);
+            }
+            case 2 -> {
+                model
+                        .rotateXYZ(
+                                getRotation().x(),
+                                getRotation().y(),
+                                getRotation().z()
+                        )
+                        .translate(-radius, 0f, 0f)
+                        .scale(scale);
+                model.mul(this.localRotationModelRoll);
+            }
+        }
+        geo.setModel(model);
+    }
+
+    private void updateScaleModelMatrix(float scale, Geometry geo, int axis) {
+        Matrix4f model = this.recycledModel;
+        float xOffset = getScale().x() * 0.5f * (axis == 0 ? 1f : 0f);
+        float yOffset = getScale().y() * 0.5f * (axis == 1 ? 1f : 0f);
+        float zOffset = getScale().z() * 0.5f * (axis == 2 ? 1f : 0f);
+        model
+                .identity()
+                .translate(
+                        (float) ((getPosition().x() + xOffset) - getCamera().getPosition().x()),
+                        (float) ((getPosition().y() + yOffset) - getCamera().getPosition().y()),
+                        (float) ((getPosition().z() + zOffset) - getCamera().getPosition().z())
+                );
+        switch (axis) {
+            case 0 -> {
+                model.rotateZ((float) Math.toRadians(-90f));
+            }
+            case 2 -> {
+                model.rotateX((float) Math.toRadians(90f));
+            }
+        }
+        model.scale(scale);
+        geo.setModel(model);
+    }
+
+    private int testGeometryAxis(Geometry x, Geometry y, Geometry z) {
+        RayResult[] results = Geometry.testRay(ZERO, this.cameraRayDirection, x, y, z);
+        if (results.length == 0) {
+            return -1;
+        }
+        Geometry closestGeometry = results[0].getGeometry();
+        if (x == closestGeometry) {
+            return 0;
+        }
+        if (y == closestGeometry) {
+            return 1;
+        }
+        return 2;
+    }
+
+    private void paintAxis(Geometry x, Geometry y, Geometry z, int axis) {
+        x.getColorHint().set((axis == 0 ? 1f : 0.5f), 0f, 0f);
+        y.getColorHint().set(0f, (axis == 1 ? 1f : 0.5f), 0f);
+        z.getColorHint().set(0f, 0f, (axis == 2 ? 1f : 0.5f));
+    }
+
     private void updateGeometries() {
         float distance = (float) getCamera().getPosition().distance(getPosition());
-        distance *= 0.1f;
+        distance *= 0.2f;
 
-        updateModelMatrix(distance, this.translateGizmoX, 0);
-        updateModelMatrix(distance, this.translateGizmoY, 1);
-        updateModelMatrix(distance, this.translateGizmoZ, 2);
-        
+        updateTranslationModelMatrix(distance, this.translateGizmoX, 0);
+        updateTranslationModelMatrix(distance, this.translateGizmoY, 1);
+        updateTranslationModelMatrix(distance, this.translateGizmoZ, 2);
+
+        updateRotationModelMatrix(distance, this.rotateGizmoXPitch, 0);
+        updateRotationModelMatrix(distance, this.rotateGizmoYYaw, 1);
+        updateRotationModelMatrix(distance, this.rotateGizmoZRoll, 2);
+
+        updateScaleModelMatrix(distance, this.scaleGizmoX, 0);
+        updateScaleModelMatrix(distance, this.scaleGizmoY, 1);
+        updateScaleModelMatrix(distance, this.scaleGizmoZ, 2);
+
         this.hoverAxis = -1;
         switch (getState()) {
             case TRANSLATING -> {
-                if (testGeometry(this.translateGizmoX)) {
-                    this.hoverAxis = 0;
-                }
-                if (testGeometry(this.translateGizmoY)) {
-                    this.hoverAxis = 1;
-                }
-                if (testGeometry(this.translateGizmoZ)) {
-                    this.hoverAxis = 2;
-                }
+                this.hoverAxis = testGeometryAxis(
+                        this.translateGizmoX, this.translateGizmoY, this.translateGizmoZ);
+            }
+            case ROTATING -> {
+                this.hoverAxis = testGeometryAxis(
+                        this.rotateGizmoXPitch, this.rotateGizmoYYaw, this.rotateGizmoZRoll);
+            }
+            case SCALING -> {
+                this.hoverAxis = testGeometryAxis(
+                        this.scaleGizmoX, this.scaleGizmoY, this.scaleGizmoZ);
             }
         }
 
@@ -215,9 +385,9 @@ public class Gizmo {
         if (axis == -1) {
             axis = this.hoverAxis;
         }
-        this.translateGizmoX.getColorHint().set((axis == 0 ? 1f : 0.5f), 0f, 0f);
-        this.translateGizmoY.getColorHint().set(0f, (axis == 1 ? 1f : 0.5f), 0f);
-        this.translateGizmoZ.getColorHint().set(0f, 0f, (axis == 2 ? 1f : 0.5f));
+        paintAxis(this.translateGizmoX, this.translateGizmoY, this.translateGizmoZ, axis);
+        paintAxis(this.rotateGizmoXPitch, this.rotateGizmoYYaw, this.rotateGizmoZRoll, axis);
+        paintAxis(this.scaleGizmoX, this.scaleGizmoY, this.scaleGizmoZ, axis);
     }
 
     public void render() {
@@ -225,9 +395,27 @@ public class Gizmo {
             return;
         }
         updateGeometries();
-        Geometry[] renderList = {
-            this.translateGizmoX, this.translateGizmoY, this.translateGizmoZ
-        };
+        Geometry[] renderList;
+        switch (getState()) {
+            case TRANSLATING -> {
+                renderList = new Geometry[]{
+                    this.translateGizmoX, this.translateGizmoY, this.translateGizmoZ
+                };
+            }
+            case ROTATING -> {
+                renderList = new Geometry[]{
+                    this.rotateGizmoXPitch, this.rotateGizmoYYaw, this.rotateGizmoZRoll
+                };
+            }
+            case SCALING -> {
+                renderList = new Geometry[]{
+                    this.scaleGizmoX, this.scaleGizmoY, this.scaleGizmoZ
+                };
+            }
+            default -> {
+                return;
+            }
+        }
         glUseProgram(SHADER_PROGRAM);
         UNIFORMS.uniformMatrix4fv("projection", getCamera().getProjection());
         UNIFORMS.uniformMatrix4fv("view", getCamera().getView());
@@ -272,74 +460,197 @@ public class Gizmo {
         return true;
     }
 
-    public void onMouseButtonClick(float normalizedX, float normalizedY) {
-        if (!updateCameraRay(normalizedX, normalizedY)) {
+    public void onLeftClick(float normalizedX, float normalizedY) {
+        if (!isActive()
+                || !updateCameraRay(normalizedX, normalizedY)
+                || !getGizmoPlanePosition()) {
             return;
         }
-        if (!getGizmoPlanePosition()) {
-            return;
-        }
-        switch (getState()) {
-            case TRANSLATING -> {
-                this.gizmoPlaneOffset
-                        .set(this.gizmoPlanePosition)
-                        .sub(getPosition());
-                this.selectedAxis = this.hoverAxis;
-            }
-        }
+        this.gizmoPlaneOffset
+                .set(this.gizmoPlanePosition)
+                .sub(getPosition());
+        this.gizmoPlaneScaleOffset
+                .set(
+                        this.gizmoPlanePosition.x() - getPosition().x(),
+                        this.gizmoPlanePosition.y() - getPosition().y(),
+                        this.gizmoPlanePosition.z() - getPosition().z()
+                )
+                .absolute()
+                .mul(2f)
+                .sub(getScale());
+        this.selectedAxis = this.hoverAxis;
     }
 
-    public void onMouseButtonRelease(float normalizedX, float normalizedY) {
-        if (!updateCameraRay(normalizedX, normalizedY)) {
+    public void onLeftClickRelease(float normalizedX, float normalizedY) {
+        if (!isActive()
+                || !updateCameraRay(normalizedX, normalizedY)) {
             return;
         }
         this.selectedAxis = -1;
     }
 
-    private void rotation() {
-        Vector3d translation = new Vector3d();
+    public void onRightClick(float normalizedX, float normalizedY) {
+        this.holdingRightClick = true;
+        if (getState().equals(GizmoState.ROTATING) && this.selectedAxis != -1) {
+            getRotation().setComponent(this.selectedAxis, 0f);
+            this.selectedAxis = -1;
+        }
+    }
 
-        Vector3f direction = new Vector3f(
+    public void onRightClickRelease(float normalizedX, float normalizedY) {
+        this.holdingRightClick = false;
+        onLeftClickRelease(normalizedX, normalizedY);
+    }
+
+    public void onMiddleClick(float normalizedX, float normalizedY) {
+        this.selectedAxis = -1;
+        onLeftClickRelease(normalizedX, normalizedY);
+        switch (getState()) {
+            case INACTIVE -> {
+                setState(Gizmo.GizmoState.TRANSLATING);
+            }
+            case TRANSLATING -> {
+                setState(Gizmo.GizmoState.ROTATING);
+            }
+            case ROTATING -> {
+                setState(Gizmo.GizmoState.SCALING);
+            }
+            case SCALING -> {
+                setState(Gizmo.GizmoState.INACTIVE);
+            }
+        }
+    }
+
+    private double applyTranslationPrecision(double e) {
+        if (this.translationPrecision <= 0f || !Float.isFinite(this.translationPrecision)) {
+            return e;
+        }
+        return Math.floor(e * this.translationPrecision) / this.translationPrecision;
+    }
+
+    private void doTranslation() {
+        switch (this.selectedAxis) {
+            case 0 -> {
+                getPosition().setComponent(0,
+                        applyTranslationPrecision(this.gizmoPlanePosition.x() - this.gizmoPlaneOffset.x()));
+            }
+            case 1 -> {
+                getPosition().setComponent(1,
+                        applyTranslationPrecision(this.gizmoPlanePosition.y() - this.gizmoPlaneOffset.y()));
+            }
+            case 2 -> {
+                getPosition().setComponent(2,
+                        applyTranslationPrecision(this.gizmoPlanePosition.z() - this.gizmoPlaneOffset.z()));
+            }
+        }
+    }
+
+    private float angle(float x, float y) {
+        float length = (float) Math.sqrt((x * x) + (y * y));
+        if (!Float.isFinite(length)) {
+            return 0f;
+        }
+        return (float) Math.atan2(y, x);
+    }
+
+    private float applyRotationPrecision(float e) {
+        if (this.rotationPrecision <= 0f || !Float.isFinite(this.rotationPrecision)) {
+            return e;
+        }
+        return (float) ((Math.floor((e / Math.PI) * this.rotationPrecision) / this.rotationPrecision) * Math.PI);
+    }
+
+    private void doRotation() {
+        Vector3d translation = this.gizmoPlanePosition;
+
+        Vector3f dir = new Vector3f(
                 (float) (translation.x() - getPosition().x()),
                 (float) (translation.y() - getPosition().y()),
                 (float) (translation.z() - getPosition().z())
         ).normalize();
 
-        Vector2f pitchDirection = new Vector2f(direction.z(), direction.y()).normalize();
-        Vector2f yawDirection = new Vector2f(direction.x(), direction.z()).normalize();
-        Vector2f rollDirection = new Vector2f(direction.x(), direction.y()).normalize();
-
-        float pitch = (float) -Math.atan2(pitchDirection.y(), pitchDirection.x());
-        float yaw = (float) (-Math.atan2(yawDirection.y(), yawDirection.x()) + (Math.PI / 2.0));
-        float roll = (float) (Math.atan2(rollDirection.y(), rollDirection.x()) + Math.PI);
-
-        this.rotation.set(
-                pitch,
-                yaw,
-                roll
-        );
-    }
-
-    public void onMouseCursorMoved(float normalizedX, float normalizedY) {
-        if (!isActive()) {
-            return;
-        }
-        if (!updateCameraRay(normalizedX, normalizedY)) {
-            return;
-        }
-        if (!getGizmoPlanePosition()) {
-            setState(GizmoState.INACTIVE);
-            return;
+        switch (this.selectedAxis) {
+            case 1 -> {
+                dir.rotateX(-getRotation().x());
+            }
+            case 2 -> {
+                dir.rotateX(-getRotation().x()).rotateY(-getRotation().y());
+            }
         }
         switch (this.selectedAxis) {
             case 0 -> {
-                getPosition().setComponent(0, this.gizmoPlanePosition.x() - this.gizmoPlaneOffset.x());
+                float pitch = applyRotationPrecision(angle(dir.z(), -dir.y()));
+                this.rotation.setComponent(0, pitch);
             }
             case 1 -> {
-                getPosition().setComponent(1, this.gizmoPlanePosition.y() - this.gizmoPlaneOffset.y());
+                float yaw = applyRotationPrecision(angle(dir.z(), dir.x()));
+                this.rotation.setComponent(1, yaw);
             }
             case 2 -> {
-                getPosition().setComponent(2, this.gizmoPlanePosition.z() - this.gizmoPlaneOffset.z());
+                float roll = applyRotationPrecision(angle(-dir.x(), -dir.y()));
+                this.rotation.setComponent(2, roll);
+            }
+        }
+    }
+    
+    private float applyScalingPrecision(float e) {
+        if (this.scalingPrecision <= 0f || !Float.isFinite(this.scalingPrecision)) {
+            return e;
+        }
+        return (float) (Math.floor(e * this.scalingPrecision) / this.scalingPrecision);
+    }
+
+    private void doScaling() {
+        float scaleX = (float) Math.abs(this.gizmoPlanePosition.x() - getPosition().x()) * 2f;
+        float scaleY = (float) Math.abs(this.gizmoPlanePosition.y() - getPosition().y()) * 2f;
+        float scaleZ = (float) Math.abs(this.gizmoPlanePosition.z() - getPosition().z()) * 2f;
+        scaleX -= this.gizmoPlaneScaleOffset.x();
+        scaleY -= this.gizmoPlaneScaleOffset.y();
+        scaleZ -= this.gizmoPlaneScaleOffset.z();
+        scaleX = Math.max(applyScalingPrecision(scaleX), 0f);
+        scaleY = Math.max(applyScalingPrecision(scaleY), 0f);
+        scaleZ = Math.max(applyScalingPrecision(scaleZ), 0f);
+        switch (this.selectedAxis) {
+            case 0 -> {
+                if (this.holdingRightClick) {
+                    this.scale.set(scaleX);
+                } else {
+                    this.scale.setComponent(0, scaleX);
+                }
+            }
+            case 1 -> {
+                if (this.holdingRightClick) {
+                    this.scale.set(scaleY);
+                } else {
+                    this.scale.setComponent(1, scaleY);
+                }
+            }
+            case 2 -> {
+                if (this.holdingRightClick) {
+                    this.scale.set(scaleZ);
+                } else {
+                    this.scale.setComponent(2, scaleZ);
+                }
+            }
+        }
+    }
+
+    public void onMouseCursorMoved(float normalizedX, float normalizedY) {
+        if (!isActive()
+                || !updateCameraRay(normalizedX, normalizedY)
+                || !getGizmoPlanePosition()
+                || this.selectedAxis == -1) {
+            return;
+        }
+        switch (getState()) {
+            case TRANSLATING -> {
+                doTranslation();
+            }
+            case ROTATING -> {
+                doRotation();
+            }
+            case SCALING -> {
+                doScaling();
             }
         }
     }

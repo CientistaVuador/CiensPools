@@ -175,8 +175,7 @@ public class Game {
 
             {
                 this.boomBoxModel = N3DModel.RESOURCES.get("[D48EAA8D455A4B57|A34C2F1CE3B5D2C7]BoomBox");
-                this.gizmo.getExtents().set(this.boomBoxModel.getAabbExtents());
-                this.gizmo.getScale().set(40f);
+                this.gizmo.getScale().set(this.boomBoxModel.getAabbExtents());
                 this.selector = new N3DObject("selector", boomBoxModel);
                 this.selector.setMap(this.map);
             }
@@ -280,8 +279,8 @@ public class Game {
         this.selector.getRotation().identity()
                 .rotateXYZ(
                         this.gizmo.getRotation().x(), this.gizmo.getRotation().y(), this.gizmo.getRotation().z());
-        this.selector.getScale().set(this.gizmo.getScale());
-
+        this.selector.getScale().set(this.gizmo.getScale()).div(this.selector.getN3DModel().getAabbExtents());
+        
         if (this.debugCollision) {
             this.physicsSpaceDebugger.pushToDebugRenderer(
                     this.camera.getProjection(), this.camera.getView(), this.camera.getPosition());
@@ -540,19 +539,27 @@ public class Game {
         if (key == GLFW_KEY_V && action == GLFW_PRESS) {
             this.playerController.getCharacterController().setNoclipEnabled(!this.playerController.getCharacterController().isNoclipEnabled());
         }
-        if (key == GLFW_KEY_R && action == GLFW_PRESS) {
-            System.out.println(this.selector.getPosition().x());
-            System.out.println(this.selector.getPosition().y());
-            System.out.println(this.selector.getPosition().z());
-        }
     }
 
     public void mouseCallback(long window, int button, int action, int mods) {
-        if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
-            this.gizmo.onMouseButtonClick(Main.MOUSE_X, Main.MOUSE_Y);
+        if (button == GLFW_MOUSE_BUTTON_LEFT) {
+            if (action == GLFW_PRESS) {
+                this.gizmo.onLeftClick(Main.MOUSE_X, Main.MOUSE_Y);
+            }
+            if (action == GLFW_RELEASE) {
+                this.gizmo.onLeftClickRelease(Main.MOUSE_X, Main.MOUSE_Y);
+            }
         }
-        if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
-            this.gizmo.onMouseButtonRelease(Main.MOUSE_X, Main.MOUSE_Y);
+        if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+            if (action == GLFW_PRESS) {
+                this.gizmo.onRightClick(Main.MOUSE_X, Main.MOUSE_Y);
+            }
+            if (action == GLFW_RELEASE) {
+                this.gizmo.onRightClickRelease(Main.MOUSE_X, Main.MOUSE_Y);
+            }
+        }
+        if (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_PRESS) {
+            this.gizmo.onMiddleClick(Main.MOUSE_X, Main.MOUSE_Y);
         }
     }
 }

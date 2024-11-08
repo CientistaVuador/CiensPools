@@ -37,6 +37,8 @@ public class Geometries {
     
     public static final MeshData DEBUG_SPHERE;
     public static final MeshData TRANSLATE_GIZMO;
+    public static final MeshData ROTATE_GIZMO;
+    public static final MeshData SCALE_GIZMO;
     
     static {
         DEBUG_SPHERE = GeometriesLoader.load(
@@ -45,6 +47,12 @@ public class Geometries {
         TRANSLATE_GIZMO = GeometriesLoader.load(
                 new MeshConfiguration("translate_gizmo.obj", false, false, 0f, 0, 0f))
                 .get("translate_gizmo.obj");
+        ROTATE_GIZMO = GeometriesLoader.load(
+                new MeshConfiguration("rotate_gizmo.obj", false, false, 0f, 0, 0f))
+                .get("rotate_gizmo.obj");
+        SCALE_GIZMO = GeometriesLoader.load(
+                new MeshConfiguration("scale_gizmo.obj", false, false, 0f, 0, 0f))
+                .get("scale_gizmo.obj");
     }
     
     public static void init() {

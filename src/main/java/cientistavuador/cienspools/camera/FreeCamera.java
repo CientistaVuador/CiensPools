@@ -32,6 +32,7 @@ import static org.lwjgl.glfw.GLFW.*;
 /**
  *
  * @author Shinoa Hiragi
+ * @author Cien
  */
 public class FreeCamera extends PerspectiveCamera {
     
