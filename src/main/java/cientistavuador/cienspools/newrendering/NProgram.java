@@ -398,7 +398,7 @@ public class NProgram {
             
             float calculateSpotlightIntensity(float theta, float innerCone, float outerCone) {
                 float epsilon = innerCone - outerCone;
-                return clamp((theta - outerCone) / epsilon, 0.0, 1.0);
+                return pow(clamp((theta - outerCone) / epsilon, 0.0, 1.0), 2.0);
             }
             
             vec3 calculateLight(

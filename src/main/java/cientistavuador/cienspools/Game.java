@@ -276,10 +276,11 @@ public class Game {
         }
 
         this.selector.getPosition().set(this.gizmo.getPosition());
-        this.selector.getRotation().identity()
-                .rotateXYZ(
-                        this.gizmo.getRotation().x(), this.gizmo.getRotation().y(), this.gizmo.getRotation().z());
-        this.selector.getScale().set(this.gizmo.getScale()).div(this.selector.getN3DModel().getAabbExtents());
+        this.gizmo.rotate(this.selector.getRotation().identity());
+        this.gizmo.getScale(this.selector.getScale().set(this.selector.getN3DModel().getAabbExtents()));
+        
+        this.flashlight.getPosition().set(this.gizmo.getPosition());
+        this.gizmo.rotate(this.flashlight.getDirection().set(0f, 0f, 1f));
         
         if (this.debugCollision) {
             this.physicsSpaceDebugger.pushToDebugRenderer(
@@ -292,7 +293,7 @@ public class Game {
         for (N3DObject boomBox : this.boomBoxes) {
             N3DObjectRenderer.queueRender(boomBox);
         }
-        N3DObjectRenderer.queueRender(selector);
+        //N3DObjectRenderer.queueRender(selector);
 
         N3DObjectRenderer.render(this.camera, this.lights, this.cubemaps);
 
