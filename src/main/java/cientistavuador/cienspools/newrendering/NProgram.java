@@ -338,13 +338,7 @@ public class NProgram {
                 float afterDepth = currentDepth - currentLayerDepth;
                 float beforeDepth = (1.0 - ht_rg_mt_nx(previousUv)[0]) - currentLayerDepth + layerDepth;
                 
-                float deltaDepth = afterDepth - beforeDepth;
-                float weight;
-                if (deltaDepth > 0.00001) {
-                    weight = afterDepth / (afterDepth - beforeDepth);
-                } else {
-                    weight = 1.0;
-                }
+                float weight = afterDepth / (afterDepth - beforeDepth);
                 vec2 finalUv = (previousUv * weight) + (currentUv * (1.0 - weight));
                 
                 return finalUv;
@@ -361,7 +355,7 @@ public class NProgram {
             };
             
             float fresnelFactor(vec3 viewDirection, vec3 normal) {
-                float fresnelDot = 1.0 - max(dot(-viewDirection, normal), 0.0);
+                float fresnelDot = clamp(1.0 - max(dot(-viewDirection, normal), 0.0), 0.0, 1.0);
                 return FRESNEL_BALANCE + ((1.0 - FRESNEL_BALANCE) * pow(fresnelDot, 5.0));
             }
             

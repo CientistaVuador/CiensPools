@@ -34,7 +34,6 @@ import cientistavuador.cienspools.util.raycast.BVH;
 import cientistavuador.cienspools.util.raycast.LocalRayResult;
 import com.jme3.bullet.objects.PhysicsRigidBody;
 import com.jme3.bullet.objects.infos.RigidBodyMotionState;
-import com.jme3.math.TransformDp;
 import com.simsilica.mathd.Quatd;
 import com.simsilica.mathd.Vec3d;
 import java.util.ArrayList;

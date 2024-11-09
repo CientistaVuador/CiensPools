@@ -248,7 +248,7 @@ public class Gizmo {
     public Vector3f rotate(Vector3f receiver) {
         return rotate(receiver, 1f, 1f, 1f);
     }
-
+    
     public Vector3f getScale() {
         return scale;
     }

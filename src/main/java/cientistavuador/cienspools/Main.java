@@ -163,6 +163,7 @@ public class Main {
         System.out.println("GLSL Version: " + glGetString(GL_SHADING_LANGUAGE_VERSION));
         System.out.println("Max Texture Size: " + glGetInteger(GL_MAX_TEXTURE_SIZE));
         System.out.println("Max Texture Array Layers: " + glGetInteger(GL_MAX_ARRAY_TEXTURE_LAYERS));
+        System.out.println("Max Texture 3D Size: " + glGetInteger(GL_MAX_3D_TEXTURE_SIZE));
 
         GL.setCapabilities(null);
         glfwMakeContextCurrent(0);
@@ -229,6 +230,9 @@ public class Main {
     public static int FPS = 60;
     public static long WINDOW_POINTER = NULL;
     public static long FRAME = 0;
+    public static int MAX_TEXTURE_SIZE = 2048;
+    public static int MAX_TEXTURE_2D_ARRAY_SIZE = 256;
+    public static int MAX_TEXTURE_3D_SIZE = 256;
     public static boolean FULLSCREEN = false;
     public static int FRAMERATE_LIMIT = 240;
     public static double ONE_SECOND_COUNTER = 0.0;
@@ -496,6 +500,10 @@ public class Main {
         if (maxTextureSize < 8192) {
             throw new IllegalStateException("Max texture size must be 8192 or more! Update your drivers or buy a new GPU.");
         }
+        
+        MAX_TEXTURE_SIZE = glGetInteger(GL_MAX_TEXTURE_SIZE);
+        MAX_TEXTURE_2D_ARRAY_SIZE = glGetInteger(GL_MAX_ARRAY_TEXTURE_LAYERS);
+        MAX_TEXTURE_3D_SIZE = glGetInteger(GL_MAX_3D_TEXTURE_SIZE);
 
         glHint(GL_TEXTURE_COMPRESSION_HINT, GL_NICEST);
         if (GL.getCapabilities().GL_NV_multisample_filter_hint) {

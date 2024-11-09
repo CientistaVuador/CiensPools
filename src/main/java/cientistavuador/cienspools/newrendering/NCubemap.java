@@ -145,7 +145,7 @@ public class NCubemap {
             String name,
             String uid,
             NCubemapBox cubemapBox,
-            DXT5Texture[] sideTextures,
+            DXT5Texture[] sides,
             Vector3fc cubemapColor
     ) {
         if (name == null) {
@@ -163,17 +163,17 @@ public class NCubemap {
         }
         this.cubemapBox = cubemapBox;
 
-        if (sideTextures == null) {
+        if (sides == null) {
             throw new NullPointerException("Side Textures is null.");
         }
-        if (sideTextures.length != SIDES) {
+        if (sides.length != SIDES) {
             throw new IllegalArgumentException("Side Textures Length is not " + SIDES + ".");
         }
 
         int cubemapSize = -1;
         this.sideTextures = new DXT5TextureStore.DXT5Texture[SIDES];
-        for (int i = 0; i < sideTextures.length; i++) {
-            DXT5Texture texture = sideTextures[i];
+        for (int i = 0; i < sides.length; i++) {
+            DXT5Texture texture = sides[i];
             if (texture == null) {
                 throw new NullPointerException("Texture at index " + i + " is null.");
             }
@@ -215,7 +215,7 @@ public class NCubemap {
         
         registerForCleaning();
     }
-
+    
     private void registerForCleaning() {
         final WrappedCubemap wrapped = this.wrappedCubemap;
 

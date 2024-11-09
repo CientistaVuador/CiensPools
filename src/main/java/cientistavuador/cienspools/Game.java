@@ -31,6 +31,7 @@ import cientistavuador.cienspools.debug.AabRender;
 import cientistavuador.cienspools.debug.LineRender;
 import cientistavuador.cienspools.editor.Gizmo;
 import cientistavuador.cienspools.newrendering.N3DModel;
+import cientistavuador.cienspools.newrendering.N3DModelImporter;
 import cientistavuador.cienspools.newrendering.N3DObject;
 import cientistavuador.cienspools.newrendering.N3DObjectRenderer;
 import cientistavuador.cienspools.newrendering.NCubemap;
@@ -66,12 +67,14 @@ import com.simsilica.mathd.Vec3d;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import org.joml.Intersectionf;
+import org.joml.Quaternionf;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL33C.*;
 
@@ -92,18 +95,24 @@ public class Game {
 
     private final NCubemap skybox;
     private final String[] cubemapNames = {
+        "spawn",
+        "spawn_corridor",
         "big_pool",
         "big_pool_refraction",
-        "spawn",
+        "big_pool_corridor",
         "exit",
-        "exit_refraction"
+        "exit_refraction",
+        "exit_corridor"
     };
     private final NCubemapBox[] cubemapInfos = {
+        new NCubemapBox(4.27, 4.96, 12.93, 4.27, 4.96, 12.93, 0.0f, 0.0f, 0.0f, 1.0f, 15.5f, 5.04f, 5.14f),
+        new NCubemapBox(4.17, 5.0, 6.5, 4.17, 5.0, 6.5, 0.0f, 0.0f, 0.0f, 1.0f, 15.5f, 5.1f, 1.41f),
         new NCubemapBox(4.68, 2.89, -0.68, -11.06, -0.15, -7.09, 20.47, 10.10, 5.06),
-        new NCubemapBox(4.07, -0.33, -0.56, -2.29, -1.07, -5.08, 9.69, 0.00, 3.02),
-        new NCubemapBox(3.23, 2.20, 12.92, -11.22, -0.05, 7.91, 19.79, 10.59, 18.04),
-        new NCubemapBox(-0.15, 2.54, -14.83, -11.11, -0.03, -19.12, 19.56, 10.09, -10.06),
-        new NCubemapBox(0.21, -0.39, -17.53, -11.14, -1.00, -16.03, 19.62, -0.09, -19.09)
+        new NCubemapBox(3.7, -0.53, -1.06, 3.7, -0.53, -1.06, 0.0f, 0.0f, 0.0f, 1.0f, 6.0f, 0.5f, 4.14f),
+        new NCubemapBox(4.28, 5.0, -8.6, 4.28, 5.0, -8.6, 0.0f, 0.0f, 0.0f, 1.0f, 15.41f, 5.14f, 1.26f),
+        new NCubemapBox(4.25, 5.02, -14.76, 4.25, 5.02, -14.76, 0.0f, 0.0f, 0.0f, 1.0f, 15.45f, 5.2f, 4.88f),
+        new NCubemapBox(0.21, -0.39, -17.53, -11.14, -1.00, -16.03, 19.62, -0.09, -19.09),
+        new NCubemapBox(-15.21, 2.53, -13.18, -15.21, 2.53, -13.18, 0.0f, 0.0f, 0.0f, 1.0f, 4.06f, 2.59f, 1.13f)
     };
 
     private NCubemaps cubemaps;
@@ -114,7 +123,7 @@ public class Game {
     private final Gizmo gizmo = new Gizmo();
 
     private final N3DModel boomBoxModel;
-    private final N3DObject selector;
+    private final N3DObject cubemapBox;
     private final List<N3DObject> boomBoxes = new ArrayList<>();
 
     private final NLight.NSpotLight flashlight = new NLight.NSpotLight("flashlight");
@@ -137,8 +146,6 @@ public class Game {
                         0.001f));
 
         this.playerController.getCharacterController().setPosition(16.72f, 0f, 12.76f);
-
-        this.gizmo.setCamera(this.camera);
 
         NLight.NDirectionalLight sun = new NLight.NDirectionalLight("sun");
         sun.getDiffuse().set(20f);
@@ -174,10 +181,9 @@ public class Game {
             ColorUtils.setSRGB(this.lighter.getAmbient(), 233, 140, 80).mul(0.015f);
 
             {
-                this.boomBoxModel = N3DModel.RESOURCES.get("[D48EAA8D455A4B57|A34C2F1CE3B5D2C7]BoomBox");
-                this.gizmo.getScale().set(this.boomBoxModel.getAabbExtents());
-                this.selector = new N3DObject("selector", boomBoxModel);
-                this.selector.setMap(this.map);
+                //this.boomBoxModel = N3DModel.RESOURCES.get("[D48EAA8D455A4B57|A34C2F1CE3B5D2C7]BoomBox");
+                this.boomBoxModel = N3DModelImporter.importFromJarFile("cientistavuador/cienspools/resources/models/box.glb");
+                this.cubemapBox = new N3DObject("cubemap box", this.boomBoxModel);
             }
         } catch (IOException ex) {
             throw new RuntimeException(ex);
@@ -216,6 +222,8 @@ public class Game {
 
     public void start() {
 
+        this.gizmo.setCamera(this.camera);
+        
         NTextures.NULL_TEXTURE.textures();
         NCubemap.NULL_CUBEMAP.cubemap();
         NLightmaps.NULL_LIGHTMAPS.lightmaps();
@@ -275,17 +283,14 @@ public class Game {
             );
         }
 
-        this.selector.getPosition().set(this.gizmo.getPosition());
-        this.gizmo.rotate(this.selector.getRotation().identity());
-        this.gizmo.getScale(this.selector.getScale().set(this.selector.getN3DModel().getAabbExtents()));
-        
-        this.flashlight.getPosition().set(this.gizmo.getPosition());
-        this.gizmo.rotate(this.flashlight.getDirection().set(0f, 0f, 1f));
-        
         if (this.debugCollision) {
             this.physicsSpaceDebugger.pushToDebugRenderer(
                     this.camera.getProjection(), this.camera.getView(), this.camera.getPosition());
         }
+        
+        this.gizmo.getScale(this.cubemapBox.getScale().set(1f));
+        this.gizmo.rotate(this.cubemapBox.getRotation().identity());
+        this.cubemapBox.getPosition().set(this.gizmo.getPosition());
 
         for (int i = 0; i < this.map.getNumberOfObjects(); i++) {
             N3DObjectRenderer.queueRender(this.map.getObject(i));
@@ -293,8 +298,8 @@ public class Game {
         for (N3DObject boomBox : this.boomBoxes) {
             N3DObjectRenderer.queueRender(boomBox);
         }
-        //N3DObjectRenderer.queueRender(selector);
-
+        N3DObjectRenderer.queueRender(this.cubemapBox);
+        
         N3DObjectRenderer.render(this.camera, this.lights, this.cubemaps);
 
         AabRender.renderQueue(this.camera);
@@ -302,7 +307,9 @@ public class Game {
         DebugRenderer.render();
 
         glClear(GL_DEPTH_BUFFER_BIT);
-        this.gizmo.render();
+        if (this.gizmo != null) {
+            this.gizmo.render();
+        }
 
         if (this.status != null) {
             if (!this.status.getTask().isDone()) {
@@ -339,7 +346,9 @@ public class Game {
     }
 
     public void mouseCursorMovedNormalized(float normalizedX, float normalizedZ) {
-        this.gizmo.onMouseCursorMoved(normalizedX, normalizedZ);
+        if (this.gizmo != null) {
+            this.gizmo.onMouseCursorMoved(normalizedX, normalizedZ);
+        }
     }
 
     public void windowSizeChanged(int width, int height) {
@@ -350,8 +359,8 @@ public class Game {
         if (key == GLFW_KEY_B && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
             N3DObject boomBox = new N3DObject("boomBox", this.boomBoxModel);
             boomBox.setMap(this.map);
-            boomBox.getScale().set(40f);
-            this.boomBoxModel.getHullCollisionShape().setScale(40f);
+            boomBox.getScale().set(1f);
+            this.boomBoxModel.getHullCollisionShape().setScale(1f);
             this.boomBoxes.add(boomBox);
 
             HullCollisionShape hull = this.boomBoxModel.getHullCollisionShape();
@@ -540,27 +549,39 @@ public class Game {
         if (key == GLFW_KEY_V && action == GLFW_PRESS) {
             this.playerController.getCharacterController().setNoclipEnabled(!this.playerController.getCharacterController().isNoclipEnabled());
         }
+        if (key == GLFW_KEY_R && action == GLFW_PRESS) {
+            Quaternionf rotation = new Quaternionf();
+            this.gizmo.rotate(rotation);
+            System.out.print("new NCubemapBox(");
+            System.out.print(this.gizmo.getPosition().x()+", "+this.gizmo.getPosition().y()+", "+this.gizmo.getPosition().z()+", ");
+            System.out.print(this.gizmo.getPosition().x()+", "+this.gizmo.getPosition().y()+", "+this.gizmo.getPosition().z()+", ");
+            System.out.print(rotation.x()+"f, "+rotation.y()+"f, "+rotation.z()+"f, "+rotation.w()+"f, ");
+            System.out.print(this.gizmo.getScale().x() * 0.5f+"f, "+this.gizmo.getScale().y() * 0.5f+"f, "+this.gizmo.getScale().z() * 0.5f+"f");
+            System.out.println(")");
+        }
     }
 
     public void mouseCallback(long window, int button, int action, int mods) {
-        if (button == GLFW_MOUSE_BUTTON_LEFT) {
-            if (action == GLFW_PRESS) {
-                this.gizmo.onLeftClick(Main.MOUSE_X, Main.MOUSE_Y);
+        if (this.gizmo != null) {
+            if (button == GLFW_MOUSE_BUTTON_LEFT) {
+                if (action == GLFW_PRESS) {
+                    this.gizmo.onLeftClick(Main.MOUSE_X, Main.MOUSE_Y);
+                }
+                if (action == GLFW_RELEASE) {
+                    this.gizmo.onLeftClickRelease(Main.MOUSE_X, Main.MOUSE_Y);
+                }
             }
-            if (action == GLFW_RELEASE) {
-                this.gizmo.onLeftClickRelease(Main.MOUSE_X, Main.MOUSE_Y);
+            if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+                if (action == GLFW_PRESS) {
+                    this.gizmo.onRightClick(Main.MOUSE_X, Main.MOUSE_Y);
+                }
+                if (action == GLFW_RELEASE) {
+                    this.gizmo.onRightClickRelease(Main.MOUSE_X, Main.MOUSE_Y);
+                }
             }
-        }
-        if (button == GLFW_MOUSE_BUTTON_RIGHT) {
-            if (action == GLFW_PRESS) {
-                this.gizmo.onRightClick(Main.MOUSE_X, Main.MOUSE_Y);
+            if (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_PRESS) {
+                this.gizmo.onMiddleClick(Main.MOUSE_X, Main.MOUSE_Y);
             }
-            if (action == GLFW_RELEASE) {
-                this.gizmo.onRightClickRelease(Main.MOUSE_X, Main.MOUSE_Y);
-            }
-        }
-        if (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_PRESS) {
-            this.gizmo.onMiddleClick(Main.MOUSE_X, Main.MOUSE_Y);
         }
     }
 }
