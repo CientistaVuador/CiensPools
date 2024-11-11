@@ -47,8 +47,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Base64;
 import java.util.Objects;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicLong;
 import org.lwjgl.opengl.EXTTextureCompressionS3TC;
 import org.lwjgl.opengl.EXTTextureFilterAnisotropic;
 import org.lwjgl.opengl.GL;
@@ -67,7 +65,7 @@ public class NTextures {
     public static final String ERROR_HT_RG_MT_NX_DATA = "KLUv/aDwVQEAVQIAcsQNFdBdAwAADZgIQJSUiqMtKueISDeQFNZae++9/1/r6pATnOsXPzo8hLL9Oybj5cEP3pzxU/TWCgUAuqpm5gsgJJA4V4x4Sxg=";
     public static final String ERROR_EM_AO_WT_NY_DATA = "KLUv/aDwVQEAVQIAcsQNFdBdAwAADZgIQJSUiqMtKueISDeQFNZae++9/1/r6pATnOsXPzo8hLL9Oybj5cEP3pzxU/TWCgUAuqpm5gsgJJA4V4x4Sxg=";
 
-    public static final NTextures NULL_TEXTURE;
+    private static final NTextures ERROR_TEXTURE_FALLBACK;
 
     static {
         try {
@@ -78,11 +76,9 @@ public class NTextures {
             DXT5Texture em_ao_wt_ny = DXT5TextureStore.readDXT5Texture(
                     new ByteArrayInputStream(Base64.getDecoder().decode(ERROR_EM_AO_WT_NY_DATA)));
 
-            NULL_TEXTURE = new NTextures(
-                    "Error/Null/Empty Texture",
-                    "Error/Null/Empty Texture",
+            ERROR_TEXTURE_FALLBACK = new NTextures(
+                    "Error Texture",
                     NBlendingMode.OPAQUE,
-                    false,
                     cr_cg_cb_ca, ht_rg_mt_nx, em_ao_wt_ny
             );
         } catch (IOException ex) {
@@ -94,10 +90,9 @@ public class NTextures {
     public static final String BLANK_HT_RG_MT_NX_DATA = "KLUv/SCwTQIAooQNFtBnDAAApbD9NBIi0vhjX9EJ1EqzSgFRzv+PcbPiwt759SeDZ8ylf4VcG/z/++uvjw0/JOucBiDA4wHTCHCBAyElTpE5AQ==";
     public static final String BLANK_EM_AO_WT_NY_DATA = "KLUv/SCwTQIAooQNFtBnDAAApbD9NBIi0vhjX9EJ1EqzSgFRzv+PcbPiwt759SeDZ8ylf4VcG/z/++uvjw0/JOucBiDA4wHTCHCBAyElTpE5AQ==";
 
-    public static final NTextures BLANK_TEXTURE;
-
+    private static final NTextures BLANK_TEXTURE_FALLBACK;
+    
     static {
-
         try {
             DXT5Texture cr_cg_cb_ca = DXT5TextureStore.readDXT5Texture(
                     new ByteArrayInputStream(Base64.getDecoder().decode(BLANK_CR_CG_CB_CA_DATA)));
@@ -106,18 +101,16 @@ public class NTextures {
             DXT5Texture em_ao_wt_ny = DXT5TextureStore.readDXT5Texture(
                     new ByteArrayInputStream(Base64.getDecoder().decode(BLANK_EM_AO_WT_NY_DATA)));
 
-            BLANK_TEXTURE = new NTextures(
-                    "Blank Texture",
+            BLANK_TEXTURE_FALLBACK = new NTextures(
                     "Blank Texture",
                     NBlendingMode.OPAQUE,
-                    false,
                     cr_cg_cb_ca, ht_rg_mt_nx, em_ao_wt_ny
             );
         } catch (IOException ex) {
             throw new UncheckedIOException(ex);
         }
     }
-
+    
     public static final ResourceRW<NTextures> RESOURCES = new ResourceRW<NTextures>(true) {
         public static final String CR_CG_CB_CA_DATA_TYPE = "application/zstd;name=cr_cg_cb_ca";
         public static final String HT_RG_MT_NX_DATA_TYPE = "application/zstd;name=ht_rg_mt_nx";
@@ -141,7 +134,7 @@ public class NTextures {
         @Override
         public NTextures readResource(Resource r) throws IOException {
             if (r == null) {
-                return NTextures.NULL_TEXTURE;
+                return NTextures.ERROR_TEXTURE;
             }
             NBlendingMode mode;
             try {
@@ -174,7 +167,7 @@ public class NTextures {
         @Override
         public void writeResource(NTextures obj, ResourceEntry entry, String path) throws IOException {
             entry.setType(getResourceType());
-            entry.setId(obj.getName());
+            entry.setId(obj.getId());
             entry.getMeta().put("blendingMode", obj.getBlendingMode().name());
             if (!path.isEmpty() && !path.endsWith("/")) {
                 path += "/";
@@ -188,18 +181,35 @@ public class NTextures {
         }
         
     };
-
-    private static final AtomicLong textureIds = new AtomicLong();
-
+    
+    public static final NTextures ERROR_TEXTURE;
+    public static final NTextures BLANK_TEXTURE;
+    
+    static {
+        NTextures error;
+        if (Resource.get(RESOURCES.getResourceType(), ERROR_TEXTURE_FALLBACK.getId()) != null) {
+            error = RESOURCES.get(ERROR_TEXTURE_FALLBACK.getId());
+        } else {
+            error = ERROR_TEXTURE_FALLBACK;
+        }
+        ERROR_TEXTURE = error;
+        
+        NTextures blank;
+        if (Resource.get(RESOURCES.getResourceType(), BLANK_TEXTURE_FALLBACK.getId()) != null) {
+            blank = RESOURCES.get(BLANK_TEXTURE_FALLBACK.getId());
+        } else {
+            blank = BLANK_TEXTURE_FALLBACK;
+        }
+        BLANK_TEXTURE = blank;
+    }
+    
     private static class WrappedTextures {
 
         public int textures = 0;
     }
     
-    private final String name;
-    private final String uid;
+    private final String id;
     private final NBlendingMode blendingMode;
-    private final boolean heightMapSupported;
     private final int width;
     private final int height;
     private final DXT5Texture texture_cr_cg_cb_ca;
@@ -211,22 +221,10 @@ public class NTextures {
     private WeakReference<byte[]> decompressed_cr_cg_cb_ca_ref = null;
     private WeakReference<byte[]> decompressed_ht_rg_mt_nx_ref = null;
     private WeakReference<byte[]> decompressed_em_ao_wt_ny_ref = null;
-
+    
     public NTextures(
-            String name,
+            String id,
             NBlendingMode blendingMode,
-            DXT5Texture texture_cr_cg_cb_ca,
-            DXT5Texture texture_ht_rg_mt_nx,
-            DXT5Texture texture_em_ao_wt_ny
-    ) {
-        this(name, null, blendingMode, false, texture_cr_cg_cb_ca, texture_ht_rg_mt_nx, texture_em_ao_wt_ny);
-    }
-
-    public NTextures(
-            String name,
-            String uid,
-            NBlendingMode blendingMode,
-            boolean heightMapSupported,
             DXT5Texture texture_r_g_b_a,
             DXT5Texture texture_ht_rg_mt_nx,
             DXT5Texture texture_er_eg_eb_ny
@@ -250,23 +248,16 @@ public class NTextures {
         this.texture_ht_rg_mt_nx = texture_ht_rg_mt_nx;
         this.texture_em_ao_wt_ny = texture_er_eg_eb_ny;
 
-        if (name == null) {
-            name = "Unnamed";
+        if (id == null) {
+            id = Resource.generateRandomId(null);
         }
-        this.name = name;
-
-        if (uid == null) {
-            uid = UUID.randomUUID().toString();
-        }
-        this.uid = uid;
+        this.id = id;
 
         if (blendingMode == null) {
             blendingMode = NBlendingMode.OPAQUE;
         }
         this.blendingMode = blendingMode;
-
-        this.heightMapSupported = heightMapSupported;
-
+        
         registerForCleaning();
     }
 
@@ -285,22 +276,14 @@ public class NTextures {
         });
     }
     
-    public String getName() {
-        return name;
+    public String getId() {
+        return id;
     }
-
-    public String getUID() {
-        return uid;
-    }
-
+    
     public NBlendingMode getBlendingMode() {
         return blendingMode;
     }
-
-    public boolean isHeightMapSupported() {
-        return heightMapSupported;
-    }
-
+    
     public int getWidth() {
         return width;
     }
@@ -372,8 +355,7 @@ public class NTextures {
         if (this.wrappedTextures.textures != 0) {
             return;
         }
-
-        long textureId = NTextures.textureIds.getAndIncrement();
+        
         glActiveTexture(GL_TEXTURE0);
 
         int textures = glGenTextures();
@@ -479,7 +461,7 @@ public class NTextures {
 
         if (GL.getCapabilities().GL_KHR_debug) {
             KHRDebug.glObjectLabel(GL_TEXTURE, textures,
-                    StringUtils.truncateStringTo255Bytes("textures_" + textureId + "_" + this.name)
+                    StringUtils.truncateStringTo255Bytes(this.id)
             );
         }
 
@@ -501,27 +483,5 @@ public class NTextures {
             final_textures.textures = 0;
         }
     }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        }
-        if (obj == null) {
-            return false;
-        }
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
-        final NTextures other = (NTextures) obj;
-        return Objects.equals(this.uid, other.uid);
-    }
-
-    @Override
-    public int hashCode() {
-        int hash = 7;
-        hash = 47 * hash + Objects.hashCode(this.uid);
-        return hash;
-    }
-
+    
 }

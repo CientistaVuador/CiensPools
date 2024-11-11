@@ -29,98 +29,47 @@ package cientistavuador.cienspools.newrendering;
 import cientistavuador.cienspools.resourcepack.Resource;
 import cientistavuador.cienspools.resourcepack.ResourcePackWriter.ResourceEntry;
 import cientistavuador.cienspools.resourcepack.ResourceRW;
-import cientistavuador.cienspools.util.ColorUtils;
 import java.io.IOException;
 import java.util.Map;
 import org.joml.Vector3f;
+import org.joml.Vector3fc;
 import org.joml.Vector4f;
+import org.joml.Vector4fc;
 
 /**
  *
  * @author Cien
  */
 public class NMaterial {
+
+    public static final Vector4fc DEFAULT_COLOR = new Vector4f(1f, 1f, 1f, 1f);
+
+    public static final float DEFAULT_METALLIC = 1f;
+    public static final float DEFAULT_ROUGHNESS = 1f;
+
+    public static final float DEFAULT_INVERSE_ROUGHNESS_EXPONENT = 2f;
+    public static final float DEFAULT_DIFFUSE_SPECULAR_RATIO = 0.5f;
+
+    public static final float DEFAULT_HEIGHT = 0f;
+    public static final float DEFAULT_HEIGHT_MIN_LAYERS = 8f;
+    public static final float DEFAULT_HEIGHT_MAX_LAYERS = 32f;
+
+    public static final float DEFAULT_EMISSIVE = 0f;
+    public static final float DEFAULT_WATER = 0f;
+    public static final float DEFAULT_REFRACTION = 0f;
+    public static final float DEFAULT_REFRACTION_POWER = 0.25f;
+
+    public static final float DEFAULT_AMBIENT_OCCLUSION = 1f;
+
+    public static final float DEFAULT_FRESNEL_OUTLINE = 0f;
+    public static final Vector3fc DEFAULT_FRESNEL_OUTLINE_COLOR = new Vector3f(0f, 1f, 0f);
     
-    public static final NMaterial NULL_MATERIAL;
-
-    static {
-        NULL_MATERIAL = new NMaterial("Error/Null Material", NTextures.NULL_TEXTURE);
-    }
-
-    public static final NMaterial MIRROR;
-
-    static {
-        MIRROR = new NMaterial("Mirror", NTextures.BLANK_TEXTURE);
-        MIRROR.setMetallic(1f);
-        MIRROR.setRoughness(0f);
-    }
-    public static final NMaterial DARK_GLASS;
-
-    static {
-        DARK_GLASS = new NMaterial("Dark Glass", NTextures.BLANK_TEXTURE);
-        DARK_GLASS.getColor().set(0.0075f, 0.0075f, 0.0075f, 0.7f);
-        DARK_GLASS.setMetallic(0f);
-        DARK_GLASS.setRoughness(0f);
-    }
-    public static final NMaterial WATER;
-
-    static {
-        WATER = new NMaterial("Water", NTextures.BLANK_TEXTURE);
-        WATER.getColor().set(0.005f, 0.005f, 0.0075f, 0.50f);
-        WATER.setMetallic(0f);
-        WATER.setRoughness(0f);
-        WATER.setRefraction(1f / 1.33f);
-        WATER.setWater(1f);
-    }
-    public static final NMaterial ORANGE_JUICE;
-
-    static {
-        ORANGE_JUICE = new NMaterial("Orange Juice", NTextures.BLANK_TEXTURE);
-        ColorUtils.setSRGBA(ORANGE_JUICE.getColor(), 255, 92, 0, 255);
-        ORANGE_JUICE.setMetallic(0f);
-        ORANGE_JUICE.setRoughness(0.7f);
-        ORANGE_JUICE.setWater(0.5f);
-    }
-    public static final NMaterial GLASS;
-
-    static {
-        GLASS = new NMaterial("Glass", NTextures.BLANK_TEXTURE);
-        GLASS.getColor().set(0.94f, 0.95f, 0.96f, 0.25f);
-        GLASS.setRoughness(0f);
-        GLASS.setMetallic(1f);
-        GLASS.setRefraction(1f / 1.53f);
-    }
-    public static final NMaterial ROUGH_BLACK;
-
-    static {
-        ROUGH_BLACK = new NMaterial("Rough Black", NTextures.BLANK_TEXTURE);
-        ROUGH_BLACK.getColor().set(0f, 0f, 0f, 1f);
-        ROUGH_BLACK.setMetallic(0f);
-        ROUGH_BLACK.setRoughness(1f);
-    }
-    public static final NMaterial SHINY_BLACK;
-
-    static {
-        SHINY_BLACK = new NMaterial("Shiny Black", NTextures.BLANK_TEXTURE);
-        SHINY_BLACK.getColor().set(0f, 0f, 0f, 1f);
-        SHINY_BLACK.setMetallic(0f);
-        SHINY_BLACK.setRoughness(0f);
-    }
-    public static final NMaterial GOLD;
-
-    static {
-        GOLD = new NMaterial("Gold", NTextures.BLANK_TEXTURE);
-        ColorUtils.setSRGBA(GOLD.getColor(), 255, 215, 0, 255);
-        GOLD.setMetallic(1f);
-        GOLD.setRoughness(0.6f);
-    }
-
     public static final ResourceRW<NMaterial> RESOURCES = new ResourceRW<NMaterial>(true) {
         @Override
         public String getResourceType() {
             return "material";
         }
-        
+
         private float readString(String s, float defaultValue) {
             if (s == null) {
                 return defaultValue;
@@ -131,41 +80,41 @@ public class NMaterial {
                 return defaultValue;
             }
         }
-        
+
         @Override
         public NMaterial readResource(Resource r) throws IOException {
             if (r == null) {
-                return NMaterial.NULL_MATERIAL;
+                return NMaterial.ERROR_MATERIAL;
             }
-            
+
             NMaterial material = new NMaterial(r.getId());
-            
+
             Map<String, String> meta = r.getMeta();
-            
+
             material.getColor().set(
                     readString(meta.get("color.r"), material.getColor().x()),
                     readString(meta.get("color.g"), material.getColor().y()),
                     readString(meta.get("color.b"), material.getColor().z()),
                     readString(meta.get("color.a"), material.getColor().w())
             );
-            
+
             material.setMetallic(readString(meta.get("metallic"), material.getMetallic()));
             material.setRoughness(readString(meta.get("roughness"), material.getRoughness()));
-            
+
             material.setInverseRoughnessExponent(
                     readString(meta.get("inverseRoughnessExponent"), material.getInverseRoughnessExponent())
             );
             material.setDiffuseSpecularRatio(
                     readString(meta.get("diffuseSpecularRatio"), material.getDiffuseSpecularRatio())
             );
-            
+
             material.setHeight(
                     readString(meta.get("height"), material.getHeight()));
             material.setHeightMinLayers(
                     readString(meta.get("heightMinLayers"), material.getHeightMinLayers()));
             material.setHeightMaxLayers(
                     readString(meta.get("heightMaxLayers"), material.getHeightMaxLayers()));
-            
+
             material.setEmissive(
                     readString(meta.get("emissive"), material.getEmissive()));
             material.setWater(
@@ -174,7 +123,7 @@ public class NMaterial {
                     readString(meta.get("refraction"), material.getRefraction()));
             material.setRefractionPower(
                     readString(meta.get("refractionPower"), material.getRefractionPower()));
-            
+
             material.setFresnelOutline(
                     readString(meta.get("fresnelOutline"), material.getFresnelOutline()));
             material.getFresnelOutlineColor().set(
@@ -182,9 +131,9 @@ public class NMaterial {
                     readString(meta.get("fresnelOutlineColor.g"), material.getFresnelOutlineColor().y()),
                     readString(meta.get("fresnelOutlineColor.b"), material.getFresnelOutlineColor().z())
             );
-            
+
             material.setTextures(NTextures.RESOURCES.get(meta.get("texture")));
-            
+
             return material;
         }
 
@@ -194,62 +143,109 @@ public class NMaterial {
             entry.setId(obj.getId());
 
             Map<String, String> meta = entry.getMeta();
+
+            if (!obj.getColor().equals(DEFAULT_COLOR)) {
+                meta.put("color.r", Float.toString(obj.getColor().x()));
+                meta.put("color.g", Float.toString(obj.getColor().y()));
+                meta.put("color.b", Float.toString(obj.getColor().z()));
+                meta.put("color.a", Float.toString(obj.getColor().w()));
+            }
+
+            if (obj.getMetallic() != DEFAULT_METALLIC) {
+                meta.put("metallic", Float.toString(obj.getMetallic()));
+            }
+            if (obj.getRoughness() != DEFAULT_ROUGHNESS) {
+                meta.put("roughness", Float.toString(obj.getRoughness()));
+            }
+
+            if (obj.getInverseRoughnessExponent() != DEFAULT_INVERSE_ROUGHNESS_EXPONENT) {
+                meta.put("inverseRoughnessExponent", Float.toString(obj.getInverseRoughnessExponent()));
+            }
+            if (obj.getDiffuseSpecularRatio() != DEFAULT_DIFFUSE_SPECULAR_RATIO) {
+                meta.put("diffuseSpecularRatio", Float.toString(obj.getDiffuseSpecularRatio()));
+            }
+
+            if (obj.getHeight() != DEFAULT_HEIGHT) {
+                meta.put("height", Float.toString(obj.getHeight()));
+            }
+            if (obj.getHeightMinLayers() != DEFAULT_HEIGHT_MIN_LAYERS) {
+                meta.put("heightMinLayers", Float.toString(obj.getHeightMinLayers()));
+            }
+            if (obj.getHeightMaxLayers() != DEFAULT_HEIGHT_MAX_LAYERS) {
+                meta.put("heightMaxLayers", Float.toString(obj.getHeightMaxLayers()));
+            }
+
+            if (obj.getEmissive() != DEFAULT_EMISSIVE) {
+                meta.put("emissive", Float.toString(obj.getEmissive()));
+            }
+            if (obj.getWater() != DEFAULT_WATER) {
+                meta.put("water", Float.toString(obj.getWater()));
+            }
+            if (obj.getRefraction() != DEFAULT_REFRACTION) {
+                meta.put("refraction", Float.toString(obj.getRefraction()));
+            }
+            if (obj.getRefractionPower() != DEFAULT_REFRACTION_POWER) {
+                meta.put("refractionPower", Float.toString(obj.getRefractionPower()));
+            }
+
+            if (obj.getFresnelOutline() != DEFAULT_FRESNEL_OUTLINE) {
+                meta.put("fresnelOutline", Float.toString(obj.getFresnelOutline()));
+            }
+            if (!obj.getFresnelOutlineColor().equals(DEFAULT_FRESNEL_OUTLINE_COLOR)) {
+                meta.put("fresnelOutlineColor.r", Float.toString(obj.getFresnelOutlineColor().x()));
+                meta.put("fresnelOutlineColor.g", Float.toString(obj.getFresnelOutlineColor().y()));
+                meta.put("fresnelOutlineColor.b", Float.toString(obj.getFresnelOutlineColor().z()));
+            }
             
-            meta.put("color.r", Float.toString(obj.getColor().x()));
-            meta.put("color.g", Float.toString(obj.getColor().y()));
-            meta.put("color.b", Float.toString(obj.getColor().z()));
-            meta.put("color.a", Float.toString(obj.getColor().w()));
-
-            meta.put("metallic", Float.toString(obj.getMetallic()));
-            meta.put("roughness", Float.toString(obj.getRoughness()));
-
-            meta.put("inverseRoughnessExponent", Float.toString(obj.getInverseRoughnessExponent()));
-            meta.put("diffuseSpecularRatio", Float.toString(obj.getDiffuseSpecularRatio()));
-
-            meta.put("height", Float.toString(obj.getHeight()));
-            meta.put("heightMinLayers", Float.toString(obj.getHeightMinLayers()));
-            meta.put("heightMaxLayers", Float.toString(obj.getHeightMaxLayers()));
-
-            meta.put("emissive", Float.toString(obj.getEmissive()));
-            meta.put("water", Float.toString(obj.getWater()));
-            meta.put("refraction", Float.toString(obj.getRefraction()));
-            meta.put("refractionPower", Float.toString(obj.getRefractionPower()));
-
-            meta.put("fresnelOutline", Float.toString(obj.getFresnelOutline()));
-            meta.put("fresnelOutlineColor.r", Float.toString(obj.getFresnelOutlineColor().x()));
-            meta.put("fresnelOutlineColor.g", Float.toString(obj.getFresnelOutlineColor().y()));
-            meta.put("fresnelOutlineColor.b", Float.toString(obj.getFresnelOutlineColor().z()));
-            
-            meta.put("texture", obj.getTextures().getName());
+            meta.put("texture", obj.getTextures().getId());
         }
     };
+    
+    private static final NMaterial ERROR_MATERIAL_FALLBACK;
 
+    static {
+        ERROR_MATERIAL_FALLBACK = new NMaterial("Error Material", NTextures.ERROR_TEXTURE);
+        ERROR_MATERIAL_FALLBACK.setMetallic(0f);
+    }
+    
+    public static final NMaterial ERROR_MATERIAL;
+    
+    static {
+        NMaterial error;
+        if (Resource.get(RESOURCES.getResourceType(), ERROR_MATERIAL_FALLBACK.getId()) != null) {
+            error = RESOURCES.get(ERROR_MATERIAL_FALLBACK.getId());
+        } else {
+            error = ERROR_MATERIAL_FALLBACK;
+        }
+        ERROR_MATERIAL = error;
+    }
+    
     private final String id;
 
-    private final Vector4f color = new Vector4f(1f, 1f, 1f, 1f);
+    private final Vector4f color = new Vector4f(DEFAULT_COLOR);
 
-    private float metallic = 0f;
-    private float roughness = 1f;
+    private float metallic = DEFAULT_METALLIC;
+    private float roughness = DEFAULT_ROUGHNESS;
 
-    private float inverseRoughnessExponent = 2f;
-    private float diffuseSpecularRatio = 0.5f;
+    private float inverseRoughnessExponent = DEFAULT_INVERSE_ROUGHNESS_EXPONENT;
+    private float diffuseSpecularRatio = DEFAULT_DIFFUSE_SPECULAR_RATIO;
 
-    private float height = 0f;
-    private float heightMinLayers = 8f;
-    private float heightMaxLayers = 32f;
+    private float height = DEFAULT_HEIGHT;
+    private float heightMinLayers = DEFAULT_HEIGHT_MIN_LAYERS;
+    private float heightMaxLayers = DEFAULT_HEIGHT_MAX_LAYERS;
 
-    private float emissive = 0f;
-    private float water = 0f;
-    private float refraction = 0f;
-    private float refractionPower = 0.25f;
+    private float emissive = DEFAULT_EMISSIVE;
+    private float water = DEFAULT_WATER;
+    private float refraction = DEFAULT_REFRACTION;
+    private float refractionPower = DEFAULT_REFRACTION_POWER;
 
-    private float ambientOcclusion = 1f;
+    private float ambientOcclusion = DEFAULT_AMBIENT_OCCLUSION;
 
-    private float fresnelOutline = 0f;
-    private final Vector3f fresnelOutlineColor = new Vector3f(0f, 1f, 0f);
+    private float fresnelOutline = DEFAULT_FRESNEL_OUTLINE;
+    private final Vector3f fresnelOutlineColor = new Vector3f(DEFAULT_FRESNEL_OUTLINE_COLOR);
 
-    private NTextures textures = NTextures.NULL_TEXTURE;
-    
+    private NTextures textures = NTextures.ERROR_TEXTURE;
+
     public NMaterial(String id) {
         this(id, null);
     }
@@ -260,7 +256,7 @@ public class NMaterial {
         }
         this.id = id;
         if (textures == null) {
-            textures = NTextures.NULL_TEXTURE;
+            textures = NTextures.ERROR_TEXTURE;
         }
         this.textures = textures;
     }
@@ -387,11 +383,11 @@ public class NMaterial {
 
     public void setTextures(NTextures textures) {
         if (textures == null) {
-            textures = NTextures.NULL_TEXTURE;
+            textures = NTextures.ERROR_TEXTURE;
         }
         this.textures = textures;
     }
-    
+
     public NBlendingMode getBlendingMode() {
         NBlendingMode mode = this.textures.getBlendingMode();
         float materialAlpha = this.color.w();
@@ -399,12 +395,15 @@ public class NMaterial {
         if (materialAlpha != 1f && NBlendingMode.OPAQUE.equals(mode)) {
             mode = NBlendingMode.ALPHA_BLENDING;
         }
+        if (this.refraction != 0f) {
+            mode = NBlendingMode.OPAQUE;
+        }
 
         return mode;
     }
 
     public boolean isInvisible() {
-        return this.color.w() <= 0f;
+        return this.color.w() <= 0f && this.refraction == 0f;
     }
-    
+
 }

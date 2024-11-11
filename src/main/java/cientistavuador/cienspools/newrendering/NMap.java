@@ -322,7 +322,6 @@ public class NMap {
                 NMesh mesh = new NMesh(geo.geometry.getMesh().getName(), vertices, indices);
                 mesh.generateBVH();
                 newGeometries.add(new NGeometry(
-                        mapObjectPrefix(this.name, geometryCounter, geo.geometry.getName()),
                         mesh,
                         geo.geometry.getMaterial()
                 ));

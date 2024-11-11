@@ -195,7 +195,7 @@ public class Gizmo {
     public void setState(GizmoState state) {
         this.state = (state == null ? GizmoState.INACTIVE : state);
     }
-
+    
     public boolean isActive() {
         return !getState().equals(GizmoState.INACTIVE);
     }
@@ -252,7 +252,7 @@ public class Gizmo {
     public Vector3f getScale() {
         return scale;
     }
-
+    
     public Vector3f getScale(Vector3f extents) {
         extents = Objects.requireNonNullElse(extents, new Vector3f(1f));
         return getScale().div(extents, extents);

@@ -157,10 +157,7 @@ public class NCubemap {
             uid = UUID.randomUUID().toString();
         }
         this.uid = uid;
-
-        if (cubemapBox == NCubemapBox.NULL_CUBEMAP_BOX) {
-            cubemapBox = null;
-        }
+        
         this.cubemapBox = cubemapBox;
 
         if (sides == null) {

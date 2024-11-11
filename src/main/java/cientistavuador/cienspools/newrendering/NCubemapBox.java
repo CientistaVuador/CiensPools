@@ -43,17 +43,15 @@ import org.joml.Vector3fc;
  */
 public class NCubemapBox {
     
-    public static final NCubemapBox NULL_CUBEMAP_BOX = new NCubemapBox();
-    
     private final Vector3d cubemapPosition = new Vector3d();
     private final Vector3d position = new Vector3d();
     private final Quaternionf rotation = new Quaternionf();
     private final Vector3f halfExtents = new Vector3f();
-    
+
     private final Matrix4d localToWorld = new Matrix4d();
     private final Vector3d min = new Vector3d();
     private final Vector3d max = new Vector3d();
-    
+
     public NCubemapBox(
             double cubemapX, double cubemapY, double cubemapZ,
             double x, double y, double z,
@@ -64,7 +62,7 @@ public class NCubemapBox {
         this.position.set(x, y, z);
         this.rotation.set(quaternionX, quaternionY, quaternionZ, quaternionW);
         this.halfExtents.set(halfExtentX, halfExtentY, halfExtentZ);
-        
+
         this.localToWorld
                 .identity()
                 .translate(this.position)
@@ -76,7 +74,7 @@ public class NCubemapBox {
         this.max.set(1.0);
         this.localToWorld.transformAab(this.min, this.max, this.min, this.max);
     }
-    
+
     public NCubemapBox(
             double pX, double pY, double pZ,
             double minX, double minY, double minZ,
@@ -86,10 +84,12 @@ public class NCubemapBox {
                 pX, pY, pZ,
                 (minX + maxX) * 0.5, (minY + maxY) * 0.5, (minZ + maxZ) * 0.5,
                 0f, 0f, 0f, 1f,
-                (float) ((maxX - minX) * 0.5f), (float) ((maxY - minY) * 0.5f), (float) ((maxZ - minZ) * 0.5f)
+                (float) ((maxX - minX) * 0.5f),
+                (float) ((maxY - minY) * 0.5f),
+                (float) ((maxZ - minZ) * 0.5f)
         );
     }
-    
+
     public NCubemapBox(
             Vector3dc cubemapPosition,
             Vector3dc position,
@@ -103,7 +103,7 @@ public class NCubemapBox {
                 halfExtents.x(), halfExtents.y(), halfExtents.z()
         );
     }
-    
+
     public NCubemapBox() {
         this(
                 0, 0, 0,
@@ -112,20 +112,20 @@ public class NCubemapBox {
                 0, 0, 0
         );
     }
-    
-    public Vector3d getCubemapPosition() {
+
+    public Vector3dc getCubemapPosition() {
         return cubemapPosition;
     }
-    
-    public Vector3d getPosition() {
+
+    public Vector3dc getPosition() {
         return position;
     }
 
-    public Quaternionf getRotation() {
+    public Quaternionfc getRotation() {
         return rotation;
     }
 
-    public Vector3f getHalfExtents() {
+    public Vector3fc getHalfExtents() {
         return halfExtents;
     }
 
@@ -140,8 +140,37 @@ public class NCubemapBox {
     public Vector3dc getMax() {
         return max;
     }
-    
-    public void calculateRelative(Vector3dc cameraPosition, Matrix4f outWorldToLocal, Vector3f outCubemapPosition) {
+
+    public void calculateRelative(
+            double x, double y, double z,
+            Matrix4f outWorldToLocal,
+            Vector3f outCubemapPosition
+    ) {
+        Objects.requireNonNull(outWorldToLocal, "outWorldToLocal is null");
+        float rx = (float) (this.position.x() - x);
+        float ry = (float) (this.position.y() - y);
+        float rz = (float) (this.position.z() - z);
+        outWorldToLocal
+                .identity()
+                .translate(rx, ry, rz)
+                .rotate(this.rotation)
+                .scale(this.halfExtents)
+                .invert();
+        
+        if (outCubemapPosition != null) {
+            outCubemapPosition.set(
+                    this.cubemapPosition.x() - x,
+                    this.cubemapPosition.y() - y,
+                    this.cubemapPosition.z() - z
+            );
+        }
+    }
+
+    public void calculateRelative(
+            Vector3dc cameraPosition,
+            Matrix4f outWorldToLocal,
+            Vector3f outCubemapPosition
+    ) {
         double cx = 0.0;
         double cy = 0.0;
         double cz = 0.0;
@@ -150,24 +179,10 @@ public class NCubemapBox {
             cy = cameraPosition.y();
             cz = cameraPosition.z();
         }
-        float rx = (float) (this.position.x() - cx);
-        float ry = (float) (this.position.y() - cy);
-        float rz = (float) (this.position.z() - cz);
-        outWorldToLocal
-                .identity()
-                .translate(rx, ry, rz)
-                .rotate(this.rotation)
-                .scale(this.halfExtents)
-                .invert()
-                ;
-
-        if (outCubemapPosition != null) {
-            outCubemapPosition.set(
-                    this.cubemapPosition.x() - cx,
-                    this.cubemapPosition.y() - cy,
-                    this.cubemapPosition.z() - cz
-            );
-        }
+        calculateRelative(
+                cx, cy, cz,
+                outWorldToLocal, outCubemapPosition
+        );
     }
 
     @Override

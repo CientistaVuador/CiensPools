@@ -237,7 +237,9 @@ public class ResourcePackWriter implements AutoCloseable {
         if (!Files.exists(getFileSystem().getPath(planB))) {
             return planB;
         }
-        return null;
+        return path 
+                + PathUtils.cleanupPathName(Resource.generateRandomId(null)) 
+                + "/" + PathUtils.cleanupPathName(id);
     }
 
     private Path createPathAndWrite(DataEntry entry) throws IOException {

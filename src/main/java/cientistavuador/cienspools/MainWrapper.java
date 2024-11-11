@@ -237,7 +237,7 @@ public class MainWrapper {
         System.out.println("Writing to File...");
         try {
             Path outputFile = path.toAbsolutePath().getParent().resolve(path.getFileName() + ".n3dm");
-            N3DModel.writeModelResourcePack(model, outputFile);
+            N3DModel.writeModelResourcePack(model, false, outputFile);
         } catch (IOException ex) {
             ex.printStackTrace(System.out);
             return;

@@ -86,7 +86,7 @@ public class ResourceLoader {
     
     static {
         String[] extensions = {
-            "n3dm"
+            "n3dm", "pack"
         };
         Set<String> validExtensions = new HashSet<>();
         validExtensions.addAll(Arrays.asList(extensions));

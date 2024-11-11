@@ -28,18 +28,15 @@ package cientistavuador.cienspools.newrendering;
 
 import cientistavuador.cienspools.resources.schemas.Schemas;
 import cientistavuador.cienspools.util.XMLUtils;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
+import org.joml.Vector3f;
 import org.joml.Vector4f;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -86,10 +83,40 @@ public class N3DModelNode {
         }
         for (int i = 0; i < node.getNumberOfGeometries(); i++) {
             NGeometry g = node.getGeometry(i);
-            b.append(INDENT)
-                    .append("<geometry id=")
-                    .append(XMLUtils.quoteAttribute(g.getName()))
-                    .append("/>\n");
+            b.append(INDENT).append("<geometry>\n");
+            b.append(INDENT).append(INDENT)
+                    .append("<mesh>")
+                    .append(XMLUtils.escapeText(g.getMesh().getName()))
+                    .append("</mesh>\n");
+            b.append(INDENT).append(INDENT)
+                    .append("<material>")
+                    .append(XMLUtils.escapeText(g.getMaterial().getId()))
+                    .append("</material>\n");
+            if (g.isAnimatedAabbGenerated()) {
+                b.append(INDENT).append(INDENT).append("<animated>\n");
+                b.append(INDENT).append(INDENT).append(INDENT).append("<aabb>\n");
+                b.append(INDENT).append(INDENT).append(INDENT).append(INDENT)
+                        .append("<min")
+                        .append(" x=")
+                        .append(XMLUtils.quoteAttribute(Float.toString(g.getAnimatedAabbMin().x())))
+                        .append(" y=")
+                        .append(XMLUtils.quoteAttribute(Float.toString(g.getAnimatedAabbMin().y())))
+                        .append(" z=")
+                        .append(XMLUtils.quoteAttribute(Float.toString(g.getAnimatedAabbMin().z())))
+                        .append("/>\n");
+                b.append(INDENT).append(INDENT).append(INDENT).append(INDENT)
+                        .append("<max")
+                        .append(" x=")
+                        .append(XMLUtils.quoteAttribute(Float.toString(g.getAnimatedAabbMax().x())))
+                        .append(" y=")
+                        .append(XMLUtils.quoteAttribute(Float.toString(g.getAnimatedAabbMax().y())))
+                        .append(" z=")
+                        .append(XMLUtils.quoteAttribute(Float.toString(g.getAnimatedAabbMax().z())))
+                        .append("/>\n");
+                b.append(INDENT).append(INDENT).append(INDENT).append("</aabb>\n");
+                b.append(INDENT).append(INDENT).append("</animated>\n");
+            }
+            b.append(INDENT).append("</geometry>\n");
         }
         for (int i = 0; i < node.getNumberOfChildren(); i++) {
             N3DModelNode n = node.getChild(i);
@@ -138,7 +165,17 @@ public class N3DModelNode {
             if (item.getParentNode() != element) {
                 continue;
             }
-            geometries.add(NGeometry.RESOURCES.get(item.getAttribute("id")));
+            NMesh mesh = NMesh.RESOURCES.get(XMLUtils.getElementText(item, "mesh"));
+            NMaterial material = NMaterial.RESOURCES.get(XMLUtils.getElementText(item, "material"));
+            Vector3f animatedMin = null;
+            Vector3f animatedMax = null;
+            Element animatedElement = XMLUtils.getElement(item, "animated");
+            if (animatedElement != null) {
+                Element aabbElement = XMLUtils.getElement(animatedElement, "aabb");
+                animatedMin = XMLUtils.getVector3f(XMLUtils.getElement(aabbElement, "min"));
+                animatedMax = XMLUtils.getVector3f(XMLUtils.getElement(aabbElement, "max"));
+            }
+            geometries.add(new NGeometry(mesh, material, animatedMin, animatedMax));
         }
 
         List<N3DModelNode> children = new ArrayList<>();

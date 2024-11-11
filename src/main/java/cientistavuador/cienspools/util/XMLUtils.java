@@ -27,15 +27,14 @@
 package cientistavuador.cienspools.util;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Stream;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.validation.Schema;
+import org.joml.Vector3f;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -67,17 +66,31 @@ public class XMLUtils {
         }
     };
 
-    public static Document parseXML(InputSource source, Schema schema)
-            throws SAXException, IOException {
+    private static final Map<Schema, DocumentBuilder> builderMap
+            = Collections.synchronizedMap(new HashMap<>());
+
+    private static DocumentBuilder getDocumentBuilderOf(Schema schema) 
+            throws ParserConfigurationException {
+        DocumentBuilder builder = builderMap.get(schema);
+        if (builder != null) {
+            return builder;
+        }
         DocumentBuilderFactory factory = DocumentBuilderFactory.newDefaultInstance();
         factory.setNamespaceAware(true);
         factory.setSchema(schema);
         factory.setCoalescing(true);
+
+        builder = factory.newDocumentBuilder();
+        builder.setErrorHandler(ERROR_HANDLER);
+        builderMap.put(schema, builder);
         
+        return builder;
+    }
+
+    public static Document parseXML(InputSource source, Schema schema)
+            throws SAXException, IOException {
         try {
-            DocumentBuilder builder = factory.newDocumentBuilder();
-            builder.setErrorHandler(ERROR_HANDLER);
-            Document doc = builder.parse(source);
+            Document doc = getDocumentBuilderOf(schema).parse(source);
             Element rootElement = doc.getDocumentElement();
             rootElement.normalize();
 
@@ -94,7 +107,7 @@ public class XMLUtils {
         }
         return null;
     }
-    
+
     public static Element getElement(Element parent, String name) {
         NodeList children = parent.getElementsByTagName(name);
         for (int i = 0; i < children.getLength(); i++) {
@@ -105,13 +118,24 @@ public class XMLUtils {
         }
         return null;
     }
-    
+
     public static String getElementText(Element parent, String name) {
         Element top = getElement(parent, name);
         if (top == null) {
             return null;
         }
         return top.getTextContent();
+    }
+
+    public static Vector3f getVector3f(Element element) {
+        if (element == null) {
+            return null;
+        }
+        return new Vector3f(
+                Float.parseFloat(element.getAttribute("x")),
+                Float.parseFloat(element.getAttribute("y")),
+                Float.parseFloat(element.getAttribute("z"))
+        );
     }
 
     public static String escapeText(String text) {

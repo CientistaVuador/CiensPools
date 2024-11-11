@@ -27,11 +27,6 @@
 package cientistavuador.cienspools.newrendering;
 
 import static cientistavuador.cienspools.newrendering.NMesh.MAX_AMOUNT_OF_BONE_WEIGHTS;
-import cientistavuador.cienspools.resourcepack.Resource;
-import cientistavuador.cienspools.resourcepack.ResourcePackWriter;
-import cientistavuador.cienspools.resourcepack.ResourceRW;
-import java.io.IOException;
-import java.util.Map;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
 import org.joml.Vector3f;
@@ -42,70 +37,29 @@ import org.joml.Vector3fc;
  * @author Cien
  */
 public class NGeometry {
-
-    public static final ResourceRW<NGeometry> RESOURCES = new ResourceRW<NGeometry>(true) {
-        @Override
-        public String getResourceType() {
-            return "geometry";
-        }
-
-        @Override
-        public NGeometry readResource(Resource r) throws IOException {
-            Map<String, String> meta = r.getMeta();
-            Vector3f animatedMin = new Vector3f();
-            Vector3f animatedMax = new Vector3f();
-            if (!ResourceRW.readVector3f(meta, animatedMin, "animatedMin", false, null) 
-                    || !ResourceRW.readVector3f(meta, animatedMax, "animatedMax", false, null)) {
-                animatedMin = null;
-                animatedMax = null;
-            }
-            return new NGeometry(
-                    r.getId(),
-                    NMesh.RESOURCES.get(meta.get("mesh")),
-                    NMaterial.RESOURCES.get(meta.get("material")),
-                    animatedMin, animatedMax
-            );
-        }
-
-        @Override
-        public void writeResource(NGeometry obj, ResourcePackWriter.ResourceEntry entry, String path) throws IOException {
-            entry.setType(getResourceType());
-            entry.setId(obj.getName());
-            Map<String, String> meta = entry.getMeta();
-            meta.put("mesh", obj.getMesh().getName());
-            meta.put("material", obj.getMaterial().getId());
-            if (obj.isAnimatedAabbGenerated()) {
-                ResourceRW.writeVector3f(meta, obj.getAnimatedAabbMin(), "animatedMin", false);
-                ResourceRW.writeVector3f(meta, obj.getAnimatedAabbMax(), "animatedMax", false);
-            }
-        }
-    };
-
+    
     private N3DModel model = null;
     private int globalId = -1;
     private N3DModelNode parent = null;
     private int localId = -1;
-
-    private final String name;
+    
     private final NMesh mesh;
+    private NMaterial material = NMaterial.ERROR_MATERIAL;
 
     private final Vector3f animatedAabbMin = new Vector3f();
     private final Vector3f animatedAabbMax = new Vector3f();
+    
     private final Vector3f animatedAabbCenter = new Vector3f();
     private boolean animatedAabbGenerated = false;
-
-    private NMaterial material = NMaterial.NULL_MATERIAL;
-
+    
     public NGeometry(
-            String name,
             NMesh mesh,
             NMaterial material,
             Vector3fc animatedMin, Vector3fc animatedMax
     ) {
-        this.name = name;
         this.mesh = mesh;
         if (material == null) {
-            material = NMaterial.NULL_MATERIAL;
+            material = NMaterial.ERROR_MATERIAL;
         }
         this.material = material;
 
@@ -121,12 +75,12 @@ public class NGeometry {
         }
     }
 
-    public NGeometry(String name, NMesh mesh, NMaterial material) {
-        this(name, mesh, material, null, null);
+    public NGeometry(NMesh mesh, NMaterial material) {
+        this(mesh, material, null, null);
     }
 
-    public NGeometry(String name, NMesh mesh) {
-        this(name, mesh, null);
+    public NGeometry(NMesh mesh) {
+        this(mesh, null);
     }
 
     protected void configure(N3DModel model, int globalId, N3DModelNode parent, int localId) {
@@ -154,11 +108,7 @@ public class NGeometry {
     public int getLocalId() {
         return localId;
     }
-
-    public String getName() {
-        return name;
-    }
-
+    
     public NMesh getMesh() {
         return mesh;
     }
@@ -169,7 +119,7 @@ public class NGeometry {
 
     public void setMaterial(NMaterial material) {
         if (material == null) {
-            material = NMaterial.NULL_MATERIAL;
+            material = NMaterial.ERROR_MATERIAL;
         }
         this.material = material;
     }

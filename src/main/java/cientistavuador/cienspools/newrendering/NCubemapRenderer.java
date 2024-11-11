@@ -38,13 +38,18 @@ import static org.lwjgl.opengl.GL33C.*;
 public class NCubemapRenderer {
 
     public static NCubemap render(
+            N3DObjectRenderer renderer,
             String name, NCubemapBox info, int size, int ssaaScale,
             List<NLight> lights, NCubemaps cubemaps
     ) {
         if (ssaaScale < 1) {
             throw new IllegalArgumentException("SSAA Scale must be larger or equal to 1; " + ssaaScale);
         }
-
+        
+        renderer = new N3DObjectRenderer(renderer);
+        renderer.setReflectionsEnabled(false);
+        renderer.setHDROutputEnabled(true);
+        
         int fboSize = size * ssaaScale;
 
         int fbo = glGenFramebuffers();
@@ -66,9 +71,7 @@ public class NCubemapRenderer {
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
             throw new IllegalArgumentException("Fatal framebuffer error, could not render cubemap, framebuffer is not complete!");
         }
-
-        N3DObject[] objects = N3DObjectRenderer.copyQueueObjects();
-
+        
         float[] cameraRotations = {
             0f, 0f, 180f,
             0f, -180f, 180f,
@@ -81,6 +84,7 @@ public class NCubemapRenderer {
         camera.setPosition(info.getCubemapPosition());
         camera.setDimensions(1f, 1f);
         camera.setFov(90f);
+        renderer.setCamera(camera);
 
         float[][] sides = new float[NCubemap.SIDES][];
 
@@ -91,19 +95,13 @@ public class NCubemapRenderer {
             float yaw = cameraRotations[(i * 3) + 1];
             float roll = cameraRotations[(i * 3) + 2];
             camera.setRotation(pitch, yaw, roll);
-
-            if (i != 0) {
-                for (int j = 0; j < objects.length; j++) {
-                    N3DObjectRenderer.queueRender(objects[j]);
-                }
-            }
-
+            
             float[] ssaaSide = new float[fboSize * fboSize * 3];
 
             glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-            N3DObjectRenderer.render(camera, lights, cubemaps);
+            renderer.render();
             glReadPixels(0, 0, fboSize, fboSize, GL_RGB, GL_FLOAT, ssaaSide);
-
+            
             float[] side = new float[size * size * 3];
             for (int y = 0; y < size; y++) {
                 for (int x = 0; x < size; x++) {
@@ -144,10 +142,11 @@ public class NCubemapRenderer {
     }
     
     public static NCubemap render(
+            N3DObjectRenderer renderer,
             String name, NCubemapBox info, int size,
             List<NLight> lights, NCubemaps cubemaps
     ) {
-        return render(name, info, size, 4, lights, cubemaps);
+        return render(renderer, name, info, size, 4, lights, cubemaps);
     }
 
     private NCubemapRenderer() {

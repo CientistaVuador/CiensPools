@@ -26,9 +26,6 @@
  */
 package cientistavuador.cienspools.newrendering;
 
-import static cientistavuador.cienspools.newrendering.NCubemap.SIDES;
-import static cientistavuador.cienspools.newrendering.NCubemap.calculateColor;
-import cientistavuador.cienspools.util.DXT5TextureStore;
 import cientistavuador.cienspools.util.DXT5TextureStore.DXT5Texture;
 import cientistavuador.cienspools.util.E8Image;
 import java.lang.ref.WeakReference;

@@ -27,6 +27,7 @@
 package cientistavuador.cienspools.newrendering;
 
 import cientistavuador.cienspools.resourcepack.Resource;
+import cientistavuador.cienspools.resourcepack.ResourcePack;
 import cientistavuador.cienspools.resourcepack.ResourcePackWriter;
 import cientistavuador.cienspools.resourcepack.ResourcePackWriter.DataEntry;
 import cientistavuador.cienspools.resourcepack.ResourcePackWriter.ResourceEntry;
@@ -58,60 +59,65 @@ import org.xml.sax.SAXException;
  * @author Cien
  */
 public class N3DModel {
+
+    private static <T> boolean isIsolated(ResourceRW<T> rw, T obj, ResourcePack rootPack) {
+        Resource resource = rw.getResourceOf(obj);
+        if (resource == null) {
+            return true;
+        }
+        return resource.getResourcePack().equals(rootPack);
+    }
     
-    public static final void writeModelResourcePack(N3DModel model, Path path) throws IOException {
+    public static final void writeModelResourcePack(
+            N3DModel model, boolean standalone, Path path) throws IOException {
+        Objects.requireNonNull(model, "model is null");
         if (Files.isRegularFile(path)) {
             Files.delete(path);
+        }
+        Resource modelResource = N3DModel.RESOURCES.getResourceOf(model);
+        ResourcePack rootPack = null;
+        if (modelResource != null) {
+            rootPack = modelResource.getResourcePack();
         }
         try (ResourcePackWriter w = new ResourcePackWriter(path)) {
             for (int i = 0; i < model.getNumberOfAnimations(); i++) {
                 NAnimation animation = model.getAnimation(i);
-                String p = w.getPathFromId("animations", animation.getName());
-                if (p == null) {
+                if (!standalone && !isIsolated(NAnimation.RESOURCES, animation, rootPack)) {
                     continue;
                 }
+                String p = w.getPathFromId("animations", animation.getName());
                 ResourceEntry e = new ResourceEntry();
                 NAnimation.RESOURCES.writeResource(animation, e, p);
                 w.writeResourceEntry(e);
             }
             for (int i = 0; i < model.getNumberOfTextures(); i++) {
                 NTextures texture = model.getTextures(i);
-                String p = w.getPathFromId("textures", texture.getName());
-                if (p == null) {
+                if (!standalone && !isIsolated(NTextures.RESOURCES, texture, rootPack)) {
                     continue;
                 }
+                String p = w.getPathFromId("textures", texture.getId());
                 ResourceEntry e = new ResourceEntry();
                 NTextures.RESOURCES.writeResource(texture, e, p);
                 w.writeResourceEntry(e);
             }
             for (int i = 0; i < model.getNumberOfMaterials(); i++) {
                 NMaterial mat = model.getMaterial(i);
-                String p = w.getPathFromId("materials", mat.getId());
-                if (p == null) {
+                if (!standalone && !isIsolated(NMaterial.RESOURCES, mat, rootPack)) {
                     continue;
                 }
+                String p = w.getPathFromId("materials", mat.getId());
                 ResourceEntry e = new ResourceEntry();
                 NMaterial.RESOURCES.writeResource(mat, e, p);
                 w.writeResourceEntry(e);
             }
             for (int i = 0; i < model.getNumberOfMeshes(); i++) {
                 NMesh mesh = model.getMesh(i);
-                String p = w.getPathFromId("meshes", mesh.getName());
-                if (p == null) {
+                if (!standalone && !isIsolated(NMesh.RESOURCES, mesh, rootPack)) {
                     continue;
                 }
+                String p = w.getPathFromId("meshes", mesh.getName());
                 ResourceEntry e = new ResourceEntry();
                 NMesh.RESOURCES.writeResource(mesh, e, p);
-                w.writeResourceEntry(e);
-            }
-            for (int i = 0; i < model.getNumberOfGeometries(); i++) {
-                NGeometry geo = model.getGeometry(i);
-                String p = w.getPathFromId("geometries", geo.getName());
-                if (p == null) {
-                    continue;
-                }
-                ResourceEntry e = new ResourceEntry();
-                NGeometry.RESOURCES.writeResource(geo, e, p);
                 w.writeResourceEntry(e);
             }
             ResourceEntry e = new ResourceEntry();
@@ -322,11 +328,11 @@ public class N3DModel {
                         meshList.add(mesh);
                     }
 
-                    if (material != NMaterial.NULL_MATERIAL && !materialsList.contains(material)) {
+                    if (material != NMaterial.ERROR_MATERIAL && !materialsList.contains(material)) {
                         materialsList.add(material);
                     }
 
-                    if (materialTextures != NTextures.NULL_TEXTURE && !texturesList.contains(materialTextures)) {
+                    if (materialTextures != NTextures.ERROR_TEXTURE && !texturesList.contains(materialTextures)) {
                         texturesList.add(materialTextures);
                     }
 
@@ -468,7 +474,7 @@ public class N3DModel {
     public Vector3f getAabbExtents() {
         return aabbExtents;
     }
-    
+
     public int getNumberOfNodes() {
         return this.nodes.length;
     }

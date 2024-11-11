@@ -959,7 +959,7 @@ public class N3DModelImporter {
 
         NMaterial material = this.materials.get(mesh.mMaterialIndex());
         if (material == null) {
-            material = NMaterial.NULL_MATERIAL;
+            material = NMaterial.ERROR_MATERIAL;
         }
 
         for (int i = 0; i < splitMeshes.size(); i++) {
@@ -984,7 +984,7 @@ public class N3DModelImporter {
             );
             loadedMesh.generateBVH();
 
-            outputGeometries.add(new NGeometry(Resource.generateRandomId(name + " Geometry"), loadedMesh, material));
+            outputGeometries.add(new NGeometry(loadedMesh, material));
         }
 
         return new Pair<>(
@@ -1033,7 +1033,7 @@ public class N3DModelImporter {
                     NMesh alreadyLoaded = loadedMeshes.get(sha256);
 
                     if (alreadyLoaded != null) {
-                        geometry = new NGeometry(geometry.getName(), alreadyLoaded, geometry.getMaterial());
+                        geometry = new NGeometry(alreadyLoaded, geometry.getMaterial());
                     } else {
                         loadedMeshes.put(sha256, mesh);
                     }
@@ -1070,7 +1070,7 @@ public class N3DModelImporter {
                 List<NGeometry> geometriesList = this.loadedGeometries.get(geometriesIndex.get(i));
                 if (geometriesList != null) {
                     for (NGeometry geo : geometriesList) {
-                        geometries.add(new NGeometry(geo.getName(), geo.getMesh(), geo.getMaterial()));
+                        geometries.add(new NGeometry(geo.getMesh(), geo.getMaterial()));
                     }
                 }
             }

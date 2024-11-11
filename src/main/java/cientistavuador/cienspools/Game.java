@@ -31,7 +31,6 @@ import cientistavuador.cienspools.debug.AabRender;
 import cientistavuador.cienspools.debug.LineRender;
 import cientistavuador.cienspools.editor.Gizmo;
 import cientistavuador.cienspools.newrendering.N3DModel;
-import cientistavuador.cienspools.newrendering.N3DModelImporter;
 import cientistavuador.cienspools.newrendering.N3DObject;
 import cientistavuador.cienspools.newrendering.N3DObjectRenderer;
 import cientistavuador.cienspools.newrendering.NCubemap;
@@ -67,13 +66,11 @@ import com.simsilica.mathd.Vec3d;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
-import org.joml.Intersectionf;
 import org.joml.Quaternionf;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL33C.*;
@@ -134,16 +131,13 @@ public class Game {
     private boolean ambientCubeDebug = false;
     private boolean debugCollision = false;
 
+    private final N3DObjectRenderer renderer = new N3DObjectRenderer();
+
     private final PhysicsSpace physicsSpace = new PhysicsSpace(PhysicsSpace.BroadphaseType.DBVT);
     private final PhysicsSpaceDebugger physicsSpaceDebugger = new PhysicsSpaceDebugger(this.physicsSpace);
     private final PlayerController playerController = new PlayerController();
 
     {
-        System.out.println(Intersectionf
-                .intersectRayPlane(
-                        0f, 0f, 0f, 0f, 1f, 0f,
-                        0f, 10f, 0f, 0f, 1f, 0f,
-                        0.001f));
 
         this.playerController.getCharacterController().setPosition(16.72f, 0f, 12.76f);
 
@@ -181,10 +175,10 @@ public class Game {
             ColorUtils.setSRGB(this.lighter.getAmbient(), 233, 140, 80).mul(0.015f);
 
             {
-                //this.boomBoxModel = N3DModel.RESOURCES.get("[D48EAA8D455A4B57|A34C2F1CE3B5D2C7]BoomBox");
-                this.boomBoxModel = N3DModelImporter.importFromJarFile("cientistavuador/cienspools/resources/models/box.glb");
+                this.boomBoxModel = N3DModel.RESOURCES.get("Box");
                 this.cubemapBox = new N3DObject("cubemap box", this.boomBoxModel);
             }
+
         } catch (IOException ex) {
             throw new RuntimeException(ex);
         }
@@ -223,8 +217,8 @@ public class Game {
     public void start() {
 
         this.gizmo.setCamera(this.camera);
-        
-        NTextures.NULL_TEXTURE.textures();
+
+        NTextures.ERROR_TEXTURE.textures();
         NCubemap.NULL_CUBEMAP.cubemap();
         NLightmaps.NULL_LIGHTMAPS.lightmaps();
 
@@ -287,20 +281,27 @@ public class Game {
             this.physicsSpaceDebugger.pushToDebugRenderer(
                     this.camera.getProjection(), this.camera.getView(), this.camera.getPosition());
         }
-        
+
         this.gizmo.getScale(this.cubemapBox.getScale().set(1f));
         this.gizmo.rotate(this.cubemapBox.getRotation().identity());
         this.cubemapBox.getPosition().set(this.gizmo.getPosition());
 
+        this.renderer.setCamera(this.camera);
+        this.renderer.getObjects().clear();
+        this.renderer.getLights().clear();
+
         for (int i = 0; i < this.map.getNumberOfObjects(); i++) {
-            N3DObjectRenderer.queueRender(this.map.getObject(i));
+            this.renderer.getObjects().add(this.map.getObject(i));
         }
         for (N3DObject boomBox : this.boomBoxes) {
-            N3DObjectRenderer.queueRender(boomBox);
+            this.renderer.getObjects().add(boomBox);
         }
-        N3DObjectRenderer.queueRender(this.cubemapBox);
-        
-        N3DObjectRenderer.render(this.camera, this.lights, this.cubemaps);
+        this.renderer.getObjects().add(this.cubemapBox);
+        this.renderer.getLights().addAll(this.lights);
+
+        this.renderer.setCubemaps(this.cubemaps);
+
+        this.renderer.render();
 
         AabRender.renderQueue(this.camera);
         LineRender.renderQueue(this.camera);
@@ -394,13 +395,13 @@ public class Game {
             this.physicsSpace.addCollisionObject(rigidBody);
         }
         if (key == GLFW_KEY_F1 && action == GLFW_PRESS) {
-            N3DObjectRenderer.REFLECTIONS_ENABLED = !N3DObjectRenderer.REFLECTIONS_ENABLED;
+            this.renderer.setReflectionsEnabled(!this.renderer.isReflectionsEnabled());
         }
         if (key == GLFW_KEY_F2 && action == GLFW_PRESS) {
-            N3DObjectRenderer.PARALLAX_ENABLED = !N3DObjectRenderer.PARALLAX_ENABLED;
+            this.renderer.setParallaxEnabled(!this.renderer.isParallaxEnabled());
         }
         if (key == GLFW_KEY_F3 && action == GLFW_PRESS) {
-            N3DObjectRenderer.REFLECTIONS_DEBUG = !N3DObjectRenderer.REFLECTIONS_DEBUG;
+            this.renderer.setReflectionsDebugEnabled(!this.renderer.isReflectionsDebugEnabled());
         }
         if (key == GLFW_KEY_F4 && action == GLFW_PRESS) {
             bake:
@@ -476,23 +477,13 @@ public class Game {
             }
         }
         if (key == GLFW_KEY_F5 && action == GLFW_PRESS) {
-            boolean reflectionsEnabled = N3DObjectRenderer.REFLECTIONS_ENABLED;
-            boolean reflectionsDebug = N3DObjectRenderer.REFLECTIONS_DEBUG;
-
-            N3DObjectRenderer.REFLECTIONS_ENABLED = false;
-            N3DObjectRenderer.HDR_OUTPUT = true;
-            N3DObjectRenderer.REFLECTIONS_DEBUG = false;
-
             List<NCubemap> cubemapsList = new ArrayList<>();
             for (int i = 0; i < this.cubemapNames.length; i++) {
                 String name = this.cubemapNames[i];
                 NCubemapBox info = this.cubemapInfos[i];
 
-                for (int j = 0; j < this.map.getNumberOfObjects(); j++) {
-                    N3DObjectRenderer.queueRender(this.map.getObject(j));
-                }
-
                 NCubemap cubemap = NCubemapRenderer.render(
+                        this.renderer,
                         name,
                         info,
                         1024,
@@ -515,10 +506,6 @@ public class Game {
             }
 
             this.cubemaps = new NCubemaps(this.skybox, cubemapsList);
-
-            N3DObjectRenderer.REFLECTIONS_ENABLED = reflectionsEnabled;
-            N3DObjectRenderer.HDR_OUTPUT = false;
-            N3DObjectRenderer.REFLECTIONS_DEBUG = reflectionsDebug;
         }
         if (key == GLFW_KEY_F6 && action == GLFW_PRESS) {
             this.ambientCubeDebug = !this.ambientCubeDebug;
@@ -527,7 +514,7 @@ public class Game {
             this.debugCollision = !this.debugCollision;
         }
         if (key == GLFW_KEY_F8 && action == GLFW_PRESS) {
-            N3DObjectRenderer.USE_TONEMAPPING = !N3DObjectRenderer.USE_TONEMAPPING;
+            this.renderer.setTonemappingEnabled(!this.renderer.isTonemappingEnabled());
         }
         if (key == GLFW_KEY_F && action == GLFW_PRESS) {
             if (this.lights.contains(this.flashlight)) {
@@ -553,10 +540,10 @@ public class Game {
             Quaternionf rotation = new Quaternionf();
             this.gizmo.rotate(rotation);
             System.out.print("new NCubemapBox(");
-            System.out.print(this.gizmo.getPosition().x()+", "+this.gizmo.getPosition().y()+", "+this.gizmo.getPosition().z()+", ");
-            System.out.print(this.gizmo.getPosition().x()+", "+this.gizmo.getPosition().y()+", "+this.gizmo.getPosition().z()+", ");
-            System.out.print(rotation.x()+"f, "+rotation.y()+"f, "+rotation.z()+"f, "+rotation.w()+"f, ");
-            System.out.print(this.gizmo.getScale().x() * 0.5f+"f, "+this.gizmo.getScale().y() * 0.5f+"f, "+this.gizmo.getScale().z() * 0.5f+"f");
+            System.out.print(this.gizmo.getPosition().x() + ", " + this.gizmo.getPosition().y() + ", " + this.gizmo.getPosition().z() + ", ");
+            System.out.print(this.gizmo.getPosition().x() + ", " + this.gizmo.getPosition().y() + ", " + this.gizmo.getPosition().z() + ", ");
+            System.out.print(rotation.x() + "f, " + rotation.y() + "f, " + rotation.z() + "f, " + rotation.w() + "f, ");
+            System.out.print(this.gizmo.getScale().x() * 0.5f + "f, " + this.gizmo.getScale().y() * 0.5f + "f, " + this.gizmo.getScale().z() * 0.5f + "f");
             System.out.println(")");
         }
     }
