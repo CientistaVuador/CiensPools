@@ -729,18 +729,24 @@ public class N3DObjectRenderer {
                         (isParallaxEnabled() ? 1 : 0))
                 .uniform1i(NProgram.UNIFORM_ENABLE_REFLECTIONS,
                         (isReflectionsEnabled() ? 1 : 0))
+                .uniform1f(NProgram.UNIFORM_GAMMA, Main.GAMMA)
+                .uniform1f(NProgram.UNIFORM_EXPOSURE, Main.EXPOSURE)
                 .uniform1f(NProgram.UNIFORM_WATER_COUNTER,
                         Water.WATER_COUNTER)
                 .uniform1i(NProgram.UNIFORM_ENABLE_OPAQUE_TEXTURE, 0)
-                .uniform1i(NProgram.UNIFORM_WATER_FRAMES, 0)
-                .uniform1i(NProgram.UNIFORM_MATERIAL_TEXTURES, 1)
-                .uniform1i(NProgram.UNIFORM_LIGHTMAPS, 2)
-                .uniform1i(NProgram.UNIFORM_REFLECTION_CUBEMAP_0, 3)
-                .uniform1i(NProgram.UNIFORM_REFLECTION_CUBEMAP_1, 4)
-                .uniform1i(NProgram.UNIFORM_REFLECTION_CUBEMAP_2, 5)
-                .uniform1i(NProgram.UNIFORM_REFLECTION_CUBEMAP_3, 6);
+                .uniform1i(NProgram.UNIFORM_SPECULAR_BRDF_LOOKUP_TABLE, 0)
+                .uniform1i(NProgram.UNIFORM_WATER_FRAMES, 1)
+                .uniform1i(NProgram.UNIFORM_MATERIAL_TEXTURES, 2)
+                .uniform1i(NProgram.UNIFORM_LIGHTMAPS, 3)
+                .uniform1i(NProgram.UNIFORM_REFLECTION_CUBEMAP_0, 4)
+                .uniform1i(NProgram.UNIFORM_REFLECTION_CUBEMAP_1, 5)
+                .uniform1i(NProgram.UNIFORM_REFLECTION_CUBEMAP_2, 6)
+                .uniform1i(NProgram.UNIFORM_REFLECTION_CUBEMAP_3, 7);
 
         glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, NSpecularBRDFLookupTable.SPECULAR_BRDF_TEXTURE);
+        
+        glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D_ARRAY, Water.TEXTURE);
 
         render(variant, toRender);
@@ -864,8 +870,6 @@ public class N3DObjectRenderer {
                                 material.getMetallic())
                         .uniform1f(NProgram.UNIFORM_MATERIAL_ROUGHNESS,
                                 material.getRoughness())
-                        .uniform1f(NProgram.UNIFORM_MATERIAL_INVERSE_ROUGHNESS_EXPONENT,
-                                material.getInverseRoughnessExponent())
                         .uniform1f(NProgram.UNIFORM_MATERIAL_DIFFUSE_SPECULAR_RATIO,
                                 material.getDiffuseSpecularRatio())
                         .uniform1f(NProgram.UNIFORM_MATERIAL_HEIGHT,
@@ -904,7 +908,7 @@ public class N3DObjectRenderer {
                 
                 int texturesId = textures.textures();
 
-                glActiveTexture(GL_TEXTURE1);
+                glActiveTexture(GL_TEXTURE2);
                 glBindTexture(GL_TEXTURE_2D_ARRAY, texturesId);
 
                 lastTextures = textures;
@@ -913,7 +917,7 @@ public class N3DObjectRenderer {
             if (lastLightmaps != lightmaps) {
                 int maps = lightmaps.lightmaps();
 
-                glActiveTexture(GL_TEXTURE2);
+                glActiveTexture(GL_TEXTURE3);
                 glBindTexture(GL_TEXTURE_2D_ARRAY, maps);
 
                 for (int i = 0; i < lightmaps.getNumberOfLightmaps(); i++) {
@@ -945,7 +949,7 @@ public class N3DObjectRenderer {
                     }
 
                     if (cubemapObj != lastCubemapObj) {
-                        glActiveTexture(GL_TEXTURE3 + i);
+                        glActiveTexture(GL_TEXTURE4 + i);
                         glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapObj);
                     }
 

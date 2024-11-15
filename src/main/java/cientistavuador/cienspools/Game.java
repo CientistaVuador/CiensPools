@@ -31,6 +31,7 @@ import cientistavuador.cienspools.debug.AabRender;
 import cientistavuador.cienspools.debug.LineRender;
 import cientistavuador.cienspools.editor.Gizmo;
 import cientistavuador.cienspools.newrendering.N3DModel;
+import cientistavuador.cienspools.newrendering.N3DModelImporter;
 import cientistavuador.cienspools.newrendering.N3DObject;
 import cientistavuador.cienspools.newrendering.N3DObjectRenderer;
 import cientistavuador.cienspools.newrendering.NCubemap;
@@ -175,10 +176,12 @@ public class Game {
             ColorUtils.setSRGB(this.lighter.getAmbient(), 233, 140, 80).mul(0.015f);
 
             {
-                this.boomBoxModel = N3DModel.RESOURCES.get("Box");
+                this.boomBoxModel = N3DModel.RESOURCES.get("[D48EAA8D455A4B57|A34C2F1CE3B5D2C7]BoomBox");
+                this.boomBoxModel.getMaterial(0).setDiffuseSpecularRatio(0.90f);
                 this.cubemapBox = new N3DObject("cubemap box", this.boomBoxModel);
+                this.cubemapBox.setMap(this.map);
             }
-
+            
         } catch (IOException ex) {
             throw new RuntimeException(ex);
         }
@@ -255,8 +258,10 @@ public class Game {
             this.playerController.getCharacterController().setPosition(0f, 0.1f, 0f);
         }
 
-        this.flashlight.getPosition().set(this.camera.getPosition());
-        this.flashlight.getDirection().set(this.camera.getFront()).add(0f, -0.15f, 0f).normalize();
+        if (glfwGetKey(Main.WINDOW_POINTER, GLFW_KEY_P) == GLFW_PRESS) {
+            this.flashlight.getPosition().set(this.camera.getPosition());
+            this.flashlight.getDirection().set(this.camera.getFront()).add(0f, -0.15f, 0f).normalize();
+        }
 
         this.lighter.getPosition().set(this.camera.getRight()).negate()
                 .mul(0.05f).add(this.camera.getPosition());

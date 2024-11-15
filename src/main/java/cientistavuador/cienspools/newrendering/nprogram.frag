@@ -8,6 +8,12 @@ uniform bool enableParallaxMapping;
 uniform bool enableWater;
 uniform bool enableOpaqueTexture;
 
+uniform float gamma;
+uniform float exposure;
+
+//specular brdf lookup table
+uniform sampler2D specularBRDFLookupTable;
+
 //water
 uniform float waterCounter;
 uniform sampler2DArray waterFrames;
@@ -94,7 +100,7 @@ vec3 cubemapReflection(samplerCube cube, float roughness, vec3 direction) {
     ivec2 cubemapSize = textureSize(cube, 0);
     float mipLevels = 1.0 + floor(log2(max(float(cubemapSize.x), float(cubemapSize.y))));
     #endif
-    float lodLevel = mipLevels * pow(roughness, 0.25);
+    float lodLevel = mipLevels * roughness;
     #ifdef SUPPORTED_400
     lodLevel = max(textureQueryLod(cube, direction).x, lodLevel);
     #endif
@@ -145,7 +151,6 @@ struct Material {
     vec4 color;
     float metallic;
     float roughness;
-    float inverseRoughnessExponent;
     float diffuseSpecularRatio;
     float height;
     float heightMinLayers;
@@ -232,17 +237,17 @@ struct BlinnPhongMaterial {
     vec3 ambient;
 };
 
-float fresnelFactor(vec3 viewDirection, vec3 normal) {
-    float fresnelDot = clamp(1.0 - max(dot(-viewDirection, normal), 0.0), 0.0, 1.0);
-    return FRESNEL_BALANCE + ((1.0 - FRESNEL_BALANCE) * pow(fresnelDot, 5.0));
+float fresnelFactor(float viewDirectionDot, float roughness) {
+    return FRESNEL_F0
+            + (max(1.0 - roughness, FRESNEL_F0) - FRESNEL_F0) 
+            * pow(clamp(1.0 - viewDirectionDot, 0.0, 1.0), 5.0);
 }
 
 BlinnPhongMaterial convertPBRMaterialToBlinnPhong(
-    vec3 viewDirection, vec3 normal,
-    vec3 color, float metallic, float roughness, float ambientOcclusion, float fresnel,
-    float inverseRoughnessExponent, float diffuseSpecularRatio
+    vec2 brdf, float diffuseSpecularRatio, vec3 color,
+    float metallic, float roughness, float ambientOcclusion, float fresnel
 ) {
-    float shininess = 1.0 / clamp(pow(roughness, inverseRoughnessExponent), 1.0 / 65535.0, 1.0);
+    float shininess = pow(65535.0, 1.0 - roughness);
     float specular = ((shininess + 2.0) * (shininess + 4.0))
                         / (8.0 * PI * (pow(2.0, -shininess * 0.5) + shininess));
     return BlinnPhongMaterial(
@@ -253,8 +258,8 @@ BlinnPhongMaterial convertPBRMaterialToBlinnPhong(
             metallic
         ),
         mix(
-            vec3(max(specular - 0.3496155267919281, 0.0)) * (1.0 - diffuseSpecularRatio) * fresnel,
-            vec3(specular) * color,
+            vec3(specular) * (1.0 - diffuseSpecularRatio) * ((brdf.x * fresnel) + brdf.y),
+            vec3(specular) * color * (brdf.x + brdf.y),
             metallic
         ),
         mix(
@@ -308,7 +313,25 @@ vec3 calculateLight(
             + (light.ambient * bpMaterial.ambient * ambientFactor);
 }
 
+//P is rayOrigin + (rayDirection * t)
+//where t is the return value
+//returns -1.0 if the ray is outside the box
+float intersectRayInsideBox(vec3 rayOrigin, vec3 rayDirection, mat4 worldToLocal) {
+    vec3 localOrigin = (worldToLocal * vec4(rayOrigin, 1.0)).xyz;
+    vec3 aabbCheck = abs(localOrigin);
+    if (max(aabbCheck.x, max(aabbCheck.y, aabbCheck.z)) > 1.0) {
+        return -1.0;
+    }
+    vec3 localDirection = mat3(worldToLocal) * rayDirection;
+    vec3 firstPlane = (vec3(-1.0) - localOrigin) / localDirection;
+    vec3 secondPlane = (vec3(1.0) - localOrigin) / localDirection;
+    vec3 furthestPlane = max(firstPlane, secondPlane);
+    return min(furthestPlane.x, min(furthestPlane.y, furthestPlane.z));
+}
+
 vec3 computeReflection(
+    vec2 brdf,
+    float specularRatio,
     vec3 fragPosition,
     vec3 viewDirection,
     vec3 reflectedDirection,
@@ -330,22 +353,13 @@ vec3 computeReflection(
         if (!parallaxCubemap.enabled) {
             continue;
         }
-
-        vec3 localPosition = (parallaxCubemap.worldToLocal * vec4(fragPosition, 1.0)).xyz;
-
-        vec3 absLocalPosition = abs(localPosition);
-        if (max(absLocalPosition.x, max(absLocalPosition.y, absLocalPosition.z)) > 1.0) {
+        
+        float distance = 
+                intersectRayInsideBox(fragPosition, reflectedDirection, parallaxCubemap.worldToLocal);
+        if (distance < 0.0) {
             continue;
         }
-
-        vec3 localDirection = mat3(parallaxCubemap.worldToLocal) * reflectedDirection;
-
-        vec3 firstPlane = (vec3(-1.0) - localPosition) / localDirection;
-        vec3 secondPlane = (vec3(1.0) - localPosition) / localDirection;
-
-        vec3 furthestPlane = max(firstPlane, secondPlane);
-        float distance = min(furthestPlane.x, min(furthestPlane.y, furthestPlane.z));
-
+        
         if (furthestDistance >= 0.0 && distance < furthestDistance) {
             continue;
         }
@@ -358,25 +372,12 @@ vec3 computeReflection(
     if (furthestDistance >= 0.0) {
         vec3 reflectedColor = cubemapReflectionIndexed(furthestIndex, roughness, resultDirection);
         return mix(
-                    reflectedColor * fresnel * (1.0 - roughness),
-                    reflectedColor * color,
+                    reflectedColor * ((fresnel * brdf.x) + brdf.y) * specularRatio,
+                    reflectedColor * (brdf.x + brdf.y) * color,
                     metallic
                 );
     }
     return vec3(0.0);
-}
-
-vec3 ACESFilm(vec3 rgb) {
-    float a = 2.51;
-    float b = 0.03;
-    float c = 2.43;
-    float d = 0.59;
-    float e = 0.14;
-    return (rgb*(a*rgb+b))/(rgb*(c*rgb+d)+e);
-}
-
-vec3 gammaCorrection(vec3 rgb) {
-    return pow(rgb, vec3(1.0/2.2));
 }
 
 void main() {
@@ -389,47 +390,48 @@ void main() {
                 material.heightMinLayers, material.heightMaxLayers, material.height
             );
     }
-
-    vec4 htrgmtnx = ht_rg_mt_nx(uv);
-    vec4 emaowtny = em_ao_wt_ny(uv);
-
+    
     vec4 color = r_g_b_a(uv) * material.color;
     #if defined(VARIANT_ALPHA_TESTING)
     if (color.a < 0.5) {
         discard;
     }
     #endif
-    float metallic = htrgmtnx[2] * material.metallic;
-    float roughness = htrgmtnx[1] * material.roughness;
-    float emissive = emaowtny[0] * material.emissive;
-    float water = emaowtny[2] * material.water;
-    float refraction = material.refraction;
-    float ambientOcclusion = emaowtny[1] * material.ambientOcclusion;
-    float fresnelOutline = material.fresnelOutline;
-    vec3 fresnelOutlineColor = material.fresnelOutlineColor;
+    
+    vec4 htrgmtnx = ht_rg_mt_nx(uv);
+    vec4 emaowtny = em_ao_wt_ny(uv);
+    
+    vec4 outputColor = vec4(0.0, 0.0, 0.0, color.a);
+    
     vec3 vertexNormal = normalize(inVertex.worldNormal);
     float nx = (htrgmtnx[3] * 2.0) - 1.0;
     float ny = (emaowtny[3] * 2.0) - 1.0;
     vec3 normal = normalize(vec3(nx, ny, sqrt(abs(1.0 - (nx * nx) - (ny * ny)))));
+    float water = emaowtny[2] * material.water;
     if (enableWater) {
         normal = mix(normal, sampleWaterNormal(uv), water);
     }
     normal = normalize(inVertex.TBN * normal);
-    vec3 position = inVertex.worldPosition;
-    vec3 viewDirection = normalize(position);
-
-    float fresnel = fresnelFactor(viewDirection, normal);
-
+    
+    float ambientOcclusion = emaowtny[1] * material.ambientOcclusion;
+    
+    float diffuseSpecularRatio = material.diffuseSpecularRatio;
+    float diffuseRatio = min(diffuseSpecularRatio, 0.5) * 2.0;
+    float specularRatio = min(1.0 - diffuseSpecularRatio, 0.5) * 2.0;
+    
+    float metallic = htrgmtnx[2] * material.metallic;
+    float roughness = htrgmtnx[1] * material.roughness;
+    
     if (!enableReflections) {
         metallic = 0.0;
     }
-
-    roughness *= roughness;
-
-    vec4 outputColor = vec4(0.0, 0.0, 0.0, color.a);
-
+    
     if (enableLightmaps) {
-        float lightmapAo = pow(max(dot(vertexNormal, normal), 0.0), 1.4);
+        vec3 lightmapFactor = 
+                mix(color.rgb, vec3(0.0), metallic) 
+                * ambientOcclusion
+                * diffuseRatio
+                ;
         int amountOfLightmaps = textureSize(lightmaps, 0).z;
         for (int i = 0; i < amountOfLightmaps; i++) {
             float intensity = 1.0;
@@ -438,16 +440,18 @@ void main() {
             }
             outputColor.rgb +=
                 sampleLightmaps(inVertex.worldLightmapTexture, i, intensity).rgb
-                * mix(color.rgb, vec3(0.0), metallic)
-                * lightmapAo
-                * ambientOcclusion
-                ;
+                * lightmapFactor;
         }
     }
 
+    vec3 position = inVertex.worldPosition;
+    vec3 viewDirection = normalize(position);
+    float viewDirectionDot = clamp(dot(normal, -viewDirection), 0.0, 1.0);
+    float fresnel = fresnelFactor(viewDirectionDot, roughness);
+    vec2 brdf = texture(specularBRDFLookupTable, vec2(viewDirectionDot, roughness)).rg;
+    
     BlinnPhongMaterial bpMaterial = convertPBRMaterialToBlinnPhong(
-        viewDirection, normal, color.rgb, metallic, roughness, ambientOcclusion, fresnel,
-        material.inverseRoughnessExponent, material.diffuseSpecularRatio
+        brdf, diffuseSpecularRatio, color.rgb, metallic, roughness, ambientOcclusion, fresnel
     );
     if (!enableReflections) {
         bpMaterial.specular = vec3(0.0);
@@ -460,13 +464,16 @@ void main() {
         outputColor.rgb += calculateLight(light, bpMaterial, position, viewDirection, normal);
     }
 
-    outputColor.rgb +=
-            mix(ambientLight(normal) * color.rgb * ambientOcclusion, vec3(0.0), metallic);
+    outputColor.rgb += mix(
+            ambientLight(normal) * color.rgb * ambientOcclusion * diffuseRatio, vec3(0.0), metallic);
+    
+    float emissive = emaowtny[0] * material.emissive;
     outputColor.rgb += color.rgb * emissive;
-
+    
     if (enableReflections) {
         vec3 reflectedDirection = reflect(viewDirection, normal);
         outputColor.rgb += computeReflection(
+                brdf, specularRatio,
                 position, viewDirection,
                 reflectedDirection, normal,
                 color.rgb, metallic, roughness, fresnel
@@ -474,9 +481,11 @@ void main() {
     }
 
     if (enableRefractions) {
+        float refraction = material.refraction;
         vec3 refractedDirection = refract(viewDirection, normal, refraction);
         refractedDirection = normalize(mix(viewDirection, refractedDirection, material.refractionPower));
         vec3 refractedColor = computeReflection(
+                brdf, specularRatio,
                 position, viewDirection,
                 refractedDirection, normal,
                 vec3(1.0), 1.0, roughness, fresnel
@@ -486,6 +495,8 @@ void main() {
         outputColor.a = 1.0;
     }
 
+    float fresnelOutline = material.fresnelOutline;
+    vec3 fresnelOutlineColor = material.fresnelOutlineColor;
     outputColor.rgb = mix(
             outputColor.rgb,
             mix(outputColor.rgb, material.fresnelOutlineColor, fresnel),
@@ -493,13 +504,13 @@ void main() {
     );
 
     if (enableTonemapping) {
-        outputColor.rgb = ACESFilm(outputColor.rgb);
+        outputColor.rgb = vec3(1.0) - exp(-outputColor.rgb * exposure);
     }
-
+    
     if (enableGammaCorrection) {
-        outputColor.rgb = gammaCorrection(outputColor.rgb);
+        outputColor.rgb = pow(outputColor.rgb, vec3(1.0/gamma));
     }
-
+    
     #if defined(VARIANT_ALPHA_TESTING) || defined(VARIANT_OPAQUE)
     outputFragColor = vec4(outputColor.rgb, 1.0);
     #endif

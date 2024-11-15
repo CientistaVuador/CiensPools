@@ -33,6 +33,7 @@ import cientistavuador.cienspools.sound.SoundSystem;
 import cientistavuador.cienspools.geometry.Geometries;
 import cientistavuador.cienspools.newrendering.NProgram;
 import cientistavuador.cienspools.newrendering.NSkybox;
+import cientistavuador.cienspools.newrendering.NSpecularBRDFLookupTable;
 import cientistavuador.cienspools.popups.LoadingPopup;
 import cientistavuador.cienspools.resources.ResourceLoader;
 import cientistavuador.cienspools.sound.Sounds;
@@ -257,6 +258,8 @@ public class Main {
     public static final Vector3f DEFAULT_CLEAR_COLOR = new Vector3f(0.2f, 0.4f, 0.6f);
     public static final String WINDOW_ICON = "cientistavuador/newrenderingpipeline/resources/image/window_icon.png";
     public static final Thread MAIN_THREAD = MainTasks.MAIN_THREAD;
+    public static float GAMMA = 1.4f;
+    public static float EXPOSURE = 3.0f;
     private static final int[] savedWindowStatus = new int[4];
     private static GLDebugMessageCallback DEBUG_CALLBACK = null;
 
@@ -514,6 +517,7 @@ public class Main {
 
         TextureCompressor.init();
         
+        NSpecularBRDFLookupTable.init();
         Gizmo.init();
         ResourceLoader.init();
         Water.init();

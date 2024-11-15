@@ -42,7 +42,7 @@ import java.util.Map;
  */
 public class NProgram {
     
-    public static final float FRESNEL_BALANCE = 0.05f;
+    public static final float FRESNEL_F0 = 0.05f;
     
     public static final int MAX_AMOUNT_OF_LIGHTS = 24;
     public static final int MAX_AMOUNT_OF_LIGHTMAPS = 32;
@@ -96,7 +96,7 @@ public class NProgram {
         new ProgramCompiler.ShaderConstant("RGBE_BASE", E8Image.BASE),
         new ProgramCompiler.ShaderConstant("RGBE_MAX_EXPONENT", E8Image.MAX_EXPONENT),
         new ProgramCompiler.ShaderConstant("RGBE_BIAS", E8Image.BIAS),
-        new ProgramCompiler.ShaderConstant("FRESNEL_BALANCE", FRESNEL_BALANCE)
+        new ProgramCompiler.ShaderConstant("FRESNEL_F0", FRESNEL_F0)
     };
 
     static {
@@ -133,6 +133,10 @@ public class NProgram {
     public static final String UNIFORM_ENABLE_WATER = "enableWater";
     public static final String UNIFORM_ENABLE_OPAQUE_TEXTURE = "enableOpaqueTexture";
     
+    public static final String UNIFORM_GAMMA = "gamma";
+    public static final String UNIFORM_EXPOSURE = "exposure";
+    
+    public static final String UNIFORM_SPECULAR_BRDF_LOOKUP_TABLE = "specularBRDFLookupTable";
     public static final String UNIFORM_WATER_COUNTER = "waterCounter";
     public static final String UNIFORM_WATER_FRAMES = "waterFrames";
     public static final String UNIFORM_MATERIAL_TEXTURES = "materialTextures";
@@ -168,7 +172,6 @@ public class NProgram {
     public static final String UNIFORM_MATERIAL_COLOR = "material.color";
     public static final String UNIFORM_MATERIAL_METALLIC = "material.metallic";
     public static final String UNIFORM_MATERIAL_ROUGHNESS = "material.roughness";
-    public static final String UNIFORM_MATERIAL_INVERSE_ROUGHNESS_EXPONENT = "material.inverseRoughnessExponent";
     public static final String UNIFORM_MATERIAL_DIFFUSE_SPECULAR_RATIO = "material.diffuseSpecularRatio";
     public static final String UNIFORM_MATERIAL_HEIGHT = "material.height";
     public static final String UNIFORM_MATERIAL_HEIGHT_MIN_LAYERS = "material.heightMinLayers";

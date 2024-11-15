@@ -595,10 +595,6 @@ public class Gizmo {
     }
 
     private float angle(float x, float y) {
-        float length = (float) Math.sqrt((x * x) + (y * y));
-        if (!Float.isFinite(length)) {
-            return 0f;
-        }
         return (float) Math.atan2(y, x);
     }
 

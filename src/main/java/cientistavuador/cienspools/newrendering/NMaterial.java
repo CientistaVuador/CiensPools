@@ -46,8 +46,7 @@ public class NMaterial {
 
     public static final float DEFAULT_METALLIC = 1f;
     public static final float DEFAULT_ROUGHNESS = 1f;
-
-    public static final float DEFAULT_INVERSE_ROUGHNESS_EXPONENT = 2f;
+    
     public static final float DEFAULT_DIFFUSE_SPECULAR_RATIO = 0.5f;
 
     public static final float DEFAULT_HEIGHT = 0f;
@@ -100,10 +99,7 @@ public class NMaterial {
 
             material.setMetallic(readString(meta.get("metallic"), material.getMetallic()));
             material.setRoughness(readString(meta.get("roughness"), material.getRoughness()));
-
-            material.setInverseRoughnessExponent(
-                    readString(meta.get("inverseRoughnessExponent"), material.getInverseRoughnessExponent())
-            );
+            
             material.setDiffuseSpecularRatio(
                     readString(meta.get("diffuseSpecularRatio"), material.getDiffuseSpecularRatio())
             );
@@ -157,10 +153,7 @@ public class NMaterial {
             if (obj.getRoughness() != DEFAULT_ROUGHNESS) {
                 meta.put("roughness", Float.toString(obj.getRoughness()));
             }
-
-            if (obj.getInverseRoughnessExponent() != DEFAULT_INVERSE_ROUGHNESS_EXPONENT) {
-                meta.put("inverseRoughnessExponent", Float.toString(obj.getInverseRoughnessExponent()));
-            }
+            
             if (obj.getDiffuseSpecularRatio() != DEFAULT_DIFFUSE_SPECULAR_RATIO) {
                 meta.put("diffuseSpecularRatio", Float.toString(obj.getDiffuseSpecularRatio()));
             }
@@ -226,8 +219,7 @@ public class NMaterial {
 
     private float metallic = DEFAULT_METALLIC;
     private float roughness = DEFAULT_ROUGHNESS;
-
-    private float inverseRoughnessExponent = DEFAULT_INVERSE_ROUGHNESS_EXPONENT;
+    
     private float diffuseSpecularRatio = DEFAULT_DIFFUSE_SPECULAR_RATIO;
 
     private float height = DEFAULT_HEIGHT;
@@ -284,15 +276,7 @@ public class NMaterial {
     public void setRoughness(float roughness) {
         this.roughness = roughness;
     }
-
-    public float getInverseRoughnessExponent() {
-        return inverseRoughnessExponent;
-    }
-
-    public void setInverseRoughnessExponent(float inverseRoughnessExponent) {
-        this.inverseRoughnessExponent = inverseRoughnessExponent;
-    }
-
+    
     public float getDiffuseSpecularRatio() {
         return diffuseSpecularRatio;
     }
