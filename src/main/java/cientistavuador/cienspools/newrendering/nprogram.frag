@@ -232,6 +232,8 @@ vec2 parallaxMapping(
 
 struct BlinnPhongMaterial {
     float shininess;
+    float metallic;
+    float roughness;
     vec3 diffuse;
     vec3 specular;
     vec3 ambient;
@@ -244,22 +246,24 @@ float fresnelFactor(float viewDirectionDot, float roughness) {
 }
 
 BlinnPhongMaterial convertPBRMaterialToBlinnPhong(
-    vec2 brdf, float diffuseSpecularRatio, vec3 color,
-    float metallic, float roughness, float ambientOcclusion, float fresnel
+    float diffuseSpecularRatio, vec3 color,
+    float metallic, float roughness, float ambientOcclusion
 ) {
     float shininess = pow(65535.0, 1.0 - roughness);
     float specular = ((shininess + 2.0) * (shininess + 4.0))
                         / (8.0 * PI * (pow(2.0, -shininess * 0.5) + shininess));
     return BlinnPhongMaterial(
         shininess,
+        metallic,
+        roughness,
         mix(
             (color * diffuseSpecularRatio) / PI,
             vec3(0.0),
             metallic
         ),
         mix(
-            vec3(specular) * (1.0 - diffuseSpecularRatio) * ((brdf.x * fresnel) + brdf.y),
-            vec3(specular) * color * (brdf.x + brdf.y),
+            vec3(specular) * (1.0 - diffuseSpecularRatio),
+            vec3(specular) * color,
             metallic
         ),
         mix(
@@ -277,7 +281,7 @@ float calculateSpotlightIntensity(float theta, float innerCone, float outerCone)
 
 vec3 calculateLight(
     Light light,
-    BlinnPhongMaterial bpMaterial,
+    BlinnPhongMaterial mat,
     vec3 fragPosition,
     vec3 viewDirection,
     vec3 normal
@@ -285,11 +289,13 @@ vec3 calculateLight(
     vec3 lightDirection = (light.type == DIRECTIONAL_LIGHT_TYPE
                         ? normalize(light.direction)
                         : normalize(fragPosition - light.position));
-
-    float diffuseFactor = clamp(dot(normal, -lightDirection), 0.0, 1.0);
     vec3 halfwayDirection = -normalize(lightDirection + viewDirection);
-    float specularFactor = pow(max(dot(normal, halfwayDirection), 0.0), bpMaterial.shininess)
-                            * diffuseFactor;
+    
+    float normalDotHalfway = max(dot(normal, halfwayDirection), 0.0);
+    float fresnel = mix(fresnelFactor(normalDotHalfway, mat.roughness), 1.0, mat.metallic);
+    
+    float diffuseFactor = clamp(dot(normal, -lightDirection), 0.0, 1.0);
+    float specularFactor = pow(normalDotHalfway, mat.shininess) * diffuseFactor * fresnel;
     
     float ambientFactor = 1.0;
     if (light.type != DIRECTIONAL_LIGHT_TYPE) {
@@ -308,9 +314,9 @@ vec3 calculateLight(
         }
     }
 
-    return (light.diffuse * bpMaterial.diffuse * diffuseFactor)
-            + (light.specular * bpMaterial.specular * specularFactor)
-            + (light.ambient * bpMaterial.ambient * ambientFactor);
+    return (light.diffuse * mat.diffuse * diffuseFactor)
+            + (light.specular * mat.specular * specularFactor)
+            + (light.ambient * mat.ambient * ambientFactor);
 }
 
 //P is rayOrigin + (rayDirection * t)
@@ -448,10 +454,9 @@ void main() {
     vec3 viewDirection = normalize(position);
     float viewDirectionDot = clamp(dot(normal, -viewDirection), 0.0, 1.0);
     float fresnel = fresnelFactor(viewDirectionDot, roughness);
-    vec2 brdf = texture(specularBRDFLookupTable, vec2(viewDirectionDot, roughness)).rg;
     
     BlinnPhongMaterial bpMaterial = convertPBRMaterialToBlinnPhong(
-        brdf, diffuseSpecularRatio, color.rgb, metallic, roughness, ambientOcclusion, fresnel
+        diffuseSpecularRatio, color.rgb, metallic, roughness, ambientOcclusion
     );
     if (!enableReflections) {
         bpMaterial.specular = vec3(0.0);
@@ -470,6 +475,7 @@ void main() {
     float emissive = emaowtny[0] * material.emissive;
     outputColor.rgb += color.rgb * emissive;
     
+    vec2 brdf = texture(specularBRDFLookupTable, vec2(viewDirectionDot, roughness)).rg;
     if (enableReflections) {
         vec3 reflectedDirection = reflect(viewDirection, normal);
         outputColor.rgb += computeReflection(

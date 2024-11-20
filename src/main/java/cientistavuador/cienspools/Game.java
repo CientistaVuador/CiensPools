@@ -26,12 +26,13 @@
  */
 package cientistavuador.cienspools;
 
+import cientistavuador.cienspools.audio.AudioStream;
+import cientistavuador.cienspools.audio.BufferedAudio;
 import cientistavuador.cienspools.camera.FreeCamera;
 import cientistavuador.cienspools.debug.AabRender;
 import cientistavuador.cienspools.debug.LineRender;
 import cientistavuador.cienspools.editor.Gizmo;
 import cientistavuador.cienspools.newrendering.N3DModel;
-import cientistavuador.cienspools.newrendering.N3DModelImporter;
 import cientistavuador.cienspools.newrendering.N3DObject;
 import cientistavuador.cienspools.newrendering.N3DObjectRenderer;
 import cientistavuador.cienspools.newrendering.NCubemap;
@@ -64,9 +65,13 @@ import com.jme3.bullet.collision.shapes.HullCollisionShape;
 import com.jme3.bullet.objects.PhysicsRigidBody;
 import com.jme3.math.Vector3f;
 import com.simsilica.mathd.Vec3d;
+import java.io.DataOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -74,7 +79,9 @@ import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import org.joml.Quaternionf;
 import static org.lwjgl.glfw.GLFW.*;
+import static org.lwjgl.openal.AL11.*;
 import static org.lwjgl.opengl.GL33C.*;
+import org.lwjgl.system.MemoryStack;
 
 /**
  *
@@ -139,7 +146,6 @@ public class Game {
     private final PlayerController playerController = new PlayerController();
 
     {
-
         this.playerController.getCharacterController().setPosition(16.72f, 0f, 12.76f);
 
         NLight.NDirectionalLight sun = new NLight.NDirectionalLight("sun");
@@ -177,11 +183,10 @@ public class Game {
 
             {
                 this.boomBoxModel = N3DModel.RESOURCES.get("[D48EAA8D455A4B57|A34C2F1CE3B5D2C7]BoomBox");
-                this.boomBoxModel.getMaterial(0).setDiffuseSpecularRatio(0.90f);
                 this.cubemapBox = new N3DObject("cubemap box", this.boomBoxModel);
                 this.cubemapBox.setMap(this.map);
             }
-            
+
         } catch (IOException ex) {
             throw new RuntimeException(ex);
         }
@@ -237,10 +242,28 @@ public class Game {
             this.cubemaps.getCubemap(i).cubemap();
         }
 
+        alDistanceModel(AL_LINEAR_DISTANCE_CLAMPED);
+
         System.gc();
     }
 
     public void loop() {
+        alListener3f(AL_POSITION,
+                (float) this.camera.getPosition().x(),
+                (float) this.camera.getPosition().y(),
+                (float) this.camera.getPosition().z()
+        );
+        alListenerfv(AL_ORIENTATION,
+                new float[]{
+                    this.camera.getFront().x(),
+                    this.camera.getFront().y(),
+                    this.camera.getFront().z(),
+                    this.camera.getUp().x(),
+                    this.camera.getUp().y(),
+                    this.camera.getUp().z()
+                }
+        );
+
         this.camera.updateMovement();
         this.camera.updateUBO();
 
@@ -365,8 +388,8 @@ public class Game {
         if (key == GLFW_KEY_B && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
             N3DObject boomBox = new N3DObject("boomBox", this.boomBoxModel);
             boomBox.setMap(this.map);
-            boomBox.getScale().set(1f);
-            this.boomBoxModel.getHullCollisionShape().setScale(1f);
+            boomBox.getScale().set(40f);
+            this.boomBoxModel.getHullCollisionShape().setScale(40f);
             this.boomBoxes.add(boomBox);
 
             HullCollisionShape hull = this.boomBoxModel.getHullCollisionShape();
@@ -550,6 +573,9 @@ public class Game {
             System.out.print(rotation.x() + "f, " + rotation.y() + "f, " + rotation.z() + "f, " + rotation.w() + "f, ");
             System.out.print(this.gizmo.getScale().x() * 0.5f + "f, " + this.gizmo.getScale().y() * 0.5f + "f, " + this.gizmo.getScale().z() * 0.5f + "f");
             System.out.println(")");
+        }
+        if (key == GLFW_KEY_G && action == GLFW_PRESS) {
+            
         }
     }
 

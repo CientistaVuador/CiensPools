@@ -24,48 +24,23 @@
  *
  * For more information, please refer to <https://unlicense.org>
  */
-package cientistavuador.cienspools.sound;
-
-import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
-import org.lwjgl.openal.AL;
-import org.lwjgl.openal.ALC;
-import static org.lwjgl.openal.ALC11.*;
-import org.lwjgl.openal.ALCCapabilities;
-import static org.lwjgl.system.MemoryUtil.NULL;
+package cientistavuador.cienspools.audio;
 
 /**
  *
  * @author Cien
  */
-public class SoundSystem {
-    
-    public static final boolean DEBUG_OUTPUT = true;
-    public static final long DEVICE;
-    public static final long CONTEXT;
+public class Sounds {
     
     static {
-        DEVICE = alcOpenDevice((ByteBuffer) null);
-        if (DEVICE == NULL) {
-            throw new RuntimeException("No Audio Device Found");
-        }
-        ALCCapabilities deviceCaps = ALC.createCapabilities(DEVICE);
-
-        CONTEXT = alcCreateContext(DEVICE, (IntBuffer) null);
-        alcMakeContextCurrent(CONTEXT);
-        AL.createCapabilities(deviceCaps);
         
-        if (DEBUG_OUTPUT) {
-            System.out.println("OpenAL Initialized.");
-            System.out.println(alcGetString(DEVICE, ALC_DEVICE_SPECIFIER)+" "+alcGetInteger(DEVICE, ALC_MAJOR_VERSION)+"."+alcGetInteger(DEVICE, ALC_MINOR_VERSION));
-        }
     }
     
     public static void init() {
         
     }
     
-    private SoundSystem() {
+    private Sounds() {
         
     }
     

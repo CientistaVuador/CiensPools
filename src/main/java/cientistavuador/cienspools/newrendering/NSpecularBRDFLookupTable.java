@@ -264,6 +264,7 @@ public class NSpecularBRDFLookupTable {
         glBindTexture(GL_TEXTURE_2D, 0);
         
         SPECULAR_BRDF_TEXTURE = texture;
+        System.out.println("(Ignore GL Debug Warning Above)");
         System.out.println("Specular BRDF Lookup Table Generated in "+(System.currentTimeMillis()-here)+"ms!");
     }
 

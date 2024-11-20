@@ -33,7 +33,7 @@ import cientistavuador.cienspools.newrendering.NCubemap;
 import cientistavuador.cienspools.newrendering.NCubemapImporter;
 import cientistavuador.cienspools.newrendering.NCubemapStore;
 import cientistavuador.cienspools.popups.ChannelManipulator;
-import cientistavuador.cienspools.sound.SoundSystem;
+import cientistavuador.cienspools.audio.AudioSystem;
 import cientistavuador.cienspools.util.postprocess.MarginAutomata;
 import com.formdev.flatlaf.FlatDarkLaf;
 import java.awt.Toolkit;
@@ -382,8 +382,8 @@ public class MainWrapper {
 
         try {
             alcMakeContextCurrent(0);
-            alcDestroyContext(SoundSystem.CONTEXT);
-            alcCloseDevice(SoundSystem.DEVICE);
+            alcDestroyContext(AudioSystem.CONTEXT);
+            alcCloseDevice(AudioSystem.DEVICE);
             glfwTerminate();
         } catch (Throwable e) {
             error = true;

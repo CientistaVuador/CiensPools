@@ -24,24 +24,14 @@
  *
  * For more information, please refer to <https://unlicense.org>
  */
-package cientistavuador.cienspools.sound;
+package cientistavuador.cienspools.audio;
 
 /**
  *
  * @author Cien
  */
-public class Sounds {
-    
-    static {
-        
+public interface Audio {
+    public static float length(int samples, int channels, int sampleRate) {
+        return (samples / ((float) channels)) / sampleRate;
     }
-    
-    public static void init() {
-        
-    }
-    
-    private Sounds() {
-        
-    }
-    
 }

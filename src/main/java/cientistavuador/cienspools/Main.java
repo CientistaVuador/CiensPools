@@ -29,14 +29,14 @@ package cientistavuador.cienspools;
 import cientistavuador.cienspools.debug.AabRender;
 import cientistavuador.cienspools.debug.LineRender;
 import cientistavuador.cienspools.editor.Gizmo;
-import cientistavuador.cienspools.sound.SoundSystem;
+import cientistavuador.cienspools.audio.AudioSystem;
 import cientistavuador.cienspools.geometry.Geometries;
 import cientistavuador.cienspools.newrendering.NProgram;
 import cientistavuador.cienspools.newrendering.NSkybox;
 import cientistavuador.cienspools.newrendering.NSpecularBRDFLookupTable;
 import cientistavuador.cienspools.popups.LoadingPopup;
 import cientistavuador.cienspools.resources.ResourceLoader;
-import cientistavuador.cienspools.sound.Sounds;
+import cientistavuador.cienspools.audio.Sounds;
 import cientistavuador.cienspools.text.GLFonts;
 import cientistavuador.cienspools.texture.Textures;
 import cientistavuador.cienspools.ubo.UBOBindingPoints;
@@ -515,6 +515,7 @@ public class Main {
 
         Main.checkGLError();
 
+        AudioSystem.init();
         TextureCompressor.init();
         
         NSpecularBRDFLookupTable.init();
@@ -525,7 +526,6 @@ public class Main {
         GLFonts.init();
         Textures.init();
         Geometries.init();
-        SoundSystem.init();
         Sounds.init();
         Cursors.init();
         NProgram.init();

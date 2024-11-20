@@ -24,7 +24,7 @@
  *
  * For more information, please refer to <https://unlicense.org>
  */
-package cientistavuador.cienspools.sound;
+package cientistavuador.cienspools.audio;
 
 import cientistavuador.cienspools.resources.audio.AudioResources;
 import cientistavuador.cienspools.resources.audio.NativeAudio;
