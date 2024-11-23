@@ -31,6 +31,9 @@ import cientistavuador.cienspools.resourcepack.ResourcePackWriter;
 import cientistavuador.cienspools.resourcepack.ResourceRW;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.HashMap;
@@ -43,7 +46,8 @@ import java.util.Map;
 public class NAnimation {
 
     public static ResourceRW<NAnimation> RESOURCES = new ResourceRW<NAnimation>(true) {
-        public static final String ANIMATION_DATA_TYPE = "application/gzip;name=animation";
+        public static final long MAGIC_NUMBER = 1712921681742521367L;
+        public static final String ANIMATION_FILE_NAME = "animation";
         
         @Override
         public String getResourceType() {
@@ -53,8 +57,22 @@ public class NAnimation {
         @Override
         public NAnimation readResource(Resource r) throws IOException {
             try (BufferedInputStream in = new BufferedInputStream(
-                    Files.newInputStream(r.getData().get(ANIMATION_DATA_TYPE)))) {
-                return NAnimationStore.readAnimation(in);
+                    Files.newInputStream(r.getData().get(ANIMATION_FILE_NAME)))) {
+                DataInputStream data = new DataInputStream(in);
+                
+                long magic = data.readLong();
+                if (magic != MAGIC_NUMBER) {
+                    throw new IOException("Invalid animation file! expected magic number "+MAGIC_NUMBER+", found "+magic);
+                }
+                
+                String name = data.readUTF();
+                float duration = data.readFloat();
+                NBoneAnimation[] boneAnimations = new NBoneAnimation[data.readInt()];
+                for (int i = 0; i < boneAnimations.length; i++) {
+                    boneAnimations[i] = NBoneAnimation.read(data);
+                }
+                
+                return new NAnimation(name, duration, boneAnimations);
             }
         }
         
@@ -65,9 +83,21 @@ public class NAnimation {
             if (!path.isEmpty() && !path.endsWith("/")) {
                 path += "/";
             }
-            entry.getData().put(ANIMATION_DATA_TYPE, 
+            ByteArrayOutputStream binaryStream = new ByteArrayOutputStream();
+            DataOutputStream dataOut = new DataOutputStream(binaryStream);
+            
+            dataOut.writeLong(MAGIC_NUMBER);
+            dataOut.writeUTF(obj.getName());
+            dataOut.writeFloat(obj.getDuration());
+            dataOut.writeInt(obj.getNumberOfBoneAnimations());
+            for (int i = 0; i < obj.getNumberOfBoneAnimations(); i++) {
+                obj.getBoneAnimation(i).write(dataOut);
+            }
+            dataOut.flush();
+            
+            entry.getData().put(ANIMATION_FILE_NAME, 
                     new ResourcePackWriter.DataEntry(path + "animation.anm",
-                            new ByteArrayInputStream(NAnimationStore.writeAnimation(obj))));
+                            new ByteArrayInputStream(binaryStream.toByteArray())));
         }
     };
     

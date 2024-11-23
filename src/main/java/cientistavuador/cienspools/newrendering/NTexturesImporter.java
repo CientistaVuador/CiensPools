@@ -27,26 +27,12 @@
 package cientistavuador.cienspools.newrendering;
 
 import cientistavuador.cienspools.util.ColorUtils;
-import cientistavuador.cienspools.util.CryptoUtils;
 import cientistavuador.cienspools.util.DXT5TextureStore;
 import cientistavuador.cienspools.util.DXT5TextureStore.DXT5Texture;
-import cientistavuador.cienspools.util.ImageUtils;
 import cientistavuador.cienspools.util.M8Image;
-import cientistavuador.cienspools.util.PixelUtils;
-import cientistavuador.cienspools.util.PixelUtils.PixelStructure;
 import cientistavuador.cienspools.util.RGBA8Image;
-import cientistavuador.cienspools.util.postprocess.MarginAutomata;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
 import java.util.Objects;
-import java.util.regex.Pattern;
 import org.joml.Vector4f;
-import org.lwjgl.system.MemoryUtil;
-import static org.lwjgl.stb.STBImage.*;
-import org.lwjgl.system.MemoryStack;
 
 /**
  *

@@ -66,9 +66,9 @@ import org.lwjgl.opengl.KHRDebug;
 public class NMesh {
 
     public static final ResourceRW<NMesh> RESOURCES = new ResourceRW<NMesh>(true) {
-        public static final String MESH_DATA_TYPE = "application/gzip;name=mesh";
-        public static final String BVH_DATA_TYPE = "application/gzip;name=bvh";
-        public static final String BONES_DATA_TYPE = "text/plain;name=bones";
+        public static final String MESH_FILE_NAME = "mesh";
+        public static final String BVH_FILE_NAME = "bvh";
+        public static final String BONES_FILE_NAME = "bones";
         
         @Override
         public String getResourceType() {
@@ -85,7 +85,7 @@ public class NMesh {
                 min = null;
                 max = null;
             }
-            Path meshPath = r.getData().get(MESH_DATA_TYPE);
+            Path meshPath = r.getData().get(MESH_FILE_NAME);
             if (meshPath == null) {
                 throw new IOException("Mesh file not found.");
             }
@@ -94,7 +94,7 @@ public class NMesh {
                 out = MeshStore.decode(in);
             }
             
-            Path bonesPath = r.getData().get(BONES_DATA_TYPE);
+            Path bonesPath = r.getData().get(BONES_FILE_NAME);
             String[] bones = null;
             if (bonesPath != null) {
                 bones = Files.readAllLines(bonesPath, StandardCharsets.UTF_8).toArray(String[]::new);
@@ -105,7 +105,7 @@ public class NMesh {
             
             NMesh mesh = new NMesh(r.getId(), vertices, indices, bones, min, max);
             
-            Path bvhPath = r.getData().get(BVH_DATA_TYPE);
+            Path bvhPath = r.getData().get(BVH_FILE_NAME);
             BVH bvh;
             if (bvhPath != null) {
                 try (BufferedInputStream in = new BufferedInputStream(Files.newInputStream(bvhPath))) {
@@ -134,10 +134,10 @@ public class NMesh {
             ResourceRW.writeVector3f(meta, obj.getAabbMax(), "max", false);
             
             Map<String, DataEntry> data = entry.getData();
-            data.put(MESH_DATA_TYPE, new DataEntry(path + "mesh.msh",
+            data.put(MESH_FILE_NAME, new DataEntry(path + "mesh.msh",
                     new ByteArrayInputStream(
                             MeshStore.encode(obj.getVertices(), NMesh.VERTEX_SIZE, obj.getIndices()))));
-            data.put(BVH_DATA_TYPE, new DataEntry(path + "boundingVolumeHierarchy.bvh",
+            data.put(BVH_FILE_NAME, new DataEntry(path + "boundingVolumeHierarchy.bvh",
                     new ByteArrayInputStream(BVHStore.writeBVH(obj.getBVH()))));
             
             if (obj.getNumberOfBones() != 0) {
@@ -146,7 +146,7 @@ public class NMesh {
                     bones.add(obj.getBone(i));
                 }
                 String bonesString = bones.stream().collect(Collectors.joining("\n"));
-                data.put(BONES_DATA_TYPE, new DataEntry(path + "bones.txt",
+                data.put(BONES_FILE_NAME, new DataEntry(path + "bones.txt",
                         new ByteArrayInputStream(bonesString.getBytes(StandardCharsets.UTF_8))));
             }
         }

@@ -133,7 +133,7 @@ public class ResourcePackReader {
             if (!Files.isRegularFile(p)) {
                 throw new FileNotFoundException(p.toString());
             }
-            map.put(file.getAttribute("type"), p);
+            map.put(file.getAttribute("name"), p);
         }
         return map;
     }

@@ -112,9 +112,9 @@ public class NTextures {
     }
     
     public static final ResourceRW<NTextures> RESOURCES = new ResourceRW<NTextures>(true) {
-        public static final String CR_CG_CB_CA_DATA_TYPE = "application/zstd;name=cr_cg_cb_ca";
-        public static final String HT_RG_MT_NX_DATA_TYPE = "application/zstd;name=ht_rg_mt_nx";
-        public static final String EM_AO_WT_NY_DATA_TYPE = "application/zstd;name=em_ao_wt_ny";
+        public static final String CR_CG_CB_CA_FILE_NAME = "cr_cg_cb_ca";
+        public static final String HT_RG_MT_NX_FILE_NAME = "ht_rg_mt_nx";
+        public static final String EM_AO_WT_NY_FILE_NAME = "em_ao_wt_ny";
         
         @Override
         public String getResourceType() {
@@ -143,9 +143,9 @@ public class NTextures {
                 mode = NBlendingMode.OPAQUE;
             }
             
-            DXT5Texture texture_cr_cg_cb_ca = readTexture(r, CR_CG_CB_CA_DATA_TYPE);
-            DXT5Texture texture_ht_rg_mt_nx = readTexture(r, HT_RG_MT_NX_DATA_TYPE);
-            DXT5Texture texture_em_ao_wt_ny = readTexture(r, EM_AO_WT_NY_DATA_TYPE);
+            DXT5Texture texture_cr_cg_cb_ca = readTexture(r, CR_CG_CB_CA_FILE_NAME);
+            DXT5Texture texture_ht_rg_mt_nx = readTexture(r, HT_RG_MT_NX_FILE_NAME);
+            DXT5Texture texture_em_ao_wt_ny = readTexture(r, EM_AO_WT_NY_FILE_NAME);
             
             return new NTextures(
                     r.getId(), mode,
@@ -172,11 +172,11 @@ public class NTextures {
             if (!path.isEmpty() && !path.endsWith("/")) {
                 path += "/";
             }
-            writeTexture(entry, CR_CG_CB_CA_DATA_TYPE,
+            writeTexture(entry, CR_CG_CB_CA_FILE_NAME,
                     path + "cr_cg_cb_ca.dds.zst", obj.texture_cr_cg_cb_ca());
-            writeTexture(entry, HT_RG_MT_NX_DATA_TYPE,
+            writeTexture(entry, HT_RG_MT_NX_FILE_NAME,
                     path + "ht_rg_mt_nx.dds.zst", obj.texture_ht_rg_mt_nx());
-            writeTexture(entry, EM_AO_WT_NY_DATA_TYPE,
+            writeTexture(entry, EM_AO_WT_NY_FILE_NAME,
                     path + "em_ao_wt_ny.dds.zst", obj.texture_em_ao_wt_ny());
         }
         

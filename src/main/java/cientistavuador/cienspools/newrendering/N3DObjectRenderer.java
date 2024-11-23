@@ -126,8 +126,8 @@ public class N3DObjectRenderer {
 
     private Camera camera = null;
     private NCubemaps cubemaps = null;
-    private final Set<N3DObject> objects = new HashSet<>();
-    private final Set<NLight> lights = new HashSet<>();
+    private final List<N3DObject> objects = new ArrayList<>();
+    private final List<NLight> lights = new ArrayList<>();
 
     private final List<ToRender> opaqueList = new ArrayList<>();
     private final List<ToRender> testedList = new ArrayList<>();
@@ -227,11 +227,11 @@ public class N3DObjectRenderer {
         this.cubemaps = cubemaps;
     }
 
-    public Set<N3DObject> getObjects() {
+    public List<N3DObject> getObjects() {
         return objects;
     }
 
-    public Set<NLight> getLights() {
+    public List<NLight> getLights() {
         return lights;
     }
     
@@ -358,9 +358,7 @@ public class N3DObjectRenderer {
             cbmaps = NCubemaps.NULL_CUBEMAPS;
         }
 
-        List<N3DObject> objectsToRender = new ArrayList<>();
-        objectsToRender.addAll(getObjects());
-        objectsToRender = filterOccluded(objectsToRender);
+        List<N3DObject> objectsToRender = filterOccluded(getObjects());
 
         Matrix4f projectionView = new Matrix4f(getCamera().getProjection()).mul(getCamera().getView());
 

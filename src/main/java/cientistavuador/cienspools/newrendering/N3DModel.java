@@ -1,4 +1,4 @@
-/*
+ /*
  * This is free and unencumbered software released into the public domain.
  *
  * Anyone is free to copy, modify, publish, use, compile, sell, or
@@ -127,8 +127,8 @@ public class N3DModel {
     }
 
     public static final ResourceRW<N3DModel> RESOURCES = new ResourceRW<N3DModel>(true) {
-        public static final String ANIMATIONS_DATA_TYPE = "text/plain;name=animations";
-        public static final String SCENEGRAPH_DATA_TYPE = "application/xml;name=scenegraph";
+        public static final String ANIMATIONS_DATA_TYPE = "animations";
+        public static final String SCENEGRAPH_DATA_TYPE = "scenegraph";
 
         @Override
         public String getResourceType() {
@@ -457,6 +457,15 @@ public class N3DModel {
             return null;
         }
         return getAnimation(index);
+    }
+    
+    public NAnimation searchAnimation(String name) {
+        for (NAnimation animation : this.animations) {
+            if (animation.getName().contains(name)) {
+                return animation;
+            }
+        }
+        return null;
     }
 
     public Vector3fc getAabbMin() {

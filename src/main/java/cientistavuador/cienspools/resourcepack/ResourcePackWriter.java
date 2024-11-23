@@ -347,7 +347,7 @@ public class ResourcePackWriter implements AutoCloseable {
             writeSecondLevelTag("<data>");
             for (Entry<String, DataEntry> e : entry.getData().entrySet()) {
                 writeThirdLevelEntry(
-                        "<file type=" + XMLUtils.quoteAttribute(e.getKey()) + ">",
+                        "<file name=" + XMLUtils.quoteAttribute(e.getKey()) + ">",
                         createPathAndWrite(e.getValue()).toString(),
                         "</file>"
                 );
