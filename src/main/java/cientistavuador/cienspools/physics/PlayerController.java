@@ -27,6 +27,7 @@
 package cientistavuador.cienspools.physics;
 
 import cientistavuador.cienspools.Main;
+import cientistavuador.cienspools.camera.FreeCamera;
 import cientistavuador.cienspools.resources.mesh.MeshData;
 import cientistavuador.cienspools.util.MeshUtils;
 import org.joml.Vector3f;
@@ -57,18 +58,15 @@ public class PlayerController {
 
     private static final float INVERSE_SQRT_2 = (float) (1.0 / Math.sqrt(2.0));
 
-    public static final float NOCLIP_SPEED = 6.5f;
-    public static final float NOCLIP_RUN_SPEED = 13f;
-
     private final CharacterController characterController;
-    
+
     private final Vector3f eyePosition = new Vector3f();
     private boolean smoothVerticalMovementEnabled = true;
     private float verticalRoughness = 15f;
-    
+
     private float walkDirectionX = 0f;
     private float walkDirectionZ = 0f;
-    
+
     private boolean crouchPressed = false;
     private long groundTime = 0;
 
@@ -79,17 +77,17 @@ public class PlayerController {
         this.characterController = new CharacterController(RADIUS, HEIGHT, CROUCH_HEIGHT, MASS);
         forceEyePositionUpdateImpl();
     }
-    
+
     private void forceEyePositionUpdateImpl() {
         Vector3fc pos = this.characterController.getInterpolatedPosition();
-        
+
         this.eyePosition.set(
                 pos.x(),
                 pos.y() + this.characterController.getCurrentHeight() + EYE_OFFSET,
                 pos.z()
         );
     }
-    
+
     public CharacterController getCharacterController() {
         return characterController;
     }
@@ -97,7 +95,7 @@ public class PlayerController {
     public Vector3fc getEyePosition() {
         return this.eyePosition;
     }
-    
+
     public void forceEyePositionUpdate() {
         forceEyePositionUpdateImpl();
     }
@@ -199,9 +197,12 @@ public class PlayerController {
         }
 
         float diagonal = (Math.abs(directionX) == 1 && Math.abs(directionZ) == 1) ? 0.707106781186f : 1f;
-        float currentSpeed = (glfwGetKey(Main.WINDOW_POINTER, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) ? NOCLIP_RUN_SPEED : NOCLIP_SPEED;
+        float currentSpeed = FreeCamera.DEFAULT_SPEED;
+        if (glfwGetKey(Main.WINDOW_POINTER, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+            currentSpeed *= FreeCamera.DEFAULT_RUN_SPEED_FACTOR;
+        }
         if (glfwGetKey(Main.WINDOW_POINTER, GLFW_KEY_LEFT_ALT) == GLFW_PRESS) {
-            currentSpeed /= 4f;
+            currentSpeed *= FreeCamera.DEFAULT_CROUCH_SPEED_FACTOR;
         }
 
         //acceleration in X and Z axis
@@ -221,23 +222,22 @@ public class PlayerController {
 
         this.characterController.setPosition(posX, posY, posZ);
     }
-    
+
     public void update(Vector3fc frontVector, Vector3fc rightVector) {
         if (this.characterController.onGround() && this.groundTime == 0) {
             this.groundTime = System.currentTimeMillis();
         } else if (!this.characterController.onGround()) {
             this.groundTime = 0;
         }
-        
+
         Vector3fc pos = this.characterController.getInterpolatedPosition();
-        
+
         float currentY = this.eyePosition.y();
         float targetY = pos.y() + this.characterController.getCurrentHeight() + EYE_OFFSET;
-        if (this.isSmoothVerticalMovementEnabled() 
-                && !this.getCharacterController().isNoclipEnabled() 
+        if (this.isSmoothVerticalMovementEnabled()
+                && !this.getCharacterController().isNoclipEnabled()
                 && this.characterController.onGround()
-                && (System.currentTimeMillis() - this.groundTime) >= 100
-                ) {
+                && (System.currentTimeMillis() - this.groundTime) >= 100) {
             float direction = targetY - currentY;
             float step = (float) (direction * Main.TPF * this.verticalRoughness);
             if (Math.abs(step) > Math.abs(direction)) {
@@ -253,7 +253,7 @@ public class PlayerController {
         if (!this.characterController.isNoclipEnabled()) {
             checkCrouch();
             calculateWalkDirection(frontVector, rightVector);
-            
+
             float speed = WALK_SPEED;
             if (this.characterController.isCrouched() && this.characterController.onGround()) {
                 speed = CROUCH_SPEED;
@@ -261,7 +261,7 @@ public class PlayerController {
             if (!this.characterController.isGroundNormalInsideThreshold()) {
                 speed = CLIFF_SPEED;
             }
-            
+
             this.characterController.setWalkDirection(
                     this.walkDirectionX * speed,
                     this.walkDirectionZ * speed

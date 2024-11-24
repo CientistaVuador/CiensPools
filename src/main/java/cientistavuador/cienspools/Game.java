@@ -26,15 +26,16 @@
  */
 package cientistavuador.cienspools;
 
+import cientistavuador.cienspools.audio.AudioNode;
+import cientistavuador.cienspools.audio.AudioSpace;
+import cientistavuador.cienspools.audio.BufferedAudio;
 import cientistavuador.cienspools.camera.FreeCamera;
 import cientistavuador.cienspools.debug.AabRender;
 import cientistavuador.cienspools.debug.LineRender;
 import cientistavuador.cienspools.editor.Gizmo;
 import cientistavuador.cienspools.newrendering.N3DModel;
-import cientistavuador.cienspools.newrendering.N3DModelImporter;
 import cientistavuador.cienspools.newrendering.N3DObject;
 import cientistavuador.cienspools.newrendering.N3DObjectRenderer;
-import cientistavuador.cienspools.newrendering.NAnimator;
 import cientistavuador.cienspools.newrendering.NCubemap;
 import cientistavuador.cienspools.newrendering.NCubemapBox;
 import cientistavuador.cienspools.newrendering.NCubemapRenderer;
@@ -48,7 +49,6 @@ import cientistavuador.cienspools.newrendering.NTextures;
 import cientistavuador.cienspools.physics.PlayerController;
 import cientistavuador.cienspools.popups.BakePopup;
 import cientistavuador.cienspools.popups.ContinuePopup;
-import cientistavuador.cienspools.resourcepack.ResourcePack;
 import cientistavuador.cienspools.text.GLFontRenderer;
 import cientistavuador.cienspools.text.GLFontSpecifications;
 import cientistavuador.cienspools.ubo.CameraUBO;
@@ -66,10 +66,10 @@ import com.jme3.bullet.collision.shapes.HullCollisionShape;
 import com.jme3.bullet.objects.PhysicsRigidBody;
 import com.jme3.math.Vector3f;
 import com.simsilica.mathd.Vec3d;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -79,7 +79,6 @@ import org.joml.Quaternionf;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.openal.AL11.*;
 import static org.lwjgl.opengl.GL33C.*;
-import org.xml.sax.SAXException;
 
 /**
  *
@@ -137,6 +136,9 @@ public class Game {
     private boolean ambientCubeDebug = false;
     private boolean debugCollision = false;
 
+    private final AudioSpace audioSpace = new AudioSpace();
+    private final BufferedAudio audio;
+    
     private final N3DObjectRenderer renderer = new N3DObjectRenderer();
 
     private final PhysicsSpace physicsSpace = new PhysicsSpace(PhysicsSpace.BroadphaseType.DBVT);
@@ -155,6 +157,9 @@ public class Game {
         this.lights.add(sun);
 
         try {
+            this.audio = BufferedAudio.fromOggVorbis("bruh",
+                    new FileInputStream("ambulance.ogg"));
+            
             this.skybox = NCubemapStore
                     .readCubemap("cientistavuador/cienspools/resources/cubemaps/skybox.cbm");
 
@@ -246,25 +251,13 @@ public class Game {
     }
 
     public void loop() {
-        alListener3f(AL_POSITION,
-                (float) this.camera.getPosition().x(),
-                (float) this.camera.getPosition().y(),
-                (float) this.camera.getPosition().z()
-        );
-        alListenerfv(AL_ORIENTATION,
-                new float[]{
-                    this.camera.getFront().x(),
-                    this.camera.getFront().y(),
-                    this.camera.getFront().z(),
-                    this.camera.getUp().x(),
-                    this.camera.getUp().y(),
-                    this.camera.getUp().z()
-                }
-        );
+        this.audioSpace.getListenerPosition().set(this.camera.getPosition());
+        this.audioSpace.getListenerUp().set(this.camera.getUp());
+        this.audioSpace.getListenerFront().set(this.camera.getFront());
 
         this.camera.updateMovement();
         this.camera.updateUBO();
-
+        
         this.playerController.update(this.camera.getFront(), this.camera.getRight());
 
         this.camera.setPosition(
@@ -273,6 +266,7 @@ public class Game {
                 this.playerController.getEyePosition().z()
         );
 
+        this.audioSpace.update(Main.TPF);
         this.physicsSpace.update((float) Main.TPF);
 
         if (this.playerController.getCharacterController().getPosition().y() < -10f) {
@@ -573,7 +567,16 @@ public class Game {
             System.out.println(")");
         }
         if (key == GLFW_KEY_G && action == GLFW_PRESS) {
+            AudioNode node = new AudioNode(null);
             
+            alSourcei(node.source(), AL_BUFFER, this.audio.buffer());
+            alSourcef(node.source(), AL_MAX_DISTANCE, 40f);
+            alSourcei(node.source(), AL_LOOPING, AL_TRUE);
+            alSourcePlay(node.source());
+            
+            node.getPosition().set(this.camera.getPosition());
+            
+            this.audioSpace.addNode(node);
         }
     }
 
