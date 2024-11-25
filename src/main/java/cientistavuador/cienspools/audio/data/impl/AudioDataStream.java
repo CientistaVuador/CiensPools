@@ -53,6 +53,7 @@ public class AudioDataStream implements AutoCloseable {
 
     private int channels = -1;
     private int sampleRate = -1;
+    private int samplesRead = 0;
 
     private static class WrappedDataStreamBuffer {
 
@@ -99,6 +100,10 @@ public class AudioDataStream implements AutoCloseable {
     public int getSampleRate() {
         return this.sampleRate;
     }
+
+    public int getSamplesRead() {
+        return this.samplesRead;
+    }
     
     private boolean readData() throws IOException {
         int read = this.in.read(this.data.readBuffer);
@@ -136,7 +141,6 @@ public class AudioDataStream implements AutoCloseable {
         if (this.closed) {
             throw new IOException("Closed");
         }
-        this.started = true;
 
         long decoder = 0;
         while (true) {
@@ -173,8 +177,9 @@ public class AudioDataStream implements AutoCloseable {
         }
 
         this.data.decoder = decoder;
+        this.started = true;
     }
-
+    
     public short[] readSamples() throws IOException {
         if (!this.started) {
             throw new IOException("Not started");
@@ -184,12 +189,11 @@ public class AudioDataStream implements AutoCloseable {
         }
         try (MemoryStack stack = MemoryStack.stackPush()) {
             PointerBuffer outputBuffer = stack.mallocPointer(1);
-            IntBuffer samplesReadBuffer = stack.mallocInt(1);
-            int bytesRead = stb_vorbis_decode_frame_pushdata(
-                    this.data.decoder,
+            IntBuffer numberOfSamplesBuffer = stack.mallocInt(1);
+            int bytesRead = stb_vorbis_decode_frame_pushdata(this.data.decoder,
                     this.data.nativeBuffer.slice(0, this.data.nativeBufferPosition),
-                    null, outputBuffer, samplesReadBuffer);
-            int samplesRead = samplesReadBuffer.get();
+                    null, outputBuffer, numberOfSamplesBuffer);
+            int numberOfSamples = numberOfSamplesBuffer.get();
             
             int error = stb_vorbis_get_error(this.data.decoder);
             if (error != VORBIS__no_error && error != VORBIS_need_more_data) {
@@ -200,7 +204,7 @@ public class AudioDataStream implements AutoCloseable {
                 consume(bytesRead);
             }
             
-            if (samplesRead == 0) {
+            if (numberOfSamples == 0) {
                 if (bytesRead == 0) {
                     if (!readData()) {
                         return null;
@@ -210,16 +214,17 @@ public class AudioDataStream implements AutoCloseable {
             }
             
             PointerBuffer channelsPointers = outputBuffer.getPointerBuffer(getChannels());
-            short[] output = new short[samplesRead * getChannels()];
+            short[] output = new short[numberOfSamples * getChannels()];
             for (int channel = 0; channel < getChannels(); channel++) {
-                FloatBuffer channelBuffer = channelsPointers.getFloatBuffer(channel, samplesRead);
-                for (int sampleIndex = 0; sampleIndex < samplesRead; sampleIndex++) {
+                FloatBuffer channelBuffer = channelsPointers.getFloatBuffer(channel, numberOfSamples);
+                for (int sampleIndex = 0; sampleIndex < numberOfSamples; sampleIndex++) {
                     float sampleFloat = ((channelBuffer.get(sampleIndex) + 1f) / 2f) * 65535f;
                     int sample = Math.min(Math.max(((int)sampleFloat), 0), 65535) - 32768;
                     output[(sampleIndex * getChannels()) + channel] = (short) sample;
                 }
             }
             
+            this.samplesRead += output.length;
             return output;
         }
     }
