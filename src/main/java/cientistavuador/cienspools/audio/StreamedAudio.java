@@ -26,6 +26,7 @@
  */
 package cientistavuador.cienspools.audio;
 
+import cientistavuador.cienspools.audio.data.Audio;
 import cientistavuador.cienspools.resourcepack.Resource;
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,6 +37,21 @@ import java.util.Objects;
  * @author Cien
  */
 public class StreamedAudio implements Audio {
+
+    @Override
+    public int getChannels() {
+        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+    }
+
+    @Override
+    public int getSampleRate() {
+        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+    }
+
+    @Override
+    public int getLengthSamples() {
+        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+    }
     
     public static interface InputStreamFactory {
         public InputStream newInputStream() throws IOException;

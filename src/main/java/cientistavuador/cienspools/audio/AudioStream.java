@@ -26,6 +26,7 @@
  */
 package cientistavuador.cienspools.audio;
 
+import cientistavuador.cienspools.audio.data.Audio;
 import cientistavuador.cienspools.Main;
 import cientistavuador.cienspools.util.ObjectCleaner;
 import java.io.ByteArrayInputStream;
@@ -345,6 +346,11 @@ public class AudioStream implements Audio {
         finalAudioBuffers.clear();
 
         this.forRecycling.clear();
+    }
+
+    @Override
+    public String getId() {
+        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
     }
 
 }

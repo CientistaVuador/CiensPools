@@ -28,7 +28,9 @@ package cientistavuador.cienspools;
 
 import cientistavuador.cienspools.audio.AudioNode;
 import cientistavuador.cienspools.audio.AudioSpace;
-import cientistavuador.cienspools.audio.BufferedAudio;
+import cientistavuador.cienspools.audio.data.Audio;
+import cientistavuador.cienspools.audio.data.BufferedAudio;
+import cientistavuador.cienspools.audio.data.impl.AudioDataStream;
 import cientistavuador.cienspools.camera.FreeCamera;
 import cientistavuador.cienspools.debug.AabRender;
 import cientistavuador.cienspools.debug.LineRender;
@@ -71,10 +73,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.joml.Quaternionf;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.openal.AL11.*;
@@ -138,7 +143,7 @@ public class Game {
 
     private final AudioSpace audioSpace = new AudioSpace();
     private final BufferedAudio audio;
-    
+
     private final N3DObjectRenderer renderer = new N3DObjectRenderer();
 
     private final PhysicsSpace physicsSpace = new PhysicsSpace(PhysicsSpace.BroadphaseType.DBVT);
@@ -157,9 +162,38 @@ public class Game {
         this.lights.add(sun);
 
         try {
-            this.audio = BufferedAudio.fromOggVorbis("bruh",
-                    new FileInputStream("ambulance.ogg"));
-            
+            try {
+                try (AudioDataStream dataStream
+                        = new AudioDataStream(
+                                new FileInputStream("Infected Mushroom - Guitarmass [Monstercat Release].ogg"))) {
+                    dataStream.start();
+                    
+                    dataStream.skipSamples(dataStream.getChannels() * dataStream.getSampleRate() * 100);
+                    
+                    short[] buffer = new short[8192];
+                    int bufferPosition = 0;
+                    
+                    short[] samples;
+                    while ((samples = dataStream.readSamples()) != null) {
+                        int free = buffer.length - bufferPosition;
+                        if (free < samples.length) {
+                            buffer = Arrays.copyOf(buffer, buffer.length * 2);
+                        }
+                        System.arraycopy(samples, 0, buffer, bufferPosition, samples.length);
+                        bufferPosition += samples.length;
+                    }
+                    
+                    buffer = Arrays.copyOf(buffer, bufferPosition);
+                    this.audio = BufferedAudio.fromArray("bruh", buffer, dataStream.getChannels(), dataStream.getSampleRate());
+                    System.out.println(this.audio.getLength());
+                }
+                
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
+            //this.audio = BufferedAudio.fromOggVorbis("bruh",
+            //        new FileInputStream("ambulance.ogg"));
+
             this.skybox = NCubemapStore
                     .readCubemap("cientistavuador/cienspools/resources/cubemaps/skybox.cbm");
 
@@ -257,7 +291,7 @@ public class Game {
 
         this.camera.updateMovement();
         this.camera.updateUBO();
-        
+
         this.playerController.update(this.camera.getFront(), this.camera.getRight());
 
         this.camera.setPosition(
@@ -568,14 +602,14 @@ public class Game {
         }
         if (key == GLFW_KEY_G && action == GLFW_PRESS) {
             AudioNode node = new AudioNode(null);
-            
+
             alSourcei(node.source(), AL_BUFFER, this.audio.buffer());
             alSourcef(node.source(), AL_MAX_DISTANCE, 40f);
             alSourcei(node.source(), AL_LOOPING, AL_TRUE);
             alSourcePlay(node.source());
-            
+
             node.getPosition().set(this.camera.getPosition());
-            
+
             this.audioSpace.addNode(node);
         }
     }

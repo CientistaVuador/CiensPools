@@ -24,14 +24,12 @@
  *
  * For more information, please refer to <https://unlicense.org>
  */
-package cientistavuador.cienspools.audio;
+package cientistavuador.cienspools.audio.data;
 
 /**
  *
  * @author Cien
  */
-public interface Audio {
-    public static float length(int samples, int channels, int sampleRate) {
-        return (samples / ((float) channels)) / sampleRate;
-    }
+public interface StreamedAudio extends Audio {
+    public AudioStream newStream();
 }
