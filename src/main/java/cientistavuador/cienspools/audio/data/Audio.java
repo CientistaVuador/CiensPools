@@ -26,15 +26,50 @@
  */
 package cientistavuador.cienspools.audio.data;
 
+import cientistavuador.cienspools.resourcepack.Resource;
+import cientistavuador.cienspools.resourcepack.ResourcePackWriter;
+import cientistavuador.cienspools.resourcepack.ResourceRW;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 /**
  *
  * @author Cien
  */
 public interface Audio {
+
+    public static ResourceRW<Audio> RESOURCES = new ResourceRW<Audio>(true) {
+        public static final String AUDIO_FILE_NAME = "audio";
+        
+        @Override
+        public String getResourceType() {
+            return "audio";
+        }
+        
+        @Override
+        public Audio readResource(Resource r) throws IOException {
+            boolean streamingEnabled = false;
+            if (r.getMeta().containsKey("streamingEnabled")) {
+                streamingEnabled = Boolean.parseBoolean(r.getMeta().get("streamingEnabled"));
+            }
+            Path audioFile = r.getData().get(AUDIO_FILE_NAME);
+            if (!streamingEnabled) {
+                return BufferedAudio.fromOggVorbis(r.getId(), Files.newInputStream(audioFile));
+            }
+            return StreamedAudio.fromInputStreamFactory(r.getId(), () -> Files.newInputStream(audioFile));
+        }
+        
+        @Override
+        public void writeResource(Audio obj, ResourcePackWriter.ResourceEntry entry, String path) throws IOException {
+            throw new IOException("Writing audio resources not supported.");
+        }
+    };
+    
     public static float length(int samples, int channels, int sampleRate) {
         return (samples / ((float) channels)) / sampleRate;
     }
-    
+
     public String getId();
 
     public int getChannels();
@@ -42,7 +77,7 @@ public interface Audio {
     public int getSampleRate();
 
     public int getLengthSamples();
-    
+
     public default float getLength() {
         return Audio.length(getLengthSamples(), getChannels(), getSampleRate());
     }

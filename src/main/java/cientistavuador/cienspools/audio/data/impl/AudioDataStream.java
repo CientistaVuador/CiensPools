@@ -179,6 +179,10 @@ public class AudioDataStream implements AutoCloseable {
         this.data.decoder = decoder;
         this.started = true;
     }
+
+    public boolean isStarted() {
+        return started;
+    }
     
     public short[] readSamples() throws IOException {
         if (!this.started) {
@@ -290,6 +294,10 @@ public class AudioDataStream implements AutoCloseable {
         try {
             finalIn.close();
         } catch (IOException ex) {}
+    }
+
+    public boolean isClosed() {
+        return closed;
     }
     
 }

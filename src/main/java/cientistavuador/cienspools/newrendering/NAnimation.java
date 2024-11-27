@@ -45,37 +45,42 @@ import java.util.Map;
  */
 public class NAnimation {
 
+    public static final long MAGIC_NUMBER = 1712921681742521367L;
+
+    public static NAnimation read(DataInputStream data) throws IOException {
+        long magic = data.readLong();
+        if (magic != MAGIC_NUMBER) {
+            throw new IOException(
+                    "Invalid animation file! expected magic number " 
+                            + MAGIC_NUMBER + ", found " + magic);
+        }
+
+        String name = data.readUTF();
+        float duration = data.readFloat();
+        NBoneAnimation[] boneAnimations = new NBoneAnimation[data.readInt()];
+        for (int i = 0; i < boneAnimations.length; i++) {
+            boneAnimations[i] = NBoneAnimation.read(data);
+        }
+
+        return new NAnimation(name, duration, boneAnimations);
+    }
+
     public static ResourceRW<NAnimation> RESOURCES = new ResourceRW<NAnimation>(true) {
-        public static final long MAGIC_NUMBER = 1712921681742521367L;
         public static final String ANIMATION_FILE_NAME = "animation";
-        
+
         @Override
         public String getResourceType() {
             return "animation";
         }
-        
+
         @Override
         public NAnimation readResource(Resource r) throws IOException {
             try (BufferedInputStream in = new BufferedInputStream(
                     Files.newInputStream(r.getData().get(ANIMATION_FILE_NAME)))) {
-                DataInputStream data = new DataInputStream(in);
-                
-                long magic = data.readLong();
-                if (magic != MAGIC_NUMBER) {
-                    throw new IOException("Invalid animation file! expected magic number "+MAGIC_NUMBER+", found "+magic);
-                }
-                
-                String name = data.readUTF();
-                float duration = data.readFloat();
-                NBoneAnimation[] boneAnimations = new NBoneAnimation[data.readInt()];
-                for (int i = 0; i < boneAnimations.length; i++) {
-                    boneAnimations[i] = NBoneAnimation.read(data);
-                }
-                
-                return new NAnimation(name, duration, boneAnimations);
+                return read(new DataInputStream(in));
             }
         }
-        
+
         @Override
         public void writeResource(NAnimation obj, ResourcePackWriter.ResourceEntry entry, String path) throws IOException {
             entry.setType(getResourceType());
@@ -85,33 +90,26 @@ public class NAnimation {
             }
             ByteArrayOutputStream binaryStream = new ByteArrayOutputStream();
             DataOutputStream dataOut = new DataOutputStream(binaryStream);
-            
-            dataOut.writeLong(MAGIC_NUMBER);
-            dataOut.writeUTF(obj.getName());
-            dataOut.writeFloat(obj.getDuration());
-            dataOut.writeInt(obj.getNumberOfBoneAnimations());
-            for (int i = 0; i < obj.getNumberOfBoneAnimations(); i++) {
-                obj.getBoneAnimation(i).write(dataOut);
-            }
+            obj.write(dataOut);
             dataOut.flush();
             
-            entry.getData().put(ANIMATION_FILE_NAME, 
+            entry.getData().put(ANIMATION_FILE_NAME,
                     new ResourcePackWriter.DataEntry(path + "animation.anm",
                             new ByteArrayInputStream(binaryStream.toByteArray())));
         }
     };
-    
+
     private final String name;
     private final float duration;
     private final NBoneAnimation[] boneAnimations;
-    
+
     private final Map<String, Integer> boneMap = new HashMap<>();
-    
+
     public NAnimation(String name, float duration, NBoneAnimation[] boneAnimations) {
         this.name = name;
         this.duration = duration;
         this.boneAnimations = boneAnimations.clone();
-        
+
         for (int i = 0; i < this.boneAnimations.length; i++) {
             this.boneMap.put(this.boneAnimations[i].getBoneName(), i);
         }
@@ -124,15 +122,15 @@ public class NAnimation {
     public float getDuration() {
         return duration;
     }
-    
+
     public int getNumberOfBoneAnimations() {
         return this.boneAnimations.length;
     }
-    
+
     public NBoneAnimation getBoneAnimation(int index) {
         return this.boneAnimations[index];
     }
-    
+
     public NBoneAnimation getBoneAnimation(String name) {
         Integer index = this.boneMap.get(name);
         if (index == null) {
@@ -140,5 +138,15 @@ public class NAnimation {
         }
         return getBoneAnimation(index);
     }
-    
+
+    public void write(DataOutputStream out) throws IOException {
+        out.writeLong(MAGIC_NUMBER);
+        out.writeUTF(getName());
+        out.writeFloat(getDuration());
+        out.writeInt(getNumberOfBoneAnimations());
+        for (int i = 0; i < getNumberOfBoneAnimations(); i++) {
+            getBoneAnimation(i).write(out);
+        }
+    }
+
 }

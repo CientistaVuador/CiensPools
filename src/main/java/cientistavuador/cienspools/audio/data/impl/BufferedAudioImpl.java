@@ -108,11 +108,10 @@ public class BufferedAudioImpl implements BufferedAudio {
         int buffer = this.audioBuffer.buffer;
         if (buffer == 0) {
             buffer = alGenBuffers();
-            if (getChannels() == 1) {
-                alBufferData(buffer, AL_FORMAT_MONO16, getData(), getSampleRate());
-            } else {
-                alBufferData(buffer, AL_FORMAT_STEREO16, getData(), getSampleRate());
-            }
+            alBufferData(
+                    buffer,
+                    (getChannels() == 1 ? AL_FORMAT_MONO16 : AL_FORMAT_STEREO16),
+                    getData(), getSampleRate());
             this.audioBuffer.buffer = buffer;
         }
         return buffer;

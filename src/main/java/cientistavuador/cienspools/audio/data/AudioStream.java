@@ -26,10 +26,65 @@
  */
 package cientistavuador.cienspools.audio.data;
 
+import cientistavuador.cienspools.audio.data.impl.AudioStreamImpl;
+
 /**
  *
  * @author Cien
  */
-public class AudioStream {
+public interface AudioStream extends AutoCloseable {
+
+    public static class AudioStreamException extends RuntimeException {
+
+        private static final long serialVersionUID = 1L;
+
+        public AudioStreamException(Throwable t) {
+            super(t);
+        }
+    }
+
+    public static final float IDEAL_BUFFERED_LENGTH = 1f;
+    public static final int IDEAL_NUMBER_OF_BUFFERS = 8;
+    public static final float IDEAL_LENGTH_PER_BUFFER
+            = IDEAL_BUFFERED_LENGTH / IDEAL_NUMBER_OF_BUFFERS;
+
+    public static AudioStream newAudioStream(InputStreamFactory factory) {
+        return new AudioStreamImpl(factory);
+    }
+
+    public InputStreamFactory getInputStreamFactory();
+
+    public void start();
+
+    public boolean isStarted();
+
+    public void join();
+
+    public int getChannels();
+
+    public int getSampleRate();
+
+    public int getCurrentSample();
+
+    public void seek(int sample);
+
+    public boolean isLooping();
+
+    public void setLooping(boolean looping);
+
+    public Throwable getThrowable();
+
+    public default void throwException() {
+        Throwable t = getThrowable();
+        if (t != null) {
+            throw new AudioStreamException(t);
+        }
+    }
     
+    public int nextBuffer();
+
+    public void returnBuffer(int buffer);
+
+    public boolean isClosed();
+
 }

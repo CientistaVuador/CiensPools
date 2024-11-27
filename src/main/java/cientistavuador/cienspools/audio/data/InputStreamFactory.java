@@ -26,53 +26,21 @@
  */
 package cientistavuador.cienspools.audio.data;
 
-import cientistavuador.cienspools.audio.data.impl.AsyncVorbisBufferedAudio;
-import cientistavuador.cienspools.audio.data.impl.BufferedAudioImpl;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.ShortBuffer;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Objects;
-import org.lwjgl.BufferUtils;
 
 /**
  *
  * @author Cien
  */
-public interface BufferedAudio extends Audio {
-
-    public static BufferedAudio fromBuffer(
-            String id, ShortBuffer data, int channels, int sampleRate) {
-        return new BufferedAudioImpl(id, data, channels, sampleRate);
+public interface InputStreamFactory {
+    public static InputStreamFactory fromPath(Path p) {
+        Objects.requireNonNull(p, "path is null");
+        return () -> Files.newInputStream(p);
     }
-
-    public static BufferedAudio fromArray(
-            String id, short[] data, int channels, int sampleRate
-    ) {
-        return new BufferedAudioImpl(id,
-                BufferUtils.createShortBuffer(data.length).put(data).flip(),
-                channels, sampleRate);
-    }
-
-    public static BufferedAudio fromOggVorbis(String id, byte[] oggFile) {
-        return new AsyncVorbisBufferedAudio(id, oggFile);
-    }
-
-    public static BufferedAudio fromOggVorbis(String id, InputStream oggFileStream)
-            throws IOException {
-        Objects.requireNonNull(oggFileStream, "Ogg File Stream is null.");
-        byte[] oggFile = oggFileStream.readAllBytes();
-        return fromOggVorbis(id, oggFile);
-    }
-
-    public ShortBuffer getData();
-
-    @Override
-    public default int getLengthSamples() {
-        return getData().capacity();
-    }
-
-    public int buffer();
-
-    public void manualFree();
-
+    
+    public InputStream newInputStream() throws IOException;
 }

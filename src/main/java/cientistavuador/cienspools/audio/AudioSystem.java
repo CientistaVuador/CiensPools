@@ -70,8 +70,6 @@ public class AudioSystem {
     public static AudioSystem get() {
         return INSTANCE;
     }
-
-    
     
     private AudioSystem() {
 

@@ -26,10 +26,37 @@
  */
 package cientistavuador.cienspools.audio.data;
 
+import cientistavuador.cienspools.audio.data.impl.StreamedAudioImpl;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Objects;
+
 /**
  *
  * @author Cien
  */
 public interface StreamedAudio extends Audio {
-    public AudioStream newStream();
+
+    public static StreamedAudio fromInputStreamFactory(String id, InputStreamFactory factory) {
+        return new StreamedAudioImpl(id, factory);
+    }
+
+    public static StreamedAudio fromOggVorbis(String id, byte[] data) {
+        Objects.requireNonNull(data, "data is null.");
+        return fromInputStreamFactory(id, () -> new ByteArrayInputStream(data));
+    }
+
+    public static StreamedAudio fromOggVorbis(String id, InputStream oggFileStream)
+            throws IOException {
+        Objects.requireNonNull(oggFileStream, "Ogg File Stream is null.");
+        byte[] oggFile = oggFileStream.readAllBytes();
+        return fromOggVorbis(id, oggFile);
+    }
+
+    public InputStreamFactory getInputStreamFactory();
+
+    public default AudioStream openNewStream() throws IOException {
+        return AudioStream.newAudioStream(getInputStreamFactory());
+    }
 }

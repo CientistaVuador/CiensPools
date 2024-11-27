@@ -28,8 +28,10 @@ package cientistavuador.cienspools;
 
 import cientistavuador.cienspools.audio.AudioNode;
 import cientistavuador.cienspools.audio.AudioSpace;
-import cientistavuador.cienspools.audio.data.Audio;
+import cientistavuador.cienspools.audio.data.AudioStream;
+import cientistavuador.cienspools.audio.data.impl.AudioStreamImpl;
 import cientistavuador.cienspools.audio.data.BufferedAudio;
+import cientistavuador.cienspools.audio.data.StreamedAudio;
 import cientistavuador.cienspools.audio.data.impl.AudioDataStream;
 import cientistavuador.cienspools.camera.FreeCamera;
 import cientistavuador.cienspools.debug.AabRender;
@@ -78,8 +80,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.joml.Quaternionf;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.openal.AL11.*;
@@ -142,7 +142,9 @@ public class Game {
     private boolean debugCollision = false;
 
     private final AudioSpace audioSpace = new AudioSpace();
-    private final BufferedAudio audio;
+    private final AudioNode audioNode = new AudioNode("bruh");
+    private final StreamedAudio audio;
+    private final AudioStream stream;
 
     private final N3DObjectRenderer renderer = new N3DObjectRenderer();
 
@@ -162,38 +164,16 @@ public class Game {
         this.lights.add(sun);
 
         try {
-            try {
-                try (AudioDataStream dataStream
-                        = new AudioDataStream(
-                                new FileInputStream("Infected Mushroom - Guitarmass [Monstercat Release].ogg"))) {
-                    dataStream.start();
-                    
-                    dataStream.skipSamples(dataStream.getChannels() * dataStream.getSampleRate() * 100);
-                    
-                    short[] buffer = new short[8192];
-                    int bufferPosition = 0;
-                    
-                    short[] samples;
-                    while ((samples = dataStream.readSamples()) != null) {
-                        int free = buffer.length - bufferPosition;
-                        if (free < samples.length) {
-                            buffer = Arrays.copyOf(buffer, buffer.length * 2);
-                        }
-                        System.arraycopy(samples, 0, buffer, bufferPosition, samples.length);
-                        bufferPosition += samples.length;
-                    }
-                    
-                    buffer = Arrays.copyOf(buffer, bufferPosition);
-                    this.audio = BufferedAudio.fromArray("bruh", buffer, dataStream.getChannels(), dataStream.getSampleRate());
-                    System.out.println(this.audio.getLength());
-                }
-                
-            } catch (IOException ex) {
-                throw new RuntimeException(ex);
-            }
-            //this.audio = BufferedAudio.fromOggVorbis("bruh",
-            //        new FileInputStream("ambulance.ogg"));
-
+            this.audio = StreamedAudio.fromInputStreamFactory("bruh", () -> 
+                    new FileInputStream("ambulance.ogg"));
+            System.out.println(this.audio.getLength());
+            System.out.println(this.audio.getSampleRate());
+            System.out.println(this.audio.getChannels());
+            this.audioSpace.addNode(this.audioNode);
+            this.stream = this.audio.openNewStream();
+            this.stream.setLooping(true);
+            this.stream.start();
+            
             this.skybox = NCubemapStore
                     .readCubemap("cientistavuador/cienspools/resources/cubemaps/skybox.cbm");
 
@@ -301,6 +281,23 @@ public class Game {
         );
 
         this.audioSpace.update(Main.TPF);
+       
+        while (alGetSourcei(this.audioNode.source(), AL_BUFFERS_QUEUED) 
+                < AudioStream.IDEAL_NUMBER_OF_BUFFERS) {
+            int buffer = this.stream.nextBuffer();
+            if (buffer == 0) {
+                break;
+            }
+            alSourceQueueBuffers(this.audioNode.source(), buffer);
+        }
+        int processed = alGetSourcei(this.audioNode.source(), AL_BUFFERS_PROCESSED);
+        for (int i = 0; i < processed; i++) {
+            int unqueued = alSourceUnqueueBuffers(this.audioNode.source());
+            if (unqueued != 0) {
+                this.stream.returnBuffer(unqueued);
+            }
+        }
+        
         this.physicsSpace.update((float) Main.TPF);
 
         if (this.playerController.getCharacterController().getPosition().y() < -10f) {
@@ -601,16 +598,9 @@ public class Game {
             System.out.println(")");
         }
         if (key == GLFW_KEY_G && action == GLFW_PRESS) {
-            AudioNode node = new AudioNode(null);
-
-            alSourcei(node.source(), AL_BUFFER, this.audio.buffer());
-            alSourcef(node.source(), AL_MAX_DISTANCE, 40f);
-            alSourcei(node.source(), AL_LOOPING, AL_TRUE);
-            alSourcePlay(node.source());
-
-            node.getPosition().set(this.camera.getPosition());
-
-            this.audioSpace.addNode(node);
+            alSourcef(this.audioNode.source(), AL_MAX_DISTANCE, 40f);
+            alSourcei(this.audioNode.source(), AL_LOOPING, AL_FALSE);
+            alSourcePlay(this.audioNode.source());
         }
     }
 
