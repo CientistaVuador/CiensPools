@@ -27,6 +27,12 @@
 package cientistavuador.cienspools.audio;
 
 import cientistavuador.cienspools.Main;
+import cientistavuador.cienspools.audio.control.AudioControl;
+import cientistavuador.cienspools.audio.control.BufferedAudioControl;
+import cientistavuador.cienspools.audio.control.StreamedAudioControl;
+import cientistavuador.cienspools.audio.data.Audio;
+import cientistavuador.cienspools.audio.data.BufferedAudio;
+import cientistavuador.cienspools.audio.data.StreamedAudio;
 import cientistavuador.cienspools.resourcepack.Resource;
 import cientistavuador.cienspools.util.ObjectCleaner;
 import java.util.Objects;
@@ -51,6 +57,10 @@ public class AudioNode {
     
     private final Vector3d position = new Vector3d();
     private final Vector3d lastPosition = new Vector3d();
+    
+    private Audio audio = null;
+    private boolean looping = false;
+    private AudioControl control = null;
 
     public AudioNode(String name) {
         this.name = Objects.requireNonNullElse(name, Resource.generateRandomId(null));
@@ -89,11 +99,85 @@ public class AudioNode {
     public Vector3d getPosition() {
         return position;
     }
+
+    public Audio getAudio() {
+        return audio;
+    }
+
+    public void setAudio(Audio audio) {
+        this.audio = audio;
+        stop();
+    }
+
+    public boolean isLooping() {
+        return looping;
+    }
+
+    public void setLooping(boolean looping) {
+        this.looping = looping;
+        if (this.control != null) {
+            this.control.setLooping(isLooping());
+        }
+    }
     
-    public void update(double tpf) {
-        if (getAudioSpace() == null) {
+    public void play() {
+        if (this.control != null) {
+            this.control.play();
             return;
         }
+        if (this.audio instanceof BufferedAudio b) {
+            this.control = new BufferedAudioControl(this, b);
+        } else if (this.audio instanceof StreamedAudio s) {
+            this.control = new StreamedAudioControl(this, s);
+        } else {
+            throw new IllegalArgumentException("Unknown audio type: "+this.audio.getClass());
+        }
+        this.control.setLooping(isLooping());
+        this.control.play();
+    }
+    
+    public void seek(float length) {
+        if (this.control != null) {
+            this.control.seek(length);
+        }
+    }
+    
+    public float elapsed() {
+        if (this.control != null) {
+            return this.control.elapsed();
+        }
+        return 0f;
+    }
+    
+    public float length() {
+        if (this.control != null) {
+            return this.control.length();
+        }
+        if (this.audio != null) {
+            return this.audio.getLength();
+        }
+        return 0f;
+    }
+    
+    public void pause() {
+        if (this.control != null) {
+            this.control.pause();
+        }
+    }
+    
+    public void stop() {
+        if (this.control != null) {
+            this.control.stop();
+            this.control = null;
+        }
+    }
+    
+    public void update(double tpf) {
+        if (getAudioSpace() == null || this.control == null) {
+            return;
+        }
+        
+        this.control.update();
         
         alSource3f(source(), 
                 AL_POSITION,

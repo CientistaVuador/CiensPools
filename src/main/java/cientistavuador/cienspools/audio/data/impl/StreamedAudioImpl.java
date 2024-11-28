@@ -29,9 +29,8 @@ package cientistavuador.cienspools.audio.data.impl;
 import cientistavuador.cienspools.audio.data.InputStreamFactory;
 import cientistavuador.cienspools.audio.data.StreamedAudio;
 import cientistavuador.cienspools.resourcepack.Resource;
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 
 /**
  *
@@ -41,69 +40,86 @@ public class StreamedAudioImpl implements StreamedAudio {
 
     private final String id;
     private final InputStreamFactory inputStreamFactory;
-    
-    private final Object audioDataLock = new Object();
-    private volatile boolean audioDataPopulated = false;
-    private int channels = 0;
-    private int sampleRate = 0;
-    private int lengthSamples = 0;
-    
+
+    private final CompletableFuture<Integer> futureChannels = new CompletableFuture<>();
+    private final CompletableFuture<Integer> futureSampleRate = new CompletableFuture<>();
+    private final CompletableFuture<Integer> futureLengthSamples = new CompletableFuture<>();
+    private volatile boolean futureScheduled = false;
+    private final Object futureLock = new Object();
+
+    private int channels = -1;
+    private int sampleRate = -1;
+    private int lengthSamples = -1;
+
     public StreamedAudioImpl(String id, InputStreamFactory factory) {
         id = Objects.requireNonNullElse(id, Resource.generateRandomId(null));
         Objects.requireNonNull(factory, "factory is null.");
         this.id = id;
         this.inputStreamFactory = factory;
     }
-    
+
     @Override
     public String getId() {
         return this.id;
     }
-    
+
     @Override
     public InputStreamFactory getInputStreamFactory() {
         return this.inputStreamFactory;
     }
 
-    private void populateAudioData() {
-        if (this.audioDataPopulated) {
+    private void scheduleFuture() {
+        if (this.futureScheduled) {
             return;
         }
-        synchronized (this.audioDataLock) {
-            if (this.audioDataPopulated) {
+        synchronized (this.futureLock) {
+            if (this.futureScheduled) {
                 return;
             }
-            try {
-                try (AudioDataStream dataStream = 
-                        new AudioDataStream(getInputStreamFactory().newInputStream())) {
-                    dataStream.start();
-                    this.channels = dataStream.getChannels();
-                    this.sampleRate = dataStream.getSampleRate();
-                    this.lengthSamples = dataStream.skipSamples(Integer.MAX_VALUE);
+            CompletableFuture.runAsync(() -> {
+                try {
+                    try (AudioDataStream dataStream
+                            = new AudioDataStream(getInputStreamFactory().newInputStream())) {
+                        dataStream.start();
+                        this.futureChannels.complete(dataStream.getChannels());
+                        this.futureSampleRate.complete(dataStream.getSampleRate());
+                        this.futureLengthSamples.complete(dataStream.skipSamples(Integer.MAX_VALUE));
+                    }
+                } catch (Throwable t) {
+                    this.futureChannels.completeExceptionally(t);
+                    this.futureSampleRate.completeExceptionally(t);
+                    this.futureLengthSamples.completeExceptionally(t);
                 }
-            } catch (IOException ex) {
-                throw new UncheckedIOException(ex);
-            }
-            this.audioDataPopulated = true;
+            });
+            this.futureScheduled = true;
         }
     }
-    
+
     @Override
     public int getChannels() {
-        populateAudioData();
+        scheduleFuture();
+        if (this.channels == -1) {
+            this.channels = this.futureChannels.join();
+        }
         return this.channels;
     }
 
     @Override
     public int getSampleRate() {
-        populateAudioData();
+        scheduleFuture();
+        if (this.sampleRate == -1) {
+            this.sampleRate = this.futureSampleRate.join();
+        }
         return this.sampleRate;
     }
 
     @Override
     public int getLengthSamples() {
-        populateAudioData();
+        scheduleFuture();
+        if (this.lengthSamples == -1) {
+            this.lengthSamples = this.futureLengthSamples.join();
+        }
         return this.lengthSamples;
     }
-    
+
 }

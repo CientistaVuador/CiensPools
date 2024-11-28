@@ -290,7 +290,7 @@ public class AudioStreamImpl implements AudioStream {
     protected int getNumberOfQueuedSampleArrays() {
         return this.samplesQueue.size();
     }
-    
+
     @Override
     public int getChannels() {
         return channels;
@@ -325,9 +325,14 @@ public class AudioStreamImpl implements AudioStream {
     public Throwable getThrowable() {
         return throwable;
     }
-    
+
     @Override
     public int nextBuffer() {
+        Throwable t = getThrowable();
+        if (t != null) {
+            throw new AudioStreamException(t);
+        }
+        
         short[] data = this.samplesQueue.poll();
         if (data == null) {
             return 0;
@@ -337,7 +342,7 @@ public class AudioStreamImpl implements AudioStream {
             buffer = alGenBuffers();
             this.buffersCreated.add(buffer);
         }
-        alBufferData(buffer, 
+        alBufferData(buffer,
                 (getChannels() == 1 ? AL_FORMAT_MONO16 : AL_FORMAT_STEREO16),
                 data, getSampleRate());
         this.buffersToBeReturned.add(buffer);
@@ -347,7 +352,7 @@ public class AudioStreamImpl implements AudioStream {
     @Override
     public void returnBuffer(int buffer) {
         if (!this.buffersCreated.contains(buffer)) {
-            throw new IllegalArgumentException("Buffer "+buffer+" not owned by this stream.");
+            throw new IllegalArgumentException("Buffer " + buffer + " not owned by this stream.");
         }
         if (this.buffersToBeReturned.remove(buffer)) {
             this.buffersToBeRecycled.add(buffer);
@@ -360,14 +365,17 @@ public class AudioStreamImpl implements AudioStream {
             return;
         }
         this.closed = true;
-        
+
         this.buffersToBeReturned.clear();
         this.buffersToBeRecycled.clear();
-        
+
         final Set<Integer> finalBuffers = this.buffersCreated;
-        for (Integer b : finalBuffers) {
-            alDeleteBuffers(b);
-        }
+        Main.MAIN_TASKS.add(() -> {
+            for (Integer b : finalBuffers) {
+                alDeleteBuffers(b);
+            }
+            finalBuffers.clear();
+        });
     }
 
     @Override

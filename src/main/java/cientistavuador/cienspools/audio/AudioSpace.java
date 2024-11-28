@@ -81,6 +81,7 @@ public class AudioSpace {
     public boolean removeNode(AudioNode node) {
         boolean result = this.nodes.remove(node);
         if (result) {
+            node.stop();
             node.audioSpace = null;
         }
         return result;
