@@ -56,6 +56,7 @@ public class AudioStreamImpl implements AudioStream {
         try {
             audioThreadTask(stream);
         } catch (Throwable t) {
+            audioThreadPlayingUpdate(stream, false);
             deliverThrowable(stream, t);
         }
     }
@@ -124,24 +125,38 @@ public class AudioStreamImpl implements AudioStream {
             s.onCurrentSampleUpdate(dataStream.getSamplesRead());
         }
     }
-
+    
+    private static void audioThreadPlayingUpdate(WeakReference<AudioStreamImpl> stream, boolean playing) {
+        AudioStreamImpl s = stream.get();
+        if (s != null) {
+            s.onPlayingUpdate(playing);
+        }
+    }
+    
     private static void audioThreadTask(WeakReference<AudioStreamImpl> stream) throws Throwable {
         AudioDataStream currentStream = null;
         try {
+            final int sleepTime = 5;
+            
             boolean informationSent = false;
             int channels = 0;
             int sampleRate = 0;
 
             audioThreadLoop:
             while (audioThreadCanRun(stream)) {
+                int seekSample = audioThreadSeek(stream);
+                
                 if (currentStream == null) {
-                    if (informationSent && !audioThreadIsLooping(stream)) {
-                        break;
+                    if (informationSent && !audioThreadIsLooping(stream) && seekSample < 0) {
+                        audioThreadPlayingUpdate(stream, false);
+                        Thread.sleep(sleepTime);
+                        continue;
                     }
                     currentStream = audioThreadOpenNewStream(stream);
                     if (currentStream == null) {
                         break;
                     }
+                    audioThreadPlayingUpdate(stream, true);
                 }
 
                 if (!informationSent) {
@@ -151,25 +166,31 @@ public class AudioStreamImpl implements AudioStream {
                     informationSent = true;
                 }
 
-                int seekSample = audioThreadSeek(stream);
                 if (seekSample >= 0) {
+                    int skipResult;
                     if (seekSample >= currentStream.getSamplesRead()) {
-                        currentStream.skipSamples(seekSample - currentStream.getSamplesRead());
+                        skipResult = currentStream
+                                .skipSamples(seekSample - currentStream.getSamplesRead());
                     } else {
                         currentStream.close();
                         currentStream = audioThreadOpenNewStream(stream);
                         if (currentStream == null) {
                             break;
                         }
-                        currentStream.skipSamples(seekSample);
+                        skipResult = currentStream.skipSamples(seekSample);
                     }
                     audioThreadUpdateCurrentSample(stream, currentStream);
+                    if (skipResult < 0) {
+                        currentStream.close();
+                        currentStream = null;
+                        continue;
+                    }
                 }
 
                 int numberOfBuffers;
                 while ((numberOfBuffers = audioThreadNumberOfBuffers(stream))
                         < IDEAL_NUMBER_OF_BUFFERS && numberOfBuffers != -1) {
-                    int idealSamples = (int) (IDEAL_LENGTH_PER_BUFFER * sampleRate * channels);
+                    int idealSamples = (int) (IDEAL_LENGTH_PER_BUFFER * sampleRate);
                     short[] buffer = currentStream.readSamples(idealSamples);
                     audioThreadUpdateCurrentSample(stream, currentStream);
                     if (buffer == null) {
@@ -180,7 +201,7 @@ public class AudioStreamImpl implements AudioStream {
                     audioThreadDeliverBuffer(stream, buffer);
                 }
 
-                Thread.sleep(10);
+                Thread.sleep(sleepTime);
             }
         } finally {
             if (currentStream != null) {
@@ -199,6 +220,7 @@ public class AudioStreamImpl implements AudioStream {
     private volatile int currentSample = 0;
     private volatile int seek = -1;
     private volatile boolean looping = false;
+    private volatile boolean playing = false;
     private volatile Throwable throwable = null;
 
     private final ConcurrentLinkedQueue<short[]> samplesQueue = new ConcurrentLinkedQueue<>();
@@ -290,6 +312,10 @@ public class AudioStreamImpl implements AudioStream {
     protected int getNumberOfQueuedSampleArrays() {
         return this.samplesQueue.size();
     }
+    
+    protected void onPlayingUpdate(boolean playing) {
+        this.playing = playing;
+    }
 
     @Override
     public int getChannels() {
@@ -308,6 +334,9 @@ public class AudioStreamImpl implements AudioStream {
 
     @Override
     public void seek(int sample) {
+        if (sample < 0) {
+            sample = 0;
+        }
         this.seek = sample;
     }
 
@@ -321,6 +350,11 @@ public class AudioStreamImpl implements AudioStream {
         this.looping = looping;
     }
 
+    @Override
+    public boolean isPlaying() {
+        return playing;
+    }
+    
     @Override
     public Throwable getThrowable() {
         return throwable;

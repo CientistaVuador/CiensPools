@@ -125,6 +125,10 @@ public class AudioNode {
             this.control.play();
             return;
         }
+        if (this.audio == null) {
+            return;
+        }
+        
         if (this.audio instanceof BufferedAudio b) {
             this.control = new BufferedAudioControl(this, b);
         } else if (this.audio instanceof StreamedAudio s) {
@@ -163,6 +167,13 @@ public class AudioNode {
         if (this.control != null) {
             this.control.pause();
         }
+    }
+    
+    public boolean isPaused() {
+        if (this.control != null) {
+            return this.control.isPaused();
+        }
+        return false;
     }
     
     public void stop() {

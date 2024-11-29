@@ -68,7 +68,7 @@ public interface BufferedAudio extends Audio {
 
     @Override
     public default int getLengthSamples() {
-        return getData().capacity();
+        return getData().capacity() / getChannels();
     }
 
     public int buffer();

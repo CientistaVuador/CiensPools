@@ -43,8 +43,8 @@ public interface AudioStream extends AutoCloseable {
         }
     }
 
-    public static final float IDEAL_BUFFERED_LENGTH = 1f;
-    public static final int IDEAL_NUMBER_OF_BUFFERS = 8;
+    public static final float IDEAL_BUFFERED_LENGTH = 0.1f;
+    public static final int IDEAL_NUMBER_OF_BUFFERS = 4;
     public static final float IDEAL_LENGTH_PER_BUFFER
             = IDEAL_BUFFERED_LENGTH / IDEAL_NUMBER_OF_BUFFERS;
 
@@ -71,6 +71,8 @@ public interface AudioStream extends AutoCloseable {
     public boolean isLooping();
 
     public void setLooping(boolean looping);
+    
+    public boolean isPlaying();
 
     public Throwable getThrowable();
 
@@ -84,6 +86,9 @@ public interface AudioStream extends AutoCloseable {
     public int nextBuffer();
 
     public void returnBuffer(int buffer);
+
+    @Override
+    public void close();
 
     public boolean isClosed();
 

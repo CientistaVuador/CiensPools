@@ -27,8 +27,10 @@
 package cientistavuador.cienspools.audio.control;
 
 import cientistavuador.cienspools.audio.AudioNode;
+import cientistavuador.cienspools.audio.data.AudioStream;
 import cientistavuador.cienspools.audio.data.StreamedAudio;
 import java.util.Objects;
+import static org.lwjgl.openal.AL11.*;
 
 /**
  *
@@ -38,12 +40,14 @@ public class StreamedAudioControl implements AudioControl {
 
     private final AudioNode node;
     private final StreamedAudio audio;
+    private final AudioStream stream;
 
     public StreamedAudioControl(AudioNode node, StreamedAudio audio) {
         Objects.requireNonNull(node, "node is null");
         Objects.requireNonNull(audio, "audio is null");
         this.node = node;
         this.audio = audio;
+        this.stream = audio.openNewStream();
     }
 
     public AudioNode getNode() {
@@ -53,50 +57,114 @@ public class StreamedAudioControl implements AudioControl {
     public StreamedAudio getAudio() {
         return audio;
     }
-    
+
     @Override
     public boolean isLooping() {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        return this.stream.isLooping();
     }
 
     @Override
     public void setLooping(boolean looping) {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        this.stream.setLooping(looping);
     }
 
     @Override
     public void play() {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        if (this.stream.isClosed()) {
+            return;
+        }
+        
+        if (!this.stream.isStarted()) {
+            this.stream.start();
+        } else if (!isPaused() || !this.stream.isPlaying()) {
+            seek(0f);
+            alSourcePlay(getNode().source());
+            return;
+        }
+        
+        if (!isPlaying()) {
+            alSourcePlay(getNode().source());
+        }
+    }
+
+    @Override
+    public boolean isPlaying() {
+        return alGetSourcei(getNode().source(), AL_SOURCE_STATE) == AL_PLAYING;
     }
 
     @Override
     public void seek(float length) {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        this.stream.seek((int) (length * this.stream.getSampleRate()));
     }
 
     @Override
     public float elapsed() {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        return this.stream.getCurrentSample() / ((float)this.stream.getSampleRate());
     }
 
     @Override
     public float length() {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        return this.audio.getLength();
     }
 
     @Override
     public void pause() {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        if (this.stream.isClosed()) {
+            return;
+        }
+        alSourcePause(getNode().source());
+    }
+
+    @Override
+    public boolean isPaused() {
+        return alGetSourcei(getNode().source(), AL_SOURCE_STATE) == AL_PAUSED;
+    }
+
+    private void returnProcessedBuffers() {
+        int processed = alGetSourcei(getNode().source(), AL_BUFFERS_PROCESSED);
+        for (int i = 0; i < processed; i++) {
+            int unqueued = alSourceUnqueueBuffers(getNode().source());
+            if (unqueued != 0) {
+                this.stream.returnBuffer(unqueued);
+            }
+        }
     }
 
     @Override
     public void stop() {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        if (this.stream.isClosed()) {
+            return;
+        }
+        try (this.stream) {
+            alSourceStop(getNode().source());
+            returnProcessedBuffers();
+        }
     }
 
     @Override
     public void update() {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        if (this.stream.isClosed()) {
+            return;
+        }
+
+        if (this.stream.isStarted()) {
+            int toQueue = Math.max(AudioStream.IDEAL_NUMBER_OF_BUFFERS
+                    - alGetSourcei(getNode().source(), AL_BUFFERS_QUEUED), 0);
+            for (int i = 0; i < toQueue; i++) {
+                int buffer = this.stream.nextBuffer();
+                if (buffer != 0) {
+                    alSourceQueueBuffers(getNode().source(), buffer);
+                }
+            }
+            
+            if (alGetSourcei(getNode().source(), AL_SOURCE_STATE) == AL_STOPPED
+                    && this.stream.isPlaying()
+                ) {
+                alSourcePlay(getNode().source());
+            }
+
+            returnProcessedBuffers();
+        }
     }
-    
+
 }

@@ -66,10 +66,6 @@ public interface Audio {
         }
     };
     
-    public static float length(int samples, int channels, int sampleRate) {
-        return (samples / ((float) channels)) / sampleRate;
-    }
-
     public String getId();
 
     public int getChannels();
@@ -79,7 +75,7 @@ public interface Audio {
     public int getLengthSamples();
 
     public default float getLength() {
-        return Audio.length(getLengthSamples(), getChannels(), getSampleRate());
+        return getLengthSamples() / ((float)getSampleRate());
     }
 
 }

@@ -37,6 +37,8 @@ public interface AudioControl {
     
     public void play();
     
+    public boolean isPlaying();
+    
     public void seek(float length);
     
     public float elapsed();
@@ -44,7 +46,9 @@ public interface AudioControl {
     public float length();
     
     public void pause();
-   
+    
+    public boolean isPaused();
+    
     public void stop();
     
     public void update();

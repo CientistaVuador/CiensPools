@@ -228,7 +228,7 @@ public class AudioDataStream implements AutoCloseable {
                 }
             }
             
-            this.samplesRead += output.length;
+            this.samplesRead += output.length / getChannels();
             return output;
         }
     }
@@ -243,7 +243,7 @@ public class AudioDataStream implements AutoCloseable {
                 }
                 break;
             }
-            read += samplesData.length;
+            read += samplesData.length / getChannels();
         }
         return read;
     }
@@ -251,7 +251,7 @@ public class AudioDataStream implements AutoCloseable {
     public short[] readSamples(int samples) throws IOException {
         short[] buffer = new short[8192];
         int bufferPosition = 0;
-        while (bufferPosition < samples) {
+        while (bufferPosition < (samples * getChannels())) {
             short[] samplesData = readSamples();
             if (samplesData == null) {
                 if (bufferPosition == 0) {

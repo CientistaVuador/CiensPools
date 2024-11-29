@@ -56,7 +56,7 @@ public interface StreamedAudio extends Audio {
 
     public InputStreamFactory getInputStreamFactory();
 
-    public default AudioStream openNewStream() throws IOException {
+    public default AudioStream openNewStream() {
         return AudioStream.newAudioStream(getInputStreamFactory());
     }
 }
