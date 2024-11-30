@@ -24,7 +24,7 @@
  *
  * For more information, please refer to <https://unlicense.org>
  */
-package cientistavuador.cienspools.audio.data.impl;
+package cientistavuador.cienspools.audio.data.defaults;
 
 import cientistavuador.cienspools.audio.data.InputStreamFactory;
 import cientistavuador.cienspools.audio.data.StreamedAudio;
@@ -36,7 +36,7 @@ import java.util.concurrent.CompletableFuture;
  *
  * @author Cien
  */
-public class StreamedAudioImpl implements StreamedAudio {
+public class DefaultStreamedAudio implements StreamedAudio {
 
     private final String id;
     private final InputStreamFactory inputStreamFactory;
@@ -51,7 +51,7 @@ public class StreamedAudioImpl implements StreamedAudio {
     private int sampleRate = -1;
     private int lengthSamples = -1;
 
-    public StreamedAudioImpl(String id, InputStreamFactory factory) {
+    public DefaultStreamedAudio(String id, InputStreamFactory factory) {
         id = Objects.requireNonNullElse(id, Resource.generateRandomId(null));
         Objects.requireNonNull(factory, "factory is null.");
         this.id = id;

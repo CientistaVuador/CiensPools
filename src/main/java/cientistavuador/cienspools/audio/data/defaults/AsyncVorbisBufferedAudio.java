@@ -24,7 +24,7 @@
  *
  * For more information, please refer to <https://unlicense.org>
  */
-package cientistavuador.cienspools.audio.data.impl;
+package cientistavuador.cienspools.audio.data.defaults;
 
 import cientistavuador.cienspools.audio.data.BufferedAudio;
 import cientistavuador.cienspools.util.ObjectCleaner;
@@ -85,6 +85,10 @@ public class AsyncVorbisBufferedAudio extends BufferedAudioDecorator {
         });
     }
 
+    public boolean isDone() {
+        return this.future.isDone();
+    }
+    
     @Override
     protected BufferedAudio getBufferedAudio() {
         if (this.wrapped != null) {

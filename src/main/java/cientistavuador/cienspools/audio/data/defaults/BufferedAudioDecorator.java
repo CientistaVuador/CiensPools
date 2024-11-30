@@ -24,7 +24,7 @@
  *
  * For more information, please refer to <https://unlicense.org>
  */
-package cientistavuador.cienspools.audio.data.impl;
+package cientistavuador.cienspools.audio.data.defaults;
 
 import cientistavuador.cienspools.audio.data.BufferedAudio;
 import java.nio.ShortBuffer;

@@ -51,5 +51,5 @@ public interface AudioControl {
     
     public void stop();
     
-    public void update();
+    public void update(double tpf);
 }

@@ -24,7 +24,7 @@
  *
  * For more information, please refer to <https://unlicense.org>
  */
-package cientistavuador.cienspools.audio.data.impl;
+package cientistavuador.cienspools.audio.data.defaults;
 
 import cientistavuador.cienspools.Main;
 import cientistavuador.cienspools.audio.data.InputStreamFactory;
@@ -43,16 +43,16 @@ import cientistavuador.cienspools.audio.data.AudioStream;
  *
  * @author Cien
  */
-public class AudioStreamImpl implements AudioStream {
+public class DefaultAudioStream implements AudioStream {
 
-    private static void deliverThrowable(WeakReference<AudioStreamImpl> stream, Throwable t) {
-        AudioStreamImpl s = stream.get();
+    private static void deliverThrowable(WeakReference<DefaultAudioStream> stream, Throwable t) {
+        DefaultAudioStream s = stream.get();
         if (s != null) {
             s.onThrowable(t);
         }
     }
 
-    private static void audioThreadMain(WeakReference<AudioStreamImpl> stream) {
+    private static void audioThreadMain(WeakReference<DefaultAudioStream> stream) {
         try {
             audioThreadTask(stream);
         } catch (Throwable t) {
@@ -61,25 +61,25 @@ public class AudioStreamImpl implements AudioStream {
         }
     }
 
-    private static boolean audioThreadCanRun(WeakReference<AudioStreamImpl> stream) {
-        AudioStreamImpl s = stream.get();
+    private static boolean audioThreadCanRun(WeakReference<DefaultAudioStream> stream) {
+        DefaultAudioStream s = stream.get();
         if (s == null) {
             return false;
         }
         return !s.isClosed();
     }
 
-    private static boolean audioThreadIsLooping(WeakReference<AudioStreamImpl> stream) {
-        AudioStreamImpl s = stream.get();
+    private static boolean audioThreadIsLooping(WeakReference<DefaultAudioStream> stream) {
+        DefaultAudioStream s = stream.get();
         if (s != null) {
             return s.isLooping();
         }
         return false;
     }
 
-    private static AudioDataStream audioThreadOpenNewStream(WeakReference<AudioStreamImpl> stream)
+    private static AudioDataStream audioThreadOpenNewStream(WeakReference<DefaultAudioStream> stream)
             throws IOException {
-        AudioStreamImpl s = stream.get();
+        DefaultAudioStream s = stream.get();
         if (s == null) {
             return null;
         }
@@ -89,51 +89,51 @@ public class AudioStreamImpl implements AudioStream {
     }
 
     private static void audioThreadSendInformation(
-            WeakReference<AudioStreamImpl> stream, int channels, int sampleRate) {
-        AudioStreamImpl s = stream.get();
+            WeakReference<DefaultAudioStream> stream, int channels, int sampleRate) {
+        DefaultAudioStream s = stream.get();
         if (s != null) {
             s.onInformationReceived(channels, sampleRate);
         }
     }
 
-    private static int audioThreadNumberOfBuffers(WeakReference<AudioStreamImpl> stream) {
-        AudioStreamImpl s = stream.get();
+    private static int audioThreadNumberOfBuffers(WeakReference<DefaultAudioStream> stream) {
+        DefaultAudioStream s = stream.get();
         if (s != null) {
             return s.getNumberOfQueuedSampleArrays();
         }
         return -1;
     }
 
-    private static void audioThreadDeliverBuffer(WeakReference<AudioStreamImpl> stream, short[] samples) {
-        AudioStreamImpl s = stream.get();
+    private static void audioThreadDeliverBuffer(WeakReference<DefaultAudioStream> stream, short[] samples) {
+        DefaultAudioStream s = stream.get();
         if (s != null) {
             s.onSamplesReceived(samples);
         }
     }
 
-    private static int audioThreadSeek(WeakReference<AudioStreamImpl> stream) {
-        AudioStreamImpl s = stream.get();
+    private static int audioThreadSeek(WeakReference<DefaultAudioStream> stream) {
+        DefaultAudioStream s = stream.get();
         if (s != null) {
             return s.getSeekAndClear();
         }
         return -1;
     }
 
-    private static void audioThreadUpdateCurrentSample(WeakReference<AudioStreamImpl> stream, AudioDataStream dataStream) {
-        AudioStreamImpl s = stream.get();
+    private static void audioThreadUpdateCurrentSample(WeakReference<DefaultAudioStream> stream, AudioDataStream dataStream) {
+        DefaultAudioStream s = stream.get();
         if (s != null) {
             s.onCurrentSampleUpdate(dataStream.getSamplesRead());
         }
     }
     
-    private static void audioThreadPlayingUpdate(WeakReference<AudioStreamImpl> stream, boolean playing) {
-        AudioStreamImpl s = stream.get();
+    private static void audioThreadPlayingUpdate(WeakReference<DefaultAudioStream> stream, boolean playing) {
+        DefaultAudioStream s = stream.get();
         if (s != null) {
             s.onPlayingUpdate(playing);
         }
     }
     
-    private static void audioThreadTask(WeakReference<AudioStreamImpl> stream) throws Throwable {
+    private static void audioThreadTask(WeakReference<DefaultAudioStream> stream) throws Throwable {
         AudioDataStream currentStream = null;
         try {
             final int sleepTime = 5;
@@ -231,7 +231,7 @@ public class AudioStreamImpl implements AudioStream {
 
     private volatile boolean closed = false;
 
-    public AudioStreamImpl(InputStreamFactory factory) {
+    public DefaultAudioStream(InputStreamFactory factory) {
         Objects.requireNonNull(factory, "Factory is null.");
         this.inputStreamFactory = factory;
 
@@ -261,13 +261,14 @@ public class AudioStreamImpl implements AudioStream {
         if (this.started) {
             return;
         }
-        final WeakReference<AudioStreamImpl> weakReference = new WeakReference<>(this);
+        final WeakReference<DefaultAudioStream> weakReference = new WeakReference<>(this);
         Thread t = new Thread(() -> {
             audioThreadMain(weakReference);
         }, "Audio Stream Thread-" + hashCode());
         t.setDaemon(true);
-        t.start();
         this.started = true;
+        this.playing = true;
+        t.start();
     }
 
     @Override

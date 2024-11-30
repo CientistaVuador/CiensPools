@@ -26,7 +26,7 @@
  */
 package cientistavuador.cienspools.audio.data;
 
-import cientistavuador.cienspools.audio.data.impl.AudioStreamImpl;
+import cientistavuador.cienspools.audio.data.defaults.DefaultAudioStream;
 
 /**
  *
@@ -49,7 +49,7 @@ public interface AudioStream extends AutoCloseable {
             = IDEAL_BUFFERED_LENGTH / IDEAL_NUMBER_OF_BUFFERS;
 
     public static AudioStream newAudioStream(InputStreamFactory factory) {
-        return new AudioStreamImpl(factory);
+        return new DefaultAudioStream(factory);
     }
 
     public InputStreamFactory getInputStreamFactory();

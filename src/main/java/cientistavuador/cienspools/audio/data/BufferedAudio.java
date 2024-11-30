@@ -26,8 +26,8 @@
  */
 package cientistavuador.cienspools.audio.data;
 
-import cientistavuador.cienspools.audio.data.impl.AsyncVorbisBufferedAudio;
-import cientistavuador.cienspools.audio.data.impl.BufferedAudioImpl;
+import cientistavuador.cienspools.audio.data.defaults.AsyncVorbisBufferedAudio;
+import cientistavuador.cienspools.audio.data.defaults.DefaultBufferedAudio;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ShortBuffer;
@@ -42,13 +42,13 @@ public interface BufferedAudio extends Audio {
 
     public static BufferedAudio fromBuffer(
             String id, ShortBuffer data, int channels, int sampleRate) {
-        return new BufferedAudioImpl(id, data, channels, sampleRate);
+        return new DefaultBufferedAudio(id, data, channels, sampleRate);
     }
 
     public static BufferedAudio fromArray(
             String id, short[] data, int channels, int sampleRate
     ) {
-        return new BufferedAudioImpl(id,
+        return new DefaultBufferedAudio(id,
                 BufferUtils.createShortBuffer(data.length).put(data).flip(),
                 channels, sampleRate);
     }

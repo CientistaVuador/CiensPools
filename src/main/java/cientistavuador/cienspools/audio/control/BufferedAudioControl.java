@@ -29,6 +29,7 @@ package cientistavuador.cienspools.audio.control;
 import cientistavuador.cienspools.audio.AudioNode;
 import cientistavuador.cienspools.audio.data.BufferedAudio;
 import java.util.Objects;
+import static org.lwjgl.openal.AL11.*;
 
 /**
  *
@@ -38,6 +39,8 @@ public class BufferedAudioControl implements AudioControl {
 
     private final AudioNode node;
     private final BufferedAudio audio;
+    
+    private boolean started = false;
     
     public BufferedAudioControl(AudioNode node, BufferedAudio audio) {
         Objects.requireNonNull(node, "node is null");
@@ -56,57 +59,67 @@ public class BufferedAudioControl implements AudioControl {
 
     @Override
     public boolean isLooping() {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        return alGetSourcei(getNode().source(), AL_LOOPING) == AL_TRUE;
     }
 
     @Override
     public void setLooping(boolean looping) {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        alSourcei(getNode().source(), AL_LOOPING, (looping ? AL_TRUE : AL_FALSE));
     }
 
     @Override
     public void play() {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        if (!this.started) {
+            this.started = true;
+            alSourcei(getNode().source(), AL_BUFFER, getAudio().buffer());
+        }
+        alSourcePlay(getNode().source());
     }
 
     @Override
     public boolean isPlaying() {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        return alGetSourcei(getNode().source(), AL_SOURCE_STATE) == AL_PLAYING;
     }
     
     @Override
     public void seek(float length) {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        int sampleOffset = (int) (length * getAudio().getSampleRate());
+        sampleOffset = Math.min(Math.max(sampleOffset, 0), getAudio().getLengthSamples() - 1);
+        alSourcei(getNode().source(), AL_SAMPLE_OFFSET, sampleOffset);
     }
 
     @Override
     public float elapsed() {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        return alGetSourcei(getNode().source(), AL_SAMPLE_OFFSET) 
+                / ((float)getAudio().getSampleRate());
     }
 
     @Override
     public float length() {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        return getAudio().getLength();
     }
 
     @Override
     public void pause() {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        alSourcePause(getNode().source());
     }
 
     @Override
     public boolean isPaused() {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        return alGetSourcei(getNode().source(), AL_SOURCE_STATE) == AL_PAUSED;
     }
     
     @Override
     public void stop() {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        alSourceStop(getNode().source());
+        alSourcei(getNode().source(), AL_LOOPING, AL_FALSE);
+        alSourcei(getNode().source(), AL_BUFFER, 0);
+        this.started = false;
     }
 
     @Override
-    public void update() {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+    public void update(double tpf) {
+        
     }
     
 }

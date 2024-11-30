@@ -49,6 +49,9 @@ public interface Audio {
         
         @Override
         public Audio readResource(Resource r) throws IOException {
+            if (r == null) {
+                return null;
+            }
             boolean streamingEnabled = false;
             if (r.getMeta().containsKey("streamingEnabled")) {
                 streamingEnabled = Boolean.parseBoolean(r.getMeta().get("streamingEnabled"));

@@ -24,7 +24,7 @@
  *
  * For more information, please refer to <https://unlicense.org>
  */
-package cientistavuador.cienspools.audio.data.impl;
+package cientistavuador.cienspools.audio.data.defaults;
 
 import cientistavuador.cienspools.Main;
 import cientistavuador.cienspools.audio.data.BufferedAudio;
@@ -38,7 +38,7 @@ import static org.lwjgl.openal.AL11.*;
  *
  * @author Cien
  */
-public class BufferedAudioImpl implements BufferedAudio {
+public class DefaultBufferedAudio implements BufferedAudio {
 
     private static class WrappedAudioBuffer {
 
@@ -52,7 +52,7 @@ public class BufferedAudioImpl implements BufferedAudio {
 
     private final WrappedAudioBuffer audioBuffer = new WrappedAudioBuffer();
 
-    public BufferedAudioImpl(String id, ShortBuffer data, int channels, int sampleRate) {
+    public DefaultBufferedAudio(String id, ShortBuffer data, int channels, int sampleRate) {
         id = Objects.requireNonNullElse(id, Resource.generateRandomId(null));
         Objects.requireNonNull(data, "Data is null.");
         if (channels != 1 && channels != 2) {

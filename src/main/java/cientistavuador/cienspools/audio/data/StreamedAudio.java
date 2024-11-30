@@ -26,7 +26,7 @@
  */
 package cientistavuador.cienspools.audio.data;
 
-import cientistavuador.cienspools.audio.data.impl.StreamedAudioImpl;
+import cientistavuador.cienspools.audio.data.defaults.DefaultStreamedAudio;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -39,7 +39,7 @@ import java.util.Objects;
 public interface StreamedAudio extends Audio {
 
     public static StreamedAudio fromInputStreamFactory(String id, InputStreamFactory factory) {
-        return new StreamedAudioImpl(id, factory);
+        return new DefaultStreamedAudio(id, factory);
     }
 
     public static StreamedAudio fromOggVorbis(String id, byte[] data) {

@@ -78,18 +78,12 @@ public class StreamedAudioControl implements AudioControl {
             this.stream.start();
         } else if (!isPaused() || !this.stream.isPlaying()) {
             seek(0f);
-            alSourcePlay(getNode().source());
-            return;
-        }
-        
-        if (!isPlaying()) {
-            alSourcePlay(getNode().source());
         }
     }
 
     @Override
     public boolean isPlaying() {
-        return alGetSourcei(getNode().source(), AL_SOURCE_STATE) == AL_PLAYING;
+        return this.stream.isPlaying();
     }
 
     @Override
@@ -142,12 +136,16 @@ public class StreamedAudioControl implements AudioControl {
     }
 
     @Override
-    public void update() {
+    public void update(double tpf) {
         if (this.stream.isClosed()) {
             return;
         }
 
         if (this.stream.isStarted()) {
+            if (alGetSourcei(getNode().source(), AL_LOOPING) == AL_TRUE) {
+                alSourcei(getNode().source(), AL_LOOPING, AL_FALSE);
+            }
+            
             int toQueue = Math.max(AudioStream.IDEAL_NUMBER_OF_BUFFERS
                     - alGetSourcei(getNode().source(), AL_BUFFERS_QUEUED), 0);
             for (int i = 0; i < toQueue; i++) {
@@ -157,7 +155,8 @@ public class StreamedAudioControl implements AudioControl {
                 }
             }
             
-            if (alGetSourcei(getNode().source(), AL_SOURCE_STATE) == AL_STOPPED
+            int sourceState = alGetSourcei(getNode().source(), AL_SOURCE_STATE);
+            if ((sourceState == AL_STOPPED || sourceState == AL_INITIAL)
                     && this.stream.isPlaying()
                 ) {
                 alSourcePlay(getNode().source());

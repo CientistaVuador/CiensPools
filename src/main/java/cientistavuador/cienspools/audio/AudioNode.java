@@ -43,7 +43,7 @@ import static org.lwjgl.openal.AL11.*;
  *
  * @author Cien
  */
-public class AudioNode {
+public class AudioNode implements AudioControl {
 
     private static class WrappedSource {
 
@@ -109,10 +109,12 @@ public class AudioNode {
         stop();
     }
 
+    @Override
     public boolean isLooping() {
         return looping;
     }
-
+    
+    @Override
     public void setLooping(boolean looping) {
         this.looping = looping;
         if (this.control != null) {
@@ -120,6 +122,7 @@ public class AudioNode {
         }
     }
     
+    @Override
     public void play() {
         if (this.control != null) {
             this.control.play();
@@ -140,12 +143,22 @@ public class AudioNode {
         this.control.play();
     }
     
+    @Override
+    public boolean isPlaying() {
+        if (this.control != null) {
+            return this.control.isPlaying();
+        }
+        return false;
+    }
+    
+    @Override
     public void seek(float length) {
         if (this.control != null) {
             this.control.seek(length);
         }
     }
     
+    @Override
     public float elapsed() {
         if (this.control != null) {
             return this.control.elapsed();
@@ -153,6 +166,7 @@ public class AudioNode {
         return 0f;
     }
     
+    @Override
     public float length() {
         if (this.control != null) {
             return this.control.length();
@@ -163,12 +177,14 @@ public class AudioNode {
         return 0f;
     }
     
+    @Override
     public void pause() {
         if (this.control != null) {
             this.control.pause();
         }
     }
     
+    @Override
     public boolean isPaused() {
         if (this.control != null) {
             return this.control.isPaused();
@@ -176,6 +192,7 @@ public class AudioNode {
         return false;
     }
     
+    @Override
     public void stop() {
         if (this.control != null) {
             this.control.stop();
@@ -183,12 +200,13 @@ public class AudioNode {
         }
     }
     
+    @Override
     public void update(double tpf) {
         if (getAudioSpace() == null || this.control == null) {
             return;
         }
         
-        this.control.update();
+        this.control.update(tpf);
         
         alSource3f(source(), 
                 AL_POSITION,
@@ -207,6 +225,8 @@ public class AudioNode {
     }
 
     public void manualFree() {
+        stop();
+        
         final WrappedSource finalWrappedSource = this.wrappedSource;
 
         if (finalWrappedSource.source != 0) {
