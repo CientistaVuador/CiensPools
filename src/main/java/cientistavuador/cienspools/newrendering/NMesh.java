@@ -36,6 +36,7 @@ import cientistavuador.cienspools.util.MeshStore;
 import cientistavuador.cienspools.util.StringUtils;
 import cientistavuador.cienspools.util.MeshUtils;
 import cientistavuador.cienspools.util.ObjectCleaner;
+import cientistavuador.cienspools.util.StringList;
 import cientistavuador.cienspools.util.raycast.BVH;
 import cientistavuador.cienspools.util.raycast.BVHStore;
 import java.awt.Color;
@@ -97,7 +98,9 @@ public class NMesh {
             Path bonesPath = r.getData().get(BONES_FILE_NAME);
             String[] bones = null;
             if (bonesPath != null) {
-                bones = Files.readAllLines(bonesPath, StandardCharsets.UTF_8).toArray(String[]::new);
+                bones = StringList
+                        .fromString(Files.readString(bonesPath, StandardCharsets.UTF_8))
+                        .toArray(String[]::new);
             }
             
             float[] vertices = out.vertices();
@@ -145,7 +148,7 @@ public class NMesh {
                 for (int i = 0; i < obj.getNumberOfBones(); i++) {
                     bones.add(obj.getBone(i));
                 }
-                String bonesString = bones.stream().collect(Collectors.joining("\n"));
+                String bonesString = StringList.toString(bones);
                 data.put(BONES_FILE_NAME, new DataEntry(path + "bones.txt",
                         new ByteArrayInputStream(bonesString.getBytes(StandardCharsets.UTF_8))));
             }

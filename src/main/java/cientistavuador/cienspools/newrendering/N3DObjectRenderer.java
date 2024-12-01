@@ -29,6 +29,7 @@ package cientistavuador.cienspools.newrendering;
 import cientistavuador.cienspools.util.bakedlighting.AmbientCube;
 import cientistavuador.cienspools.Main;
 import cientistavuador.cienspools.camera.Camera;
+import cientistavuador.cienspools.lut.LUT;
 import cientistavuador.cienspools.newrendering.NLight.NDirectionalLight;
 import cientistavuador.cienspools.newrendering.NLight.NPointLight;
 import cientistavuador.cienspools.newrendering.NLight.NSpotLight;
@@ -730,19 +731,25 @@ public class N3DObjectRenderer {
                 .uniform1f(NProgram.UNIFORM_WATER_COUNTER,
                         Water.WATER_COUNTER)
                 .uniform1i(NProgram.UNIFORM_ENABLE_OPAQUE_TEXTURE, 0)
-                .uniform1i(NProgram.UNIFORM_SPECULAR_BRDF_LOOKUP_TABLE, 0)
-                .uniform1i(NProgram.UNIFORM_WATER_FRAMES, 1)
-                .uniform1i(NProgram.UNIFORM_MATERIAL_TEXTURES, 2)
-                .uniform1i(NProgram.UNIFORM_LIGHTMAPS, 3)
-                .uniform1i(NProgram.UNIFORM_REFLECTION_CUBEMAP_0, 4)
-                .uniform1i(NProgram.UNIFORM_REFLECTION_CUBEMAP_1, 5)
-                .uniform1i(NProgram.UNIFORM_REFLECTION_CUBEMAP_2, 6)
-                .uniform1i(NProgram.UNIFORM_REFLECTION_CUBEMAP_3, 7);
+                .uniform1i(NProgram.UNIFORM_LUT, 0)
+                .uniform1i(NProgram.UNIFORM_SPECULAR_BRDF_LOOKUP_TABLE, 1)
+                .uniform1i(NProgram.UNIFORM_WATER_FRAMES, 2)
+                .uniform1i(NProgram.UNIFORM_MATERIAL_TEXTURES, 3)
+                .uniform1i(NProgram.UNIFORM_LIGHTMAPS, 4)
+                .uniform1i(NProgram.UNIFORM_REFLECTION_CUBEMAP_0, 5)
+                .uniform1i(NProgram.UNIFORM_REFLECTION_CUBEMAP_1, 6)
+                .uniform1i(NProgram.UNIFORM_REFLECTION_CUBEMAP_2, 7)
+                .uniform1i(NProgram.UNIFORM_REFLECTION_CUBEMAP_3, 8);
 
+        int neutralLut = LUT.NEUTRAL.texture();
+        
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, NSpecularBRDFLookupTable.SPECULAR_BRDF_TEXTURE);
+        glBindTexture(GL_TEXTURE_3D, neutralLut);
         
         glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, NSpecularBRDFLookupTable.SPECULAR_BRDF_TEXTURE);
+        
+        glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D_ARRAY, Water.TEXTURE);
 
         render(variant, toRender);
@@ -904,7 +911,7 @@ public class N3DObjectRenderer {
                 
                 int texturesId = textures.textures();
 
-                glActiveTexture(GL_TEXTURE2);
+                glActiveTexture(GL_TEXTURE3);
                 glBindTexture(GL_TEXTURE_2D_ARRAY, texturesId);
 
                 lastTextures = textures;
@@ -913,7 +920,7 @@ public class N3DObjectRenderer {
             if (lastLightmaps != lightmaps) {
                 int maps = lightmaps.lightmaps();
 
-                glActiveTexture(GL_TEXTURE3);
+                glActiveTexture(GL_TEXTURE4);
                 glBindTexture(GL_TEXTURE_2D_ARRAY, maps);
 
                 for (int i = 0; i < lightmaps.getNumberOfLightmaps(); i++) {
@@ -945,7 +952,7 @@ public class N3DObjectRenderer {
                     }
 
                     if (cubemapObj != lastCubemapObj) {
-                        glActiveTexture(GL_TEXTURE4 + i);
+                        glActiveTexture(GL_TEXTURE5 + i);
                         glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapObj);
                     }
 

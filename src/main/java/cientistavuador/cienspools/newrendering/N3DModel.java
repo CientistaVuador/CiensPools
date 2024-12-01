@@ -1,4 +1,4 @@
- /*
+/*
  * This is free and unencumbered software released into the public domain.
  *
  * Anyone is free to copy, modify, publish, use, compile, sell, or
@@ -33,6 +33,7 @@ import cientistavuador.cienspools.resourcepack.ResourcePackWriter.DataEntry;
 import cientistavuador.cienspools.resourcepack.ResourcePackWriter.ResourceEntry;
 import cientistavuador.cienspools.resourcepack.ResourceRW;
 import cientistavuador.cienspools.util.MeshUtils;
+import cientistavuador.cienspools.util.StringList;
 import com.jme3.bullet.collision.shapes.HullCollisionShape;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -67,7 +68,7 @@ public class N3DModel {
         }
         return resource.getResourcePack().equals(rootPack);
     }
-    
+
     public static final void writeModelResourcePack(
             N3DModel model, boolean standalone, Path path) throws IOException {
         Objects.requireNonNull(model, "model is null");
@@ -155,7 +156,8 @@ public class N3DModel {
             NAnimation[] animations = null;
             Path animationsPath = r.getData().get(ANIMATIONS_DATA_TYPE);
             if (animationsPath != null) {
-                animations = Files.readAllLines(animationsPath)
+                animations = StringList
+                        .fromString(Files.readString(animationsPath, StandardCharsets.UTF_8))
                         .stream()
                         .map(s -> NAnimation.RESOURCES.get(s))
                         .toArray(NAnimation[]::new);
@@ -190,10 +192,10 @@ public class N3DModel {
                 for (int i = 0; i < obj.getNumberOfAnimations(); i++) {
                     animations.add(obj.getAnimation(i));
                 }
-                String animationsIds = animations
+                String animationsIds = StringList.toString(animations
                         .stream()
                         .map(NAnimation::getName)
-                        .collect(Collectors.joining("\n"));
+                        .toList());
                 data.put(ANIMATIONS_DATA_TYPE,
                         new DataEntry(path + "animations.txt",
                                 new ByteArrayInputStream(
@@ -458,7 +460,7 @@ public class N3DModel {
         }
         return getAnimation(index);
     }
-    
+
     public NAnimation searchAnimation(String name) {
         for (NAnimation animation : this.animations) {
             if (animation.getName().contains(name)) {

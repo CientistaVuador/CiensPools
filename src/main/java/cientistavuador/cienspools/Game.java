@@ -28,11 +28,6 @@ package cientistavuador.cienspools;
 
 import cientistavuador.cienspools.audio.AudioNode;
 import cientistavuador.cienspools.audio.AudioSpace;
-import cientistavuador.cienspools.audio.data.AudioStream;
-import cientistavuador.cienspools.audio.data.impl.AudioStreamImpl;
-import cientistavuador.cienspools.audio.data.BufferedAudio;
-import cientistavuador.cienspools.audio.data.StreamedAudio;
-import cientistavuador.cienspools.audio.data.impl.AudioDataStream;
 import cientistavuador.cienspools.camera.FreeCamera;
 import cientistavuador.cienspools.debug.AabRender;
 import cientistavuador.cienspools.debug.LineRender;
@@ -60,6 +55,7 @@ import cientistavuador.cienspools.ubo.UBOBindingPoints;
 import cientistavuador.cienspools.util.ColorUtils;
 import cientistavuador.cienspools.util.DebugRenderer;
 import cientistavuador.cienspools.util.PhysicsSpaceDebugger;
+import cientistavuador.cienspools.util.StringList;
 import cientistavuador.cienspools.util.StringUtils;
 import cientistavuador.cienspools.util.bakedlighting.AmbientCubeDebug;
 import cientistavuador.cienspools.util.bakedlighting.Lightmapper;
@@ -70,12 +66,12 @@ import com.jme3.bullet.collision.shapes.HullCollisionShape;
 import com.jme3.bullet.objects.PhysicsRigidBody;
 import com.jme3.math.Vector3f;
 import com.simsilica.mathd.Vec3d;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -143,9 +139,7 @@ public class Game {
 
     private final AudioSpace audioSpace = new AudioSpace();
     private final AudioNode audioNode = new AudioNode("bruh");
-    private final StreamedAudio audio;
-    private final AudioStream stream;
-
+    
     private final N3DObjectRenderer renderer = new N3DObjectRenderer();
 
     private final PhysicsSpace physicsSpace = new PhysicsSpace(PhysicsSpace.BroadphaseType.DBVT);
@@ -164,15 +158,13 @@ public class Game {
         this.lights.add(sun);
 
         try {
-            this.audio = StreamedAudio.fromInputStreamFactory("bruh", () -> 
-                    new FileInputStream("ambulance.ogg"));
-            System.out.println(this.audio.getLength());
-            System.out.println(this.audio.getSampleRate());
-            System.out.println(this.audio.getChannels());
+            //StreamedAudio audio = StreamedAudio.fromInputStreamFactory("bruh", () -> 
+            //        new FileInputStream("[Electro] - Rogue - Dynamite [Monstercat Release].ogg"));
+            //BufferedAudio audio = BufferedAudio.fromOggVorbis("bruh",
+            //        new FileInputStream("[Electro] - Rogue - Dynamite [Monstercat Release].ogg"));
+            //this.audioNode.setAudio(audio);
             this.audioSpace.addNode(this.audioNode);
-            this.stream = this.audio.openNewStream();
-            this.stream.setLooping(true);
-            this.stream.start();
+            
             
             this.skybox = NCubemapStore
                     .readCubemap("cientistavuador/cienspools/resources/cubemaps/skybox.cbm");
@@ -193,7 +185,7 @@ public class Game {
             this.flashlight.setDiffuseSpecularAmbient(50f, 10f, 0.1f);
             this.flashlight.setRange(20f);
             this.flashlight.setSize(0.25f);
-
+            
             ColorUtils.setSRGB(this.lighter.getDiffuse(), 233, 140, 80).mul(4f);
             ColorUtils.setSRGB(this.lighter.getSpecular(), 233, 140, 80).mul(0.03f);
             ColorUtils.setSRGB(this.lighter.getAmbient(), 233, 140, 80).mul(0.015f);
@@ -281,22 +273,8 @@ public class Game {
         );
 
         this.audioSpace.update(Main.TPF);
-       
-        while (alGetSourcei(this.audioNode.source(), AL_BUFFERS_QUEUED) 
-                < AudioStream.IDEAL_NUMBER_OF_BUFFERS) {
-            int buffer = this.stream.nextBuffer();
-            if (buffer == 0) {
-                break;
-            }
-            alSourceQueueBuffers(this.audioNode.source(), buffer);
-        }
-        int processed = alGetSourcei(this.audioNode.source(), AL_BUFFERS_PROCESSED);
-        for (int i = 0; i < processed; i++) {
-            int unqueued = alSourceUnqueueBuffers(this.audioNode.source());
-            if (unqueued != 0) {
-                this.stream.returnBuffer(unqueued);
-            }
-        }
+        
+        System.out.println(this.audioNode.elapsed() + " / " + this.audioNode.length()+": "+this.audioNode.isPaused());
         
         this.physicsSpace.update((float) Main.TPF);
 
@@ -598,9 +576,19 @@ public class Game {
             System.out.println(")");
         }
         if (key == GLFW_KEY_G && action == GLFW_PRESS) {
-            alSourcef(this.audioNode.source(), AL_MAX_DISTANCE, 40f);
-            alSourcei(this.audioNode.source(), AL_LOOPING, AL_FALSE);
-            alSourcePlay(this.audioNode.source());
+            this.audioNode.play();
+        }
+        if (key == GLFW_KEY_B && action == GLFW_PRESS) {
+            this.audioNode.stop();
+        }
+        if (key == GLFW_KEY_X && action == GLFW_PRESS) {
+            this.audioNode.pause();
+        }
+        if (key == GLFW_KEY_M && action == GLFW_PRESS) {
+            this.audioNode.seek(this.audioNode.elapsed() + 10f);
+        }
+        if (key == GLFW_KEY_N && action == GLFW_PRESS) {
+            this.audioNode.seek(this.audioNode.elapsed() - 10f);
         }
     }
 

@@ -125,19 +125,19 @@ public class DefaultAudioStream implements AudioStream {
             s.onCurrentSampleUpdate(dataStream.getSamplesRead());
         }
     }
-    
+
     private static void audioThreadPlayingUpdate(WeakReference<DefaultAudioStream> stream, boolean playing) {
         DefaultAudioStream s = stream.get();
         if (s != null) {
             s.onPlayingUpdate(playing);
         }
     }
-    
+
     private static void audioThreadTask(WeakReference<DefaultAudioStream> stream) throws Throwable {
         AudioDataStream currentStream = null;
         try {
             final int sleepTime = 5;
-            
+
             boolean informationSent = false;
             int channels = 0;
             int sampleRate = 0;
@@ -145,7 +145,7 @@ public class DefaultAudioStream implements AudioStream {
             audioThreadLoop:
             while (audioThreadCanRun(stream)) {
                 int seekSample = audioThreadSeek(stream);
-                
+
                 if (currentStream == null) {
                     if (informationSent && !audioThreadIsLooping(stream) && seekSample < 0) {
                         audioThreadPlayingUpdate(stream, false);
@@ -313,7 +313,7 @@ public class DefaultAudioStream implements AudioStream {
     protected int getNumberOfQueuedSampleArrays() {
         return this.samplesQueue.size();
     }
-    
+
     protected void onPlayingUpdate(boolean playing) {
         this.playing = playing;
     }
@@ -355,7 +355,7 @@ public class DefaultAudioStream implements AudioStream {
     public boolean isPlaying() {
         return playing;
     }
-    
+
     @Override
     public Throwable getThrowable() {
         return throwable;
@@ -367,7 +367,7 @@ public class DefaultAudioStream implements AudioStream {
         if (t != null) {
             throw new AudioStreamException(t);
         }
-        
+
         short[] data = this.samplesQueue.poll();
         if (data == null) {
             return 0;
@@ -405,12 +405,10 @@ public class DefaultAudioStream implements AudioStream {
         this.buffersToBeRecycled.clear();
 
         final Set<Integer> finalBuffers = this.buffersCreated;
-        Main.MAIN_TASKS.add(() -> {
-            for (Integer b : finalBuffers) {
-                alDeleteBuffers(b);
-            }
-            finalBuffers.clear();
-        });
+        for (Integer b : finalBuffers) {
+            alDeleteBuffers(b);
+        }
+        finalBuffers.clear();
     }
 
     @Override

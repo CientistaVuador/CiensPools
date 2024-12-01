@@ -11,6 +11,9 @@ uniform bool enableOpaqueTexture;
 uniform float gamma;
 uniform float exposure;
 
+//lut
+uniform sampler3D LUT;
+
 //specular brdf lookup table
 uniform sampler2D specularBRDFLookupTable;
 
@@ -515,6 +518,10 @@ void main() {
     
     if (enableGammaCorrection) {
         outputColor.rgb = pow(outputColor.rgb, vec3(1.0/gamma));
+    }
+    
+    if (enableTonemapping) {
+        outputColor.rgb = texture(LUT, outputColor.rgb).rgb;
     }
     
     #if defined(VARIANT_ALPHA_TESTING) || defined(VARIANT_OPAQUE)
