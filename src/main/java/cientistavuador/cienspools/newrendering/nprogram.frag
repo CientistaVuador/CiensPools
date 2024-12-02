@@ -521,7 +521,7 @@ void main() {
     }
     
     if (enableTonemapping) {
-        outputColor.rgb = texture(LUT, outputColor.rgb).rgb;
+        //outputColor.rgb = texture(LUT, outputColor.rgb).rgb;
     }
     
     #if defined(VARIANT_ALPHA_TESTING) || defined(VARIANT_OPAQUE)

@@ -132,6 +132,10 @@ public class Resource {
         return ResourceLocator.get(type, id);
     }
 
+    public static Authorship authorshipOf(String type, String id) {
+        return ResourceLocator.authorshipOf(type, id);
+    }
+    
     public static String generateRandomId(String suffix) {
         return new IDSyntax(UUID.randomUUID(), suffix).toString();
     }

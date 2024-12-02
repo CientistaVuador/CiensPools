@@ -43,6 +43,18 @@ public class ResourceLocator {
         return GLOBAL.getResource(type, id);
     }
     
+    public static Authorship authorshipOf(String type, String id) {
+        Resource planA = get(type, id);
+        if (planA == null || planA.getAuthorship() == null) {
+            Resource planB = get("authorship", id);
+            if (planB == null) {
+                return null;
+            }
+            return planB.getAuthorship();
+        }
+        return planA.getAuthorship();
+    }
+    
     private final Set<ResourcePack> resourcePacks = Collections.newSetFromMap(new ConcurrentHashMap<>());
     
     private final Map<String, Set<Resource>> idMap = new ConcurrentHashMap<>();

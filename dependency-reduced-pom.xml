@@ -4,7 +4,7 @@
   <groupId>cientistavuador</groupId>
   <artifactId>CiensPools</artifactId>
   <name>CiensPools</name>
-  <version>2.0.0-proto</version>
+  <version>1.0.0-alpha</version>
   <build>
     <resources>
       <resource>

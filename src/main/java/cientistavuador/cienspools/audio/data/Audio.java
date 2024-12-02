@@ -39,8 +39,11 @@ import java.nio.file.Path;
  */
 public interface Audio {
 
+    public static final Audio EMPTY = BufferedAudio
+            .fromArray("Empty Audio", new short[0], 1, 44100);
+    
     public static ResourceRW<Audio> RESOURCES = new ResourceRW<Audio>(true) {
-        public static final String AUDIO_FILE_NAME = "audio";
+        public static final String AUDIO_FILE_NAME = "vorbis";
         
         @Override
         public String getResourceType() {
@@ -50,7 +53,7 @@ public interface Audio {
         @Override
         public Audio readResource(Resource r) throws IOException {
             if (r == null) {
-                return null;
+                return Audio.EMPTY;
             }
             boolean streamingEnabled = false;
             if (r.getMeta().containsKey("streamingEnabled")) {

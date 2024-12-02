@@ -28,6 +28,7 @@ package cientistavuador.cienspools;
 
 import cientistavuador.cienspools.audio.AudioNode;
 import cientistavuador.cienspools.audio.AudioSpace;
+import cientistavuador.cienspools.audio.data.Audio;
 import cientistavuador.cienspools.camera.FreeCamera;
 import cientistavuador.cienspools.debug.AabRender;
 import cientistavuador.cienspools.debug.LineRender;
@@ -44,6 +45,7 @@ import cientistavuador.cienspools.newrendering.NLight;
 import cientistavuador.cienspools.newrendering.NLightmaps;
 import cientistavuador.cienspools.newrendering.NLightmapsStore;
 import cientistavuador.cienspools.newrendering.NMap;
+import cientistavuador.cienspools.newrendering.NMaterialSoundEffects;
 import cientistavuador.cienspools.newrendering.NTextures;
 import cientistavuador.cienspools.physics.PlayerController;
 import cientistavuador.cienspools.popups.BakePopup;
@@ -55,7 +57,6 @@ import cientistavuador.cienspools.ubo.UBOBindingPoints;
 import cientistavuador.cienspools.util.ColorUtils;
 import cientistavuador.cienspools.util.DebugRenderer;
 import cientistavuador.cienspools.util.PhysicsSpaceDebugger;
-import cientistavuador.cienspools.util.StringList;
 import cientistavuador.cienspools.util.StringUtils;
 import cientistavuador.cienspools.util.bakedlighting.AmbientCubeDebug;
 import cientistavuador.cienspools.util.bakedlighting.Lightmapper;
@@ -69,14 +70,14 @@ import com.simsilica.mathd.Vec3d;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import org.joml.Quaternionf;
+import org.joml.Vector3d;
+import org.joml.Vector3dc;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.openal.AL11.*;
 import static org.lwjgl.opengl.GL33C.*;
@@ -139,12 +140,18 @@ public class Game {
 
     private final AudioSpace audioSpace = new AudioSpace();
     private final AudioNode audioNode = new AudioNode("bruh");
-    
+
     private final N3DObjectRenderer renderer = new N3DObjectRenderer();
 
     private final PhysicsSpace physicsSpace = new PhysicsSpace(PhysicsSpace.BroadphaseType.DBVT);
     private final PhysicsSpaceDebugger physicsSpaceDebugger = new PhysicsSpaceDebugger(this.physicsSpace);
     private final PlayerController playerController = new PlayerController();
+
+    private final AudioNode stepNode = new AudioNode("step node");
+    private final AudioNode flashlightNode = new AudioNode("flashlight node");
+    private final AudioNode lighterNode = new AudioNode("lighter node");
+    private final Vector3d lastStepPosition = new Vector3d(Double.NaN);
+    private float stepDistance = 0f;
 
     {
         this.playerController.getCharacterController().setPosition(16.72f, 0f, 12.76f);
@@ -164,8 +171,7 @@ public class Game {
             //        new FileInputStream("[Electro] - Rogue - Dynamite [Monstercat Release].ogg"));
             //this.audioNode.setAudio(audio);
             this.audioSpace.addNode(this.audioNode);
-            
-            
+
             this.skybox = NCubemapStore
                     .readCubemap("cientistavuador/cienspools/resources/cubemaps/skybox.cbm");
 
@@ -185,7 +191,7 @@ public class Game {
             this.flashlight.setDiffuseSpecularAmbient(50f, 10f, 0.1f);
             this.flashlight.setRange(20f);
             this.flashlight.setSize(0.25f);
-            
+
             ColorUtils.setSRGB(this.lighter.getDiffuse(), 233, 140, 80).mul(4f);
             ColorUtils.setSRGB(this.lighter.getSpecular(), 233, 140, 80).mul(0.03f);
             ColorUtils.setSRGB(this.lighter.getAmbient(), 233, 140, 80).mul(0.015f);
@@ -232,6 +238,9 @@ public class Game {
     }
 
     public void start() {
+        this.audioSpace.addNode(this.stepNode);
+        this.audioSpace.addNode(this.flashlightNode);
+        this.audioSpace.addNode(this.lighterNode);
 
         this.gizmo.setCamera(this.camera);
 
@@ -272,20 +281,34 @@ public class Game {
                 this.playerController.getEyePosition().z()
         );
 
+        this.stepNode.getPosition().set(this.playerController.getCharacterController().getPosition());
+        this.flashlightNode.getPosition().set(this.playerController.getCharacterController().getPosition());
+        this.flashlightNode.getPosition().add(0f, 1f, 0f);
+        this.lighterNode.getPosition().set(this.playerController.getCharacterController().getPosition());
+        this.lighterNode.getPosition().add(0f, 1f, 0f);
+        
+        if (!this.lastStepPosition.isFinite()) {
+            this.lastStepPosition.set(this.playerController.getCharacterController().getPosition());
+        } else {
+            this.stepDistance += this.lastStepPosition.distance(new Vector3d(this.playerController.getCharacterController().getPosition()));
+            this.lastStepPosition.set(this.playerController.getCharacterController().getPosition());
+            if (this.stepDistance > 1.5f) {
+                this.stepNode.setAudio(NMaterialSoundEffects.RESOURCES.get("default/sounds/materials/stone").getRandomFootstep());
+                this.stepNode.play();
+                this.stepDistance = 0f;
+            }
+        }
+
         this.audioSpace.update(Main.TPF);
-        
-        System.out.println(this.audioNode.elapsed() + " / " + this.audioNode.length()+": "+this.audioNode.isPaused());
-        
+
         this.physicsSpace.update((float) Main.TPF);
 
         if (this.playerController.getCharacterController().getPosition().y() < -10f) {
             this.playerController.getCharacterController().setPosition(0f, 0.1f, 0f);
         }
 
-        if (glfwGetKey(Main.WINDOW_POINTER, GLFW_KEY_P) == GLFW_PRESS) {
-            this.flashlight.getPosition().set(this.camera.getPosition());
-            this.flashlight.getDirection().set(this.camera.getFront()).add(0f, -0.15f, 0f).normalize();
-        }
+        this.flashlight.getPosition().set(this.camera.getPosition());
+        this.flashlight.getDirection().set(this.camera.getFront()).add(0f, -0.15f, 0f).normalize();
 
         this.lighter.getPosition().set(this.camera.getRight()).negate()
                 .mul(0.05f).add(this.camera.getPosition());
@@ -548,8 +571,12 @@ public class Game {
         if (key == GLFW_KEY_F && action == GLFW_PRESS) {
             if (this.lights.contains(this.flashlight)) {
                 this.lights.remove(this.flashlight);
+                this.flashlightNode.setAudio(Audio.RESOURCES.get("default/sounds/flashlight/flashlight_off"));
+                this.flashlightNode.play();
             } else {
                 this.lights.add(this.flashlight);
+                this.flashlightNode.setAudio(Audio.RESOURCES.get("default/sounds/flashlight/flashlight_on"));
+                this.flashlightNode.play();
             }
         }
         if (key == GLFW_KEY_L && action == GLFW_PRESS) {
@@ -557,6 +584,8 @@ public class Game {
                 this.lights.remove(this.lighter);
             } else {
                 this.lights.add(this.lighter);
+                this.lighterNode.setAudio(Audio.RESOURCES.get("default/sounds/lighter/lighter_on"));
+                this.lighterNode.play();
             }
         }
         if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {

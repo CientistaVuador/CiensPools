@@ -129,7 +129,11 @@ public class NMaterial {
             );
 
             material.setTextures(NTextures.RESOURCES.get(meta.get("texture")));
-
+            
+            if (meta.containsKey("materialSoundEffects")) {
+                material.setSoundEffects(NMaterialSoundEffects.RESOURCES.get(meta.get("materialSoundEffects")));
+            }
+            
             return material;
         }
 
@@ -191,6 +195,10 @@ public class NMaterial {
             }
             
             meta.put("texture", obj.getTextures().getId());
+            
+            if (obj.getSoundEffects() != NMaterialSoundEffects.EMPTY) {
+                meta.put("materialSoundEffects", obj.getSoundEffects().getId());
+            }
         }
     };
     
@@ -238,6 +246,8 @@ public class NMaterial {
 
     private NTextures textures = NTextures.ERROR_TEXTURE;
 
+    private NMaterialSoundEffects soundEffects = NMaterialSoundEffects.EMPTY;
+    
     public NMaterial(String id) {
         this(id, null);
     }
@@ -370,6 +380,17 @@ public class NMaterial {
             textures = NTextures.ERROR_TEXTURE;
         }
         this.textures = textures;
+    }
+
+    public NMaterialSoundEffects getSoundEffects() {
+        return soundEffects;
+    }
+
+    public void setSoundEffects(NMaterialSoundEffects soundEffects) {
+        if (soundEffects == null) {
+            soundEffects = NMaterialSoundEffects.EMPTY;
+        }
+        this.soundEffects = soundEffects;
     }
 
     public NBlendingMode getBlendingMode() {

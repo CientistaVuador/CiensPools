@@ -95,7 +95,7 @@ public class PlayerController {
     public Vector3fc getEyePosition() {
         return this.eyePosition;
     }
-
+    
     public void forceEyePositionUpdate() {
         forceEyePositionUpdateImpl();
     }
