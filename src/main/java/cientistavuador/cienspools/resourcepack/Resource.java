@@ -131,17 +131,14 @@ public class Resource {
     public static Resource get(String type, String id) {
         return ResourceLocator.get(type, id);
     }
-
-    public static Authorship authorshipOf(String type, String id) {
-        return ResourceLocator.authorshipOf(type, id);
-    }
     
     public static String generateRandomId(String suffix) {
         return new IDSyntax(UUID.randomUUID(), suffix).toString();
     }
     
-    protected ResourcePack resourcePack;
-
+    private ResourcePack resourcePack;
+    private Authorship externalAuthorship;
+    
     private final String type;
     private final String id;
     private final int priority;
@@ -177,8 +174,24 @@ public class Resource {
         }
     }
 
+    protected void attachResourcePack(ResourcePack p) {
+        this.resourcePack = p;
+        this.externalAuthorship = this.authorship;
+        
+        Resource externalAuthorshipResource = p.getResource("authorship", this.id);
+        if (externalAuthorshipResource != null) {
+            if (externalAuthorshipResource.getAuthorship() != null) {
+                this.externalAuthorship = externalAuthorshipResource.getAuthorship();
+            }
+        }
+    }
+    
     public ResourcePack getResourcePack() {
         return resourcePack;
+    }
+    
+    public Authorship getExternalAuthorship() {
+        return externalAuthorship;
     }
 
     public String getType() {
@@ -200,7 +213,7 @@ public class Resource {
     public Authorship getAuthorship() {
         return authorship;
     }
-
+    
     public Map<String, String> getMeta() {
         return meta;
     }

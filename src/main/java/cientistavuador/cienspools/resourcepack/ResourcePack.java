@@ -98,7 +98,7 @@ public class ResourcePack implements AutoCloseable {
     
     private void leak() {
         for (Resource r:this.resources) {
-            r.resourcePack = this;
+            r.attachResourcePack(this);
         }
     }
 
