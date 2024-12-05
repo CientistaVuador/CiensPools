@@ -39,8 +39,7 @@ public class NCubemapRenderer {
 
     public static NCubemap render(
             N3DObjectRenderer renderer,
-            String name, NCubemapBox info, int size, int ssaaScale,
-            List<NLight> lights, NCubemaps cubemaps
+            String name, NCubemapBox info, int size, int ssaaScale
     ) {
         if (ssaaScale < 1) {
             throw new IllegalArgumentException("SSAA Scale must be larger or equal to 1; " + ssaaScale);
@@ -143,10 +142,9 @@ public class NCubemapRenderer {
     
     public static NCubemap render(
             N3DObjectRenderer renderer,
-            String name, NCubemapBox info, int size,
-            List<NLight> lights, NCubemaps cubemaps
+            String name, NCubemapBox info, int size
     ) {
-        return render(renderer, name, info, size, 4, lights, cubemaps);
+        return render(renderer, name, info, size, 4);
     }
 
     private NCubemapRenderer() {

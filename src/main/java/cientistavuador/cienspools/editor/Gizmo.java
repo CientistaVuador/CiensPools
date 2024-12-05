@@ -129,6 +129,7 @@ public class Gizmo {
     private GizmoState state = GizmoState.INACTIVE;
     private final Vector3d position = new Vector3d();
     private final Vector3f rotation = new Vector3f();
+    private final Vector3f extents = new Vector3f(1f);
     private final Vector3f scale = new Vector3f(1f);
 
     private float translationPrecision = 100f;
@@ -248,16 +249,15 @@ public class Gizmo {
     public Vector3f rotate(Vector3f receiver) {
         return rotate(receiver, 1f, 1f, 1f);
     }
+
+    public Vector3f getExtents() {
+        return extents;
+    }
     
     public Vector3f getScale() {
         return scale;
     }
     
-    public Vector3f getScale(Vector3f extents) {
-        extents = Objects.requireNonNullElse(extents, new Vector3f(1f));
-        return getScale().div(extents, extents);
-    }
-
     public float getTranslationPrecision() {
         return translationPrecision;
     }
@@ -284,9 +284,9 @@ public class Gizmo {
 
     private void updateTranslationModelMatrix(float scale, Geometry geo, int axis) {
         Matrix4f model = new Matrix4f();
-        float xOffset = getScale().x() * 0.5f * (axis == 0 ? 1f : 0f);
-        float yOffset = getScale().y() * 0.5f * (axis == 1 ? 1f : 0f);
-        float zOffset = getScale().z() * 0.5f * (axis == 2 ? 1f : 0f);
+        float xOffset = getScale().x() * getExtents().x() * 0.5f * (axis == 0 ? 1f : 0f);
+        float yOffset = getScale().y() * getExtents().y() * 0.5f * (axis == 1 ? 1f : 0f);
+        float zOffset = getScale().z() * getExtents().z() * 0.5f * (axis == 2 ? 1f : 0f);
         model
                 .identity()
                 .translate(
@@ -309,9 +309,9 @@ public class Gizmo {
     private void updateRotationModelMatrix(float scale, Geometry geo, int axis) {
         Matrix4f model = new Matrix4f();
         float radius = Math.max(Math.max(
-                Math.abs(getScale().x() * 0.5f),
-                Math.abs(getScale().y() * 0.5f)),
-                Math.abs(getScale().z() * 0.5f)
+                Math.abs(getScale().x() * getExtents().x() * 0.5f),
+                Math.abs(getScale().y() * getExtents().y() * 0.5f)),
+                Math.abs(getScale().z() * getExtents().z() * 0.5f)
         );
         model
                 .identity()
@@ -343,9 +343,9 @@ public class Gizmo {
 
     private void updateScaleModelMatrix(float scale, Geometry geo, int axis) {
         Matrix4f model = new Matrix4f();
-        float xOffset = getScale().x() * 0.5f * (axis == 0 ? 1f : 0f);
-        float yOffset = getScale().y() * 0.5f * (axis == 1 ? 1f : 0f);
-        float zOffset = getScale().z() * 0.5f * (axis == 2 ? 1f : 0f);
+        float xOffset = getScale().x() * getExtents().x() * 0.5f * (axis == 0 ? 1f : 0f);
+        float yOffset = getScale().y() * getExtents().y() * 0.5f * (axis == 1 ? 1f : 0f);
+        float zOffset = getScale().z() * getExtents().z() * 0.5f * (axis == 2 ? 1f : 0f);
         model
                 .identity()
                 .translate(
@@ -522,7 +522,10 @@ public class Gizmo {
         this.gizmoPlaneScaleOffset
                 .absolute()
                 .mul(2f)
-                .sub(getScale());
+                .sub(
+                        getScale().x() * getExtents().x(),
+                        getScale().y() * getExtents().y(),
+                        getScale().z() * getExtents().z());
 
         this.selectedAxis = this.hoverAxis;
     }
@@ -660,12 +663,14 @@ public class Gizmo {
         sc
                 .absolute()
                 .mul(2f)
-                .sub(this.gizmoPlaneScaleOffset);
+                .sub(this.gizmoPlaneScaleOffset)
+                ;
         sc.set(
                 Math.max(applyScalingPrecision(sc.x()), 0f),
                 Math.max(applyScalingPrecision(sc.y()), 0f),
                 Math.max(applyScalingPrecision(sc.z()), 0f)
         );
+        sc.div(getExtents());
         switch (this.selectedAxis) {
             case 0 -> {
                 if (this.holdingRightClick) {

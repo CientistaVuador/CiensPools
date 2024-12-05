@@ -482,7 +482,7 @@ public class N3DModel {
         return aabbCenter;
     }
 
-    public Vector3f getAabbExtents() {
+    public Vector3fc getAabbExtents() {
         return aabbExtents;
     }
 

@@ -135,6 +135,7 @@ public class NProgram {
     
     public static final String UNIFORM_GAMMA = "gamma";
     public static final String UNIFORM_EXPOSURE = "exposure";
+    public static final String UNIFORM_SCREEN_SIZE = "screenSize";
     
     public static final String UNIFORM_LUT = "LUT";
     public static final String UNIFORM_SPECULAR_BRDF_LOOKUP_TABLE = "specularBRDFLookupTable";

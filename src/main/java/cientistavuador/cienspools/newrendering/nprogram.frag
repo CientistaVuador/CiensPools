@@ -10,6 +10,7 @@ uniform bool enableOpaqueTexture;
 
 uniform float gamma;
 uniform float exposure;
+uniform vec2 screenSize;
 
 //lut
 uniform sampler3D LUT;
@@ -503,7 +504,11 @@ void main() {
         outputColor.rgb = mix(refractedColor, outputColor.rgb, outputColor.a);
         outputColor.a = 1.0;
     }
-
+    
+    if (enableTonemapping) {
+        outputColor.rgb = vec3(1.0) - exp(-outputColor.rgb * exposure);
+    }
+    
     float fresnelOutline = material.fresnelOutline;
     vec3 fresnelOutlineColor = material.fresnelOutlineColor;
     outputColor.rgb = mix(
@@ -512,16 +517,19 @@ void main() {
             fresnelOutline
     );
 
-    if (enableTonemapping) {
-        outputColor.rgb = vec3(1.0) - exp(-outputColor.rgb * exposure);
-    }
-    
     if (enableGammaCorrection) {
         outputColor.rgb = pow(outputColor.rgb, vec3(1.0/gamma));
     }
     
     if (enableTonemapping) {
-        //outputColor.rgb = texture(LUT, outputColor.rgb).rgb;
+        outputColor.rgb = texture(LUT, outputColor.rgb).rgb;
+    }
+    
+    if (enableTonemapping) {
+        const float noise = 0.5 / 255.0;
+        vec2 coords = gl_FragCoord.xy / screenSize;
+        outputColor.rgb += mix(-noise, noise,
+                            fract(sin(dot(coords, vec2(12.9898,78.233))) * 43758.5453));
     }
     
     #if defined(VARIANT_ALPHA_TESTING) || defined(VARIANT_OPAQUE)

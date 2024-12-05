@@ -26,16 +26,12 @@
  */
 package cientistavuador.cienspools;
 
-import cientistavuador.cienspools.audio.AudioNode;
-import cientistavuador.cienspools.audio.AudioSpace;
-import cientistavuador.cienspools.audio.data.Audio;
-import cientistavuador.cienspools.camera.FreeCamera;
 import cientistavuador.cienspools.debug.AabRender;
 import cientistavuador.cienspools.debug.LineRender;
 import cientistavuador.cienspools.editor.Gizmo;
 import cientistavuador.cienspools.newrendering.N3DModel;
+import cientistavuador.cienspools.newrendering.N3DModelImporter;
 import cientistavuador.cienspools.newrendering.N3DObject;
-import cientistavuador.cienspools.newrendering.N3DObjectRenderer;
 import cientistavuador.cienspools.newrendering.NCubemap;
 import cientistavuador.cienspools.newrendering.NCubemapBox;
 import cientistavuador.cienspools.newrendering.NCubemapRenderer;
@@ -45,23 +41,20 @@ import cientistavuador.cienspools.newrendering.NLight;
 import cientistavuador.cienspools.newrendering.NLightmaps;
 import cientistavuador.cienspools.newrendering.NLightmapsStore;
 import cientistavuador.cienspools.newrendering.NMap;
-import cientistavuador.cienspools.newrendering.NMaterialSoundEffects;
 import cientistavuador.cienspools.newrendering.NTextures;
-import cientistavuador.cienspools.physics.PlayerController;
 import cientistavuador.cienspools.popups.BakePopup;
 import cientistavuador.cienspools.popups.ContinuePopup;
 import cientistavuador.cienspools.text.GLFontRenderer;
 import cientistavuador.cienspools.text.GLFontSpecifications;
 import cientistavuador.cienspools.ubo.CameraUBO;
 import cientistavuador.cienspools.ubo.UBOBindingPoints;
-import cientistavuador.cienspools.util.ColorUtils;
 import cientistavuador.cienspools.util.DebugRenderer;
-import cientistavuador.cienspools.util.PhysicsSpaceDebugger;
 import cientistavuador.cienspools.util.StringUtils;
 import cientistavuador.cienspools.util.bakedlighting.AmbientCubeDebug;
 import cientistavuador.cienspools.util.bakedlighting.Lightmapper;
 import cientistavuador.cienspools.util.bakedlighting.Scene;
-import com.jme3.bullet.PhysicsSpace;
+import cientistavuador.cienspools.world.World;
+import cientistavuador.cienspools.world.player.Player;
 import com.jme3.bullet.collision.shapes.CompoundCollisionShape;
 import com.jme3.bullet.collision.shapes.HullCollisionShape;
 import com.jme3.bullet.objects.PhysicsRigidBody;
@@ -76,8 +69,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import org.joml.Quaternionf;
-import org.joml.Vector3d;
-import org.joml.Vector3dc;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.openal.AL11.*;
 import static org.lwjgl.opengl.GL33C.*;
@@ -94,7 +85,6 @@ public class Game {
         return GAME;
     }
 
-    private final FreeCamera camera = new FreeCamera();
     private NMap.BakeStatus status = null;
 
     private final NCubemap skybox;
@@ -121,40 +111,23 @@ public class Game {
 
     private NCubemaps cubemaps;
 
-    private NMap map;
     private NMap nextMap;
+
+    private final World world = new World();
+    private final Player player = new Player();
 
     private final Gizmo gizmo = new Gizmo();
 
     private final N3DModel boomBoxModel;
-    private final N3DObject cubemapBox;
-    private final List<N3DObject> boomBoxes = new ArrayList<>();
+    private final N3DObject acUnit;
 
-    private final NLight.NSpotLight flashlight = new NLight.NSpotLight("flashlight");
-    private final NLight.NPointLight lighter = new NLight.NPointLight("lighter");
-    private final List<NLight> lights = new ArrayList<>();
     private final Scene scene = new Scene();
 
     private boolean ambientCubeDebug = false;
     private boolean debugCollision = false;
 
-    private final AudioSpace audioSpace = new AudioSpace();
-    private final AudioNode audioNode = new AudioNode("bruh");
-
-    private final N3DObjectRenderer renderer = new N3DObjectRenderer();
-
-    private final PhysicsSpace physicsSpace = new PhysicsSpace(PhysicsSpace.BroadphaseType.DBVT);
-    private final PhysicsSpaceDebugger physicsSpaceDebugger = new PhysicsSpaceDebugger(this.physicsSpace);
-    private final PlayerController playerController = new PlayerController();
-
-    private final AudioNode stepNode = new AudioNode("step node");
-    private final AudioNode flashlightNode = new AudioNode("flashlight node");
-    private final AudioNode lighterNode = new AudioNode("lighter node");
-    private final Vector3d lastStepPosition = new Vector3d(Double.NaN);
-    private float stepDistance = 0f;
-
     {
-        this.playerController.getCharacterController().setPosition(16.72f, 0f, 12.76f);
+        this.player.getPlayerController().getCharacterController().setPosition(16.72f, 0f, 12.76f);
 
         NLight.NDirectionalLight sun = new NLight.NDirectionalLight("sun");
         sun.getDiffuse().set(20f);
@@ -162,16 +135,9 @@ public class Game {
         sun.getAmbient().set(0.1f);
         sun.setDynamic(false);
         sun.getDirection().set(-0.5f, -0.75f, -0.45f).normalize();
-        this.lights.add(sun);
+        this.world.getLights().add(sun);
 
         try {
-            //StreamedAudio audio = StreamedAudio.fromInputStreamFactory("bruh", () -> 
-            //        new FileInputStream("[Electro] - Rogue - Dynamite [Monstercat Release].ogg"));
-            //BufferedAudio audio = BufferedAudio.fromOggVorbis("bruh",
-            //        new FileInputStream("[Electro] - Rogue - Dynamite [Monstercat Release].ogg"));
-            //this.audioNode.setAudio(audio);
-            this.audioSpace.addNode(this.audioNode);
-
             this.skybox = NCubemapStore
                     .readCubemap("cientistavuador/cienspools/resources/cubemaps/skybox.cbm");
 
@@ -182,31 +148,24 @@ public class Game {
                 mapObjects.add(room);
             }
 
-            this.map = new NMap("map", mapObjects, NMap.DEFAULT_LIGHTMAP_MARGIN, 45f);
-            this.map.setLightmaps(NLightmapsStore
+            NMap map = new NMap("map", mapObjects, NMap.DEFAULT_LIGHTMAP_MARGIN, 45f);
+            map.setLightmaps(NLightmapsStore
                     .readLightmaps("cientistavuador/cienspools/resources/lightmaps/lightmap.lit"));
-
-            this.flashlight.setInnerConeAngle(10f);
-            this.flashlight.setOuterConeAngle(40f);
-            this.flashlight.setDiffuseSpecularAmbient(50f, 10f, 0.1f);
-            this.flashlight.setRange(20f);
-            this.flashlight.setSize(0.25f);
-
-            ColorUtils.setSRGB(this.lighter.getDiffuse(), 233, 140, 80).mul(4f);
-            ColorUtils.setSRGB(this.lighter.getSpecular(), 233, 140, 80).mul(0.03f);
-            ColorUtils.setSRGB(this.lighter.getAmbient(), 233, 140, 80).mul(0.015f);
+            this.world.setMap(map);
 
             {
                 this.boomBoxModel = N3DModel.RESOURCES.get("[D48EAA8D455A4B57|A34C2F1CE3B5D2C7]BoomBox");
-                this.cubemapBox = new N3DObject("cubemap box", this.boomBoxModel);
-                this.cubemapBox.setMap(this.map);
+
+                this.acUnit = new N3DObject("AC Unit", this.boomBoxModel);
+                this.gizmo.getExtents().set(this.boomBoxModel.getAabbExtents());
+                this.world.addObject(this.acUnit);
             }
 
         } catch (IOException ex) {
             throw new RuntimeException(ex);
         }
 
-        for (NLight light : this.lights) {
+        for (NLight light : this.world.getLights()) {
             if (light.isDynamic()) {
                 continue;
             }
@@ -222,15 +181,7 @@ public class Game {
             ex.printStackTrace();
         }
         this.cubemaps = new NCubemaps(this.skybox, cubemapsList);
-        this.map.setCubemaps(this.cubemaps);
-
-        this.camera.setMovementDisabled(true);
-        this.playerController.getCharacterController().addToPhysicsSpace(this.physicsSpace);
-
-        this.physicsSpace.setGravity(new com.jme3.math.Vector3f(0f, -9.8f * Main.TO_PHYSICS_ENGINE_UNITS, 0f));
-        this.physicsSpace.addCollisionObject(new PhysicsRigidBody(this.map.getMeshCollision(), 0f));
-        this.physicsSpace.setAccuracy(1f / 480f);
-        this.physicsSpace.setMaxSubSteps(16);
+        this.world.getMap().setCubemaps(this.cubemaps);
     }
 
     private Game() {
@@ -238,20 +189,16 @@ public class Game {
     }
 
     public void start() {
-        this.audioSpace.addNode(this.stepNode);
-        this.audioSpace.addNode(this.flashlightNode);
-        this.audioSpace.addNode(this.lighterNode);
-
-        this.gizmo.setCamera(this.camera);
-
+        this.gizmo.setCamera(this.player.getCamera());
+        this.player.getCamera().setUBO(CameraUBO.create(UBOBindingPoints.PLAYER_CAMERA));
+        this.world.setPlayer(this.player);
+        
         NTextures.ERROR_TEXTURE.textures();
         NCubemap.NULL_CUBEMAP.cubemap();
         NLightmaps.NULL_LIGHTMAPS.lightmaps();
 
-        this.camera.setUBO(CameraUBO.create(UBOBindingPoints.PLAYER_CAMERA));
-
-        for (int i = 0; i < this.map.getNumberOfObjects(); i++) {
-            this.map.getObject(i).getN3DModel().load();
+        for (N3DObject obj : this.world.getObjects()) {
+            obj.getN3DModel().load();
         }
 
         this.skybox.cubemap();
@@ -266,99 +213,46 @@ public class Game {
     }
 
     public void loop() {
-        this.audioSpace.getListenerPosition().set(this.camera.getPosition());
-        this.audioSpace.getListenerUp().set(this.camera.getUp());
-        this.audioSpace.getListenerFront().set(this.camera.getFront());
-
-        this.camera.updateMovement();
-        this.camera.updateUBO();
-
-        this.playerController.update(this.camera.getFront(), this.camera.getRight());
-
-        this.camera.setPosition(
-                this.playerController.getEyePosition().x(),
-                this.playerController.getEyePosition().y(),
-                this.playerController.getEyePosition().z()
-        );
-
-        this.stepNode.getPosition().set(this.playerController.getCharacterController().getPosition());
-        this.flashlightNode.getPosition().set(this.playerController.getCharacterController().getPosition());
-        this.flashlightNode.getPosition().add(0f, 1f, 0f);
-        this.lighterNode.getPosition().set(this.playerController.getCharacterController().getPosition());
-        this.lighterNode.getPosition().add(0f, 1f, 0f);
-        
-        if (!this.lastStepPosition.isFinite()) {
-            this.lastStepPosition.set(this.playerController.getCharacterController().getPosition());
-        } else {
-            this.stepDistance += this.lastStepPosition.distance(new Vector3d(this.playerController.getCharacterController().getPosition()));
-            this.lastStepPosition.set(this.playerController.getCharacterController().getPosition());
-            if (this.stepDistance > 1.5f) {
-                this.stepNode.setAudio(NMaterialSoundEffects.RESOURCES.get("default/sounds/materials/stone").getRandomFootstep());
-                this.stepNode.play();
-                this.stepDistance = 0f;
-            }
-        }
-
-        this.audioSpace.update(Main.TPF);
-
-        this.physicsSpace.update((float) Main.TPF);
-
-        if (this.playerController.getCharacterController().getPosition().y() < -10f) {
-            this.playerController.getCharacterController().setPosition(0f, 0.1f, 0f);
-        }
-
-        this.flashlight.getPosition().set(this.camera.getPosition());
-        this.flashlight.getDirection().set(this.camera.getFront()).add(0f, -0.15f, 0f).normalize();
-
-        this.lighter.getPosition().set(this.camera.getRight()).negate()
-                .mul(0.05f).add(this.camera.getPosition());
+        this.world.update(Main.TPF);
+        this.player.update(Main.TPF);
 
         if (this.nextMap != null) {
-            this.map = this.nextMap;
-
+            this.world.setMap(this.nextMap);
             this.nextMap = null;
         }
 
-        if (this.map.getLightmaps() != null && this.ambientCubeDebug) {
+        if (this.world.getMap().getLightmaps() != null && this.ambientCubeDebug) {
             AmbientCubeDebug.render(
-                    this.map
+                    this.world.getMap()
                             .getLightmaps()
                             .getAmbientCubes()
                             .getAmbientCubes(),
-                    this.camera.getProjection(), this.camera.getView(), this.camera.getPosition()
+                    this.player.getCamera().getProjection(),
+                    this.player.getCamera().getView(),
+                    this.player.getCamera().getPosition()
             );
         }
 
         if (this.debugCollision) {
-            this.physicsSpaceDebugger.pushToDebugRenderer(
-                    this.camera.getProjection(), this.camera.getView(), this.camera.getPosition());
+            this.world.getPhysicsSpaceDebugger().pushToDebugRenderer(
+                    this.player.getCamera().getProjection(),
+                    this.player.getCamera().getView(),
+                    this.player.getCamera().getPosition());
         }
 
-        this.gizmo.getScale(this.cubemapBox.getScale().set(1f));
-        this.gizmo.rotate(this.cubemapBox.getRotation().identity());
-        this.cubemapBox.getPosition().set(this.gizmo.getPosition());
+        this.acUnit.getScale().set(this.gizmo.getScale());
+        this.gizmo.rotate(this.acUnit.getRotation().identity());
+        this.acUnit.getPosition().set(this.gizmo.getPosition());
 
-        this.renderer.setCamera(this.camera);
-        this.renderer.getObjects().clear();
-        this.renderer.getLights().clear();
-
-        for (int i = 0; i < this.map.getNumberOfObjects(); i++) {
-            this.renderer.getObjects().add(this.map.getObject(i));
-        }
-        for (N3DObject boomBox : this.boomBoxes) {
-            this.renderer.getObjects().add(boomBox);
-        }
-        this.renderer.getObjects().add(this.cubemapBox);
-        this.renderer.getLights().addAll(this.lights);
-
-        this.renderer.setCubemaps(this.cubemaps);
-
-        this.renderer.render();
-
-        AabRender.renderQueue(this.camera);
-        LineRender.renderQueue(this.camera);
+        this.world.prepareRender();
+        this.world.renderOpaqueAlphaTested();
+        
+        AabRender.renderQueue(this.player.getCamera());
+        LineRender.renderQueue(this.player.getCamera());
         DebugRenderer.render();
 
+        this.world.renderAlpha();
+        
         glClear(GL_DEPTH_BUFFER_BIT);
         if (this.gizmo != null) {
             this.gizmo.render();
@@ -379,7 +273,7 @@ public class Game {
                 }
                 try {
                     try (FileOutputStream out = new FileOutputStream("lightmap.lit")) {
-                        NLightmapsStore.writeLightmaps(this.map.getLightmaps(), out);
+                        NLightmapsStore.writeLightmaps(this.world.getMap().getLightmaps(), out);
                     }
                 } catch (IOException ex) {
                     throw new UncheckedIOException(ex);
@@ -389,13 +283,13 @@ public class Game {
         }
 
         Main.WINDOW_TITLE += " (DrawCalls: " + Main.NUMBER_OF_DRAWCALLS + ", Vertices: " + Main.NUMBER_OF_VERTICES + ")";
-        Main.WINDOW_TITLE += " (x:" + String.format("%,.2f", this.camera.getPosition().x()) + ",y:" + String.format("%,.2f", this.camera.getPosition().y()) + ",z:" + String.format("%,.2f", this.camera.getPosition().z()) + ")";
-        Main.WINDOW_TITLE += " (dx:" + String.format("%,.2f", this.camera.getFront().x()) + ",dy:" + String.format("%,.2f", this.camera.getFront().y()) + ",dz:" + String.format("%,.2f", this.camera.getFront().z()) + ")";
-        Main.WINDOW_TITLE += " (p:" + String.format("%,.2f", this.camera.getRotation().x()) + ",y:" + String.format("%,.2f", this.camera.getRotation().y()) + ",r:" + String.format("%,.2f", this.camera.getRotation().z()) + ")";
+        Main.WINDOW_TITLE += " (x:" + String.format("%,.2f", this.player.getCamera().getPosition().x()) + ",y:" + String.format("%,.2f", this.player.getCamera().getPosition().y()) + ",z:" + String.format("%,.2f", this.player.getCamera().getPosition().z()) + ")";
+        Main.WINDOW_TITLE += " (dx:" + String.format("%,.2f", this.player.getCamera().getFront().x()) + ",dy:" + String.format("%,.2f", this.player.getCamera().getFront().y()) + ",dz:" + String.format("%,.2f", this.player.getCamera().getFront().z()) + ")";
+        Main.WINDOW_TITLE += " (p:" + String.format("%,.2f", this.player.getCamera().getRotation().x()) + ",y:" + String.format("%,.2f", this.player.getCamera().getRotation().y()) + ",r:" + String.format("%,.2f", this.player.getCamera().getRotation().z()) + ")";
     }
 
     public void mouseCursorMoved(double x, double y) {
-        this.camera.mouseCursorMoved(x, y);
+        this.player.getCamera().mouseCursorMoved(x, y);
     }
 
     public void mouseCursorMovedNormalized(float normalizedX, float normalizedZ) {
@@ -405,16 +299,16 @@ public class Game {
     }
 
     public void windowSizeChanged(int width, int height) {
-        this.camera.setDimensions(width, height);
+        this.player.getCamera().setDimensions(width, height);
     }
 
     public void keyCallback(long window, int key, int scancode, int action, int mods) {
+        this.player.keyCallback(window, key, scancode, action, mods);
         if (key == GLFW_KEY_B && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
             N3DObject boomBox = new N3DObject("boomBox", this.boomBoxModel);
-            boomBox.setMap(this.map);
             boomBox.getScale().set(40f);
             this.boomBoxModel.getHullCollisionShape().setScale(40f);
-            this.boomBoxes.add(boomBox);
+            this.world.addObject(boomBox);
 
             HullCollisionShape hull = this.boomBoxModel.getHullCollisionShape();
             Vector3f center = hull.aabbCenter(null).negate();
@@ -432,28 +326,28 @@ public class Game {
                     5f
             );
             rigidBody.applyCentralImpulse(new Vector3f(
-                    this.camera.getFront().x() * 5f * Main.TO_PHYSICS_ENGINE_UNITS * rigidBody.getMass(),
-                    this.camera.getFront().y() * 5f * Main.TO_PHYSICS_ENGINE_UNITS * rigidBody.getMass(),
-                    this.camera.getFront().z() * 5f * Main.TO_PHYSICS_ENGINE_UNITS * rigidBody.getMass()
+                    this.player.getCamera().getFront().x() * 5f * Main.TO_PHYSICS_ENGINE_UNITS * rigidBody.getMass(),
+                    this.player.getCamera().getFront().y() * 5f * Main.TO_PHYSICS_ENGINE_UNITS * rigidBody.getMass(),
+                    this.player.getCamera().getFront().z() * 5f * Main.TO_PHYSICS_ENGINE_UNITS * rigidBody.getMass()
             ));
             rigidBody.setPhysicsLocationDp(new Vec3d(
-                    this.camera.getPosition().x() * Main.TO_PHYSICS_ENGINE_UNITS,
-                    this.camera.getPosition().y() * Main.TO_PHYSICS_ENGINE_UNITS,
-                    this.camera.getPosition().z() * Main.TO_PHYSICS_ENGINE_UNITS
+                    this.player.getCamera().getPosition().x() * Main.TO_PHYSICS_ENGINE_UNITS,
+                    this.player.getCamera().getPosition().y() * Main.TO_PHYSICS_ENGINE_UNITS,
+                    this.player.getCamera().getPosition().z() * Main.TO_PHYSICS_ENGINE_UNITS
             ));
             rigidBody.setProtectGravity(true);
             rigidBody.setGravity(new Vector3f(0f, -98f, 0f));
             boomBox.setRigidBody(rigidBody);
-            this.physicsSpace.addCollisionObject(rigidBody);
+            this.world.getPhysicsSpace().addCollisionObject(rigidBody);
         }
         if (key == GLFW_KEY_F1 && action == GLFW_PRESS) {
-            this.renderer.setReflectionsEnabled(!this.renderer.isReflectionsEnabled());
+            this.world.getRenderer().setReflectionsEnabled(!this.world.getRenderer().isReflectionsEnabled());
         }
         if (key == GLFW_KEY_F2 && action == GLFW_PRESS) {
-            this.renderer.setParallaxEnabled(!this.renderer.isParallaxEnabled());
+            this.world.getRenderer().setParallaxEnabled(!this.world.getRenderer().isParallaxEnabled());
         }
         if (key == GLFW_KEY_F3 && action == GLFW_PRESS) {
-            this.renderer.setReflectionsDebugEnabled(!this.renderer.isReflectionsDebugEnabled());
+            this.world.getRenderer().setReflectionsDebugEnabled(!this.world.getRenderer().isReflectionsDebugEnabled());
         }
         if (key == GLFW_KEY_F4 && action == GLFW_PRESS) {
             bake:
@@ -462,8 +356,8 @@ public class Game {
                     break bake;
                 }
 
-                if (this.camera.isCaptureMouse()) {
-                    this.camera.pressEscape();
+                if (this.player.getCamera().isCaptureMouse()) {
+                    this.player.getCamera().pressEscape();
                 }
 
                 BakePopup.show(
@@ -476,12 +370,12 @@ public class Game {
                             BakePopup.toScene(this.scene, p);
 
                             List<N3DObject> list = new ArrayList<>();
-                            for (int i = 0; i < this.map.getNumberOfObjects(); i++) {
-                                list.add(this.map.getObject(i));
+                            for (int i = 0; i < this.world.getMap().getNumberOfObjects(); i++) {
+                                list.add(this.world.getMap().getObject(i));
                             }
 
                             final NMap newMap = new NMap(
-                                    this.map.getName(),
+                                    this.world.getMap().getName(),
                                     list,
                                     NMap.DEFAULT_LIGHTMAP_MARGIN,
                                     this.scene.getPixelToWorldRatio()
@@ -535,13 +429,11 @@ public class Game {
                 NCubemapBox info = this.cubemapInfos[i];
 
                 NCubemap cubemap = NCubemapRenderer.render(
-                        this.renderer,
+                        this.world.getRenderer(),
                         name,
                         info,
                         1024,
-                        4,
-                        this.lights,
-                        this.cubemaps
+                        4
                 );
 
                 cubemapsList.add(cubemap);
@@ -566,33 +458,7 @@ public class Game {
             this.debugCollision = !this.debugCollision;
         }
         if (key == GLFW_KEY_F8 && action == GLFW_PRESS) {
-            this.renderer.setTonemappingEnabled(!this.renderer.isTonemappingEnabled());
-        }
-        if (key == GLFW_KEY_F && action == GLFW_PRESS) {
-            if (this.lights.contains(this.flashlight)) {
-                this.lights.remove(this.flashlight);
-                this.flashlightNode.setAudio(Audio.RESOURCES.get("default/sounds/flashlight/flashlight_off"));
-                this.flashlightNode.play();
-            } else {
-                this.lights.add(this.flashlight);
-                this.flashlightNode.setAudio(Audio.RESOURCES.get("default/sounds/flashlight/flashlight_on"));
-                this.flashlightNode.play();
-            }
-        }
-        if (key == GLFW_KEY_L && action == GLFW_PRESS) {
-            if (this.lights.contains(this.lighter)) {
-                this.lights.remove(this.lighter);
-            } else {
-                this.lights.add(this.lighter);
-                this.lighterNode.setAudio(Audio.RESOURCES.get("default/sounds/lighter/lighter_on"));
-                this.lighterNode.play();
-            }
-        }
-        if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
-            this.playerController.jump();
-        }
-        if (key == GLFW_KEY_V && action == GLFW_PRESS) {
-            this.playerController.getCharacterController().setNoclipEnabled(!this.playerController.getCharacterController().isNoclipEnabled());
+            this.world.getRenderer().setTonemappingEnabled(!this.world.getRenderer().isTonemappingEnabled());
         }
         if (key == GLFW_KEY_R && action == GLFW_PRESS) {
             Quaternionf rotation = new Quaternionf();
@@ -603,21 +469,6 @@ public class Game {
             System.out.print(rotation.x() + "f, " + rotation.y() + "f, " + rotation.z() + "f, " + rotation.w() + "f, ");
             System.out.print(this.gizmo.getScale().x() * 0.5f + "f, " + this.gizmo.getScale().y() * 0.5f + "f, " + this.gizmo.getScale().z() * 0.5f + "f");
             System.out.println(")");
-        }
-        if (key == GLFW_KEY_G && action == GLFW_PRESS) {
-            this.audioNode.play();
-        }
-        if (key == GLFW_KEY_B && action == GLFW_PRESS) {
-            this.audioNode.stop();
-        }
-        if (key == GLFW_KEY_X && action == GLFW_PRESS) {
-            this.audioNode.pause();
-        }
-        if (key == GLFW_KEY_M && action == GLFW_PRESS) {
-            this.audioNode.seek(this.audioNode.elapsed() + 10f);
-        }
-        if (key == GLFW_KEY_N && action == GLFW_PRESS) {
-            this.audioNode.seek(this.audioNode.elapsed() - 10f);
         }
     }
 

@@ -728,6 +728,7 @@ public class N3DObjectRenderer {
                         (isReflectionsEnabled() ? 1 : 0))
                 .uniform1f(NProgram.UNIFORM_GAMMA, Main.GAMMA)
                 .uniform1f(NProgram.UNIFORM_EXPOSURE, Main.EXPOSURE)
+                .uniform2f(NProgram.UNIFORM_SCREEN_SIZE, Main.WIDTH, Main.HEIGHT)
                 .uniform1f(NProgram.UNIFORM_WATER_COUNTER,
                         Water.WATER_COUNTER)
                 .uniform1i(NProgram.UNIFORM_ENABLE_OPAQUE_TEXTURE, 0)

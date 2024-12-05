@@ -42,6 +42,7 @@ import cientistavuador.cienspools.util.bakedlighting.Scene;
 import cientistavuador.cienspools.util.raycast.LocalRayResult;
 import com.jme3.bullet.collision.shapes.MeshCollisionShape;
 import com.jme3.bullet.collision.shapes.infos.IndexedMesh;
+import com.jme3.bullet.objects.PhysicsRigidBody;
 import com.jme3.util.BufferUtils;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -158,6 +159,7 @@ public class NMap {
     private final String name;
     private final N3DObject[] objects;
     private final MeshCollisionShape meshCollision;
+    private final PhysicsRigidBody rigidBody;
 
     private final int lightmapMargin;
     private final float lightmapPixelToWorldRatio;
@@ -365,7 +367,7 @@ public class NMap {
                 BufferUtils.createFloatBuffer(indexedCollision.getA()),
                 BufferUtils.createIntBuffer(indexedCollision.getB())
         ));
-
+        this.rigidBody = new PhysicsRigidBody(this.meshCollision, 0f);
     }
 
     public String getName() {
@@ -384,6 +386,10 @@ public class NMap {
         return meshCollision;
     }
 
+    public PhysicsRigidBody getRigidBody() {
+        return rigidBody;
+    }
+    
     public int getLightmapMargin() {
         return lightmapMargin;
     }
