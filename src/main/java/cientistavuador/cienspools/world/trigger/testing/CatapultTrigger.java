@@ -29,6 +29,7 @@ package cientistavuador.cienspools.world.trigger.testing;
 import cientistavuador.cienspools.audio.AudioNode;
 import cientistavuador.cienspools.audio.data.Audio;
 import cientistavuador.cienspools.world.World;
+import cientistavuador.cienspools.world.WorldEntity;
 import cientistavuador.cienspools.world.trigger.EnterExitTrigger;
 import com.jme3.bullet.PhysicsSpace;
 import com.jme3.bullet.objects.PhysicsRigidBody;
@@ -39,7 +40,7 @@ import org.joml.Vector3f;
  *
  * @author Cien
  */
-public class CatapultTrigger extends EnterExitTrigger {
+public class CatapultTrigger extends EnterExitTrigger implements WorldEntity {
     
     private float force = 100f;
     private final Vector3f direction = new Vector3f(0f, 1f, 0f);

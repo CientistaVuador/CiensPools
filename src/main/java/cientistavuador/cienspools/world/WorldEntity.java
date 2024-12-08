@@ -30,8 +30,6 @@ package cientistavuador.cienspools.world;
  *
  * @author Cien
  */
-public interface WorldObject {
-    public World getWorld();
-    public void onAddedToWorld(World world);
-    public void onRemovedFromWorld(World world);
+public interface WorldEntity extends WorldObject {
+    public void onWorldUpdate(World world, double tpf);
 }

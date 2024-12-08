@@ -104,7 +104,7 @@ public class Main {
         if (!glfwInit()) {
             throw new IllegalStateException("Could not initialize GLFW!");
         }
-
+        
         int[] supportedVersions = {
             4, 6,
             4, 5,

@@ -27,7 +27,6 @@
 package cientistavuador.cienspools.world.trigger;
 
 import cientistavuador.cienspools.world.World;
-import cientistavuador.cienspools.world.WorldObject;
 import com.jme3.bullet.PhysicsSpace;
 import com.jme3.bullet.collision.shapes.BoxCollisionShape;
 import com.jme3.bullet.collision.shapes.CollisionShape;
@@ -36,6 +35,7 @@ import com.jme3.bullet.objects.PhysicsRigidBody;
 import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
 import com.simsilica.mathd.Vec3d;
+import cientistavuador.cienspools.world.WorldObject;
 
 /**
  *
@@ -52,6 +52,7 @@ public class Trigger extends PhysicsGhostObject implements WorldObject {
         this.name = name;
     }
 
+    @Override
     public World getWorld() {
         return world;
     }
@@ -60,11 +61,6 @@ public class Trigger extends PhysicsGhostObject implements WorldObject {
     public void onAddedToWorld(World world) {
         this.world = world;
         world.getPhysicsSpace().add(this);
-    }
-    
-    @Override
-    public void onWorldUpdate(World world, double tpf) {
-        
     }
     
     @Override

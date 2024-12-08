@@ -68,6 +68,7 @@ public class World {
     private final Set<N3DObject> objects = new HashSet<>();
     private final N3DObjectRenderer renderer = new N3DObjectRenderer();
     private final Set<WorldObject> worldObjects = new HashSet<>();
+    private final Set<WorldEntity> worldEntities = new HashSet<>();
 
     private NMap map = null;
     private Player player = null;
@@ -108,12 +109,19 @@ public class World {
         return Collections.unmodifiableSet(worldObjects);
     }
     
+    public Set<WorldObject> getWorldEntities() {
+        return Collections.unmodifiableSet(worldEntities);
+    }
+    
     public boolean addWorldObject(WorldObject obj) {
         if (obj == null) {
             return false;
         }
         boolean success = this.worldObjects.add(obj);
         if (success) {
+            if (obj instanceof WorldEntity e) {
+                this.worldEntities.add(e);
+            }
             obj.onAddedToWorld(this);
         }
         return success;
@@ -125,6 +133,9 @@ public class World {
         }
         boolean success = this.worldObjects.remove(obj);
         if (success) {
+            if (obj instanceof WorldEntity e) {
+                this.worldEntities.remove(e);
+            }
             obj.onRemovedFromWorld(this);
         }
         return success;
@@ -197,8 +208,8 @@ public class World {
     }
 
     public void update(double tpf) {
-        for (WorldObject obj:this.worldObjects) {
-            obj.onWorldUpdate(this, tpf);
+        for (WorldEntity e:this.worldEntities) {
+            e.onWorldUpdate(this, tpf);
         }
         
         if (this.player != null) {
