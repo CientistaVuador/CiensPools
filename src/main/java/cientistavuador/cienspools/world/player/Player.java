@@ -95,28 +95,20 @@ public class Player {
         return playerController;
     }
 
-    public boolean addToWorld(World world) {
-        if (world == null || this.world != null) {
-            return false;
-        }
+    public void onAddedToWorld(World world) {
+        this.world = world;
         this.playerController.getCharacterController().addToPhysicsSpace(world.getPhysicsSpace());
         world.getAudioSpace().addNode(this.stepNode);
         world.getAudioSpace().addNode(this.flashlightNode);
         world.getAudioSpace().addNode(this.lighterNode);
-        this.world = world;
-        return true;
     }
 
-    public boolean removeFromWorld() {
-        if (this.world == null) {
-            return false;
-        }
-        this.playerController.getCharacterController().removeFromPhysicsSpace();
-        this.world.getAudioSpace().removeNode(this.stepNode);
-        this.world.getAudioSpace().removeNode(this.flashlightNode);
-        this.world.getAudioSpace().removeNode(this.lighterNode);
+    public void onRemovedFromWorld(World world) {
         this.world = null;
-        return true;
+        this.playerController.getCharacterController().removeFromPhysicsSpace();
+        world.getAudioSpace().removeNode(this.stepNode);
+        world.getAudioSpace().removeNode(this.flashlightNode);
+        world.getAudioSpace().removeNode(this.lighterNode);
     }
 
     public void update(double tpf) {

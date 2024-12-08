@@ -30,7 +30,6 @@ import cientistavuador.cienspools.debug.AabRender;
 import cientistavuador.cienspools.debug.LineRender;
 import cientistavuador.cienspools.editor.Gizmo;
 import cientistavuador.cienspools.newrendering.N3DModel;
-import cientistavuador.cienspools.newrendering.N3DModelImporter;
 import cientistavuador.cienspools.newrendering.N3DObject;
 import cientistavuador.cienspools.newrendering.NCubemap;
 import cientistavuador.cienspools.newrendering.NCubemapBox;
@@ -55,6 +54,7 @@ import cientistavuador.cienspools.util.bakedlighting.Lightmapper;
 import cientistavuador.cienspools.util.bakedlighting.Scene;
 import cientistavuador.cienspools.world.World;
 import cientistavuador.cienspools.world.player.Player;
+import cientistavuador.cienspools.world.trigger.testing.CatapultTrigger;
 import com.jme3.bullet.collision.shapes.CompoundCollisionShape;
 import com.jme3.bullet.collision.shapes.HullCollisionShape;
 import com.jme3.bullet.objects.PhysicsRigidBody;
@@ -189,10 +189,14 @@ public class Game {
     }
 
     public void start() {
+        CatapultTrigger catapult = new CatapultTrigger("my catapult");
+        catapult.setScale(new Vector3f(5f, 0.1f, 5f));
+        this.world.addWorldObject(catapult);
+        
         this.gizmo.setCamera(this.player.getCamera());
         this.player.getCamera().setUBO(CameraUBO.create(UBOBindingPoints.PLAYER_CAMERA));
         this.world.setPlayer(this.player);
-        
+
         NTextures.ERROR_TEXTURE.textures();
         NCubemap.NULL_CUBEMAP.cubemap();
         NLightmaps.NULL_LIGHTMAPS.lightmaps();
@@ -246,13 +250,13 @@ public class Game {
 
         this.world.prepareRender();
         this.world.renderOpaqueAlphaTested();
-        
+
         AabRender.renderQueue(this.player.getCamera());
         LineRender.renderQueue(this.player.getCamera());
         DebugRenderer.render();
 
         this.world.renderAlpha();
-        
+
         glClear(GL_DEPTH_BUFFER_BIT);
         if (this.gizmo != null) {
             this.gizmo.render();
@@ -309,9 +313,9 @@ public class Game {
             boomBox.getScale().set(40f);
             this.boomBoxModel.getHullCollisionShape().setScale(40f);
             this.world.addObject(boomBox);
-
+            
             HullCollisionShape hull = this.boomBoxModel.getHullCollisionShape();
-            Vector3f center = hull.aabbCenter(null).negate();
+            com.jme3.math.Vector3f center = hull.aabbCenter(null).negate();
             CompoundCollisionShape compound = new CompoundCollisionShape();
             compound.addChildShape(hull, center);
 
@@ -325,7 +329,7 @@ public class Game {
                     compound,
                     5f
             );
-            rigidBody.applyCentralImpulse(new Vector3f(
+            rigidBody.applyCentralImpulse(new com.jme3.math.Vector3f(
                     this.player.getCamera().getFront().x() * 5f * Main.TO_PHYSICS_ENGINE_UNITS * rigidBody.getMass(),
                     this.player.getCamera().getFront().y() * 5f * Main.TO_PHYSICS_ENGINE_UNITS * rigidBody.getMass(),
                     this.player.getCamera().getFront().z() * 5f * Main.TO_PHYSICS_ENGINE_UNITS * rigidBody.getMass()
@@ -336,7 +340,7 @@ public class Game {
                     this.player.getCamera().getPosition().z() * Main.TO_PHYSICS_ENGINE_UNITS
             ));
             rigidBody.setProtectGravity(true);
-            rigidBody.setGravity(new Vector3f(0f, -98f, 0f));
+            rigidBody.setGravity(new com.jme3.math.Vector3f(0f, -9.8f, 0f));
             boomBox.setRigidBody(rigidBody);
             this.world.getPhysicsSpace().addCollisionObject(rigidBody);
         }

@@ -158,6 +158,7 @@ public class NMap {
 
     private final String name;
     private final N3DObject[] objects;
+
     private final MeshCollisionShape meshCollision;
     private final PhysicsRigidBody rigidBody;
 
@@ -282,12 +283,12 @@ public class NMap {
             objectsGeometries.add(objectGeometries);
         }
         transformedVertices = Arrays.copyOf(transformedVertices, transformedVerticesIndex);
-        
+
         LightmapUVs.GeneratorOutput output = MeshUtils.generateLightmapUVs(
                 transformedVertices, NMesh.VERTEX_SIZE, NMesh.OFFSET_POSITION_XYZ,
                 this.lightmapMargin, this.lightmapPixelToWorldRatio, 1f, 1f, 1f
         );
-        
+
         this.originalLightmapSize = output.getOriginalLightmapSize();
         this.lightmapSize = output.getLightmapSize();
 
@@ -306,7 +307,7 @@ public class NMap {
             transformedVertices[i + NMesh.OFFSET_LIGHTMAP_TEXTURE_XY + 0] = uvs[((i / NMesh.VERTEX_SIZE) * 2) + 0];
             transformedVertices[i + NMesh.OFFSET_LIGHTMAP_TEXTURE_XY + 1] = uvs[((i / NMesh.VERTEX_SIZE) * 2) + 1];
         }
-        
+
         List<N3DObject> resultObjects = new ArrayList<>();
 
         int objectCounter = 0;
@@ -349,24 +350,43 @@ public class NMap {
             this.objects[i].setMap(this);
         }
 
-        float[] collisionTriangles = new float[(transformedVertices.length / NMesh.VERTEX_SIZE) * 3];
+        List<IndexedMesh> collisionMeshes = new ArrayList<>();
+        List<IndexedMesh> waterCollisionMeshes = new ArrayList<>();
 
-        for (int i = 0; i < transformedVertices.length; i += NMesh.VERTEX_SIZE) {
-            float x = transformedVertices[i + NMesh.OFFSET_POSITION_XYZ + 0];
-            float y = transformedVertices[i + NMesh.OFFSET_POSITION_XYZ + 1];
-            float z = transformedVertices[i + NMesh.OFFSET_POSITION_XYZ + 2];
+        for (N3DObject obj : this.objects) {
+            N3DModel model = obj.getN3DModel();
+            for (int i = 0; i < model.getNumberOfGeometries(); i++) {
+                NGeometry geometry = model.getGeometry(i);
+                NMesh mesh = geometry.getMesh();
 
-            collisionTriangles[0 + (i / NMesh.VERTEX_SIZE) * 3] = x * Main.TO_PHYSICS_ENGINE_UNITS;
-            collisionTriangles[1 + (i / NMesh.VERTEX_SIZE) * 3] = y * Main.TO_PHYSICS_ENGINE_UNITS;
-            collisionTriangles[2 + (i / NMesh.VERTEX_SIZE) * 3] = z * Main.TO_PHYSICS_ENGINE_UNITS;
+                float[] originalVertices = mesh.getVertices();
+                int[] originalIndices = mesh.getIndices();
+
+                float[] resultVertices = new float[originalIndices.length * 3];
+
+                for (int j = 0; j < originalIndices.length; j++) {
+                    int v = (originalIndices[j] * NMesh.VERTEX_SIZE) + NMesh.OFFSET_POSITION_XYZ;
+                    resultVertices[(j * 3) + 0]
+                            = originalVertices[v + 0] * Main.TO_PHYSICS_ENGINE_UNITS;
+                    resultVertices[(j * 3) + 1]
+                            = originalVertices[v + 1] * Main.TO_PHYSICS_ENGINE_UNITS;
+                    resultVertices[(j * 3) + 2]
+                            = originalVertices[v + 2] * Main.TO_PHYSICS_ENGINE_UNITS;
+                }
+
+                Pair<float[], int[]> indexed = MeshUtils.generateIndices(resultVertices, 3);
+
+                IndexedMesh indexedMesh = new IndexedMesh(
+                        BufferUtils.createFloatBuffer(indexed.getA()),
+                        BufferUtils.createIntBuffer(indexed.getB())
+                );
+                if (!geometry.getMaterial().getId().equalsIgnoreCase("water")) {
+                    collisionMeshes.add(indexedMesh);
+                }
+            }
         }
 
-        Pair<float[], int[]> indexedCollision = MeshUtils.generateIndices(collisionTriangles, 3);
-
-        this.meshCollision = new MeshCollisionShape(true, new IndexedMesh(
-                BufferUtils.createFloatBuffer(indexedCollision.getA()),
-                BufferUtils.createIntBuffer(indexedCollision.getB())
-        ));
+        this.meshCollision = new MeshCollisionShape(true, collisionMeshes);
         this.rigidBody = new PhysicsRigidBody(this.meshCollision, 0f);
     }
 
@@ -432,7 +452,7 @@ public class NMap {
     public void setCubemaps(NCubemaps cubemaps) {
         this.cubemaps = cubemaps;
     }
-    
+
     public List<NRayResult> testRay(
             double pX, double pY, double pZ,
             float dX, float dY, float dZ
@@ -832,33 +852,33 @@ public class NMap {
         status.setLightmapper(lightmapper);
 
         Lightmapper.LightmapperOutput output = lightmapper.bake();
-        
+
         E8Image[] lightmapsImages = new E8Image[output.getNames().length];
         for (int i = 0; i < lightmapsImages.length; i++) {
             lightmapsImages[i] = new E8Image(output.getLightmaps()[i], output.getSize(), output.getSize());
         }
-        
+
         DXT5Texture[] lightmapsTextures = new DXT5Texture[lightmapsImages.length];
         for (int i = 0; i < lightmapsTextures.length; i++) {
             lightmapsTextures[i] = DXT5TextureStore.createDXT5Texture(lightmapsImages[i].getRGBE(), lightmapsImages[i].getWidth(), lightmapsImages[i].getHeight());
         }
-        
+
         float[] colorFloat = output.getColor();
         Vector3f lightmapColor = new Vector3f();
         for (int i = 0; i < lightmapsImages.length; i++) {
             float[] emissive = output.getLightmapsEmissive()[i];
             E8Image lightmapImage = lightmapsImages[i];
-            
+
             for (int y = 0; y < lightmapImage.getHeight(); y++) {
                 for (int x = 0; x < lightmapImage.getWidth(); x++) {
                     int index = (x * 3) + (y * output.getSize() * 3);
-                    
+
                     float er = emissive[0 + index];
                     float eg = emissive[1 + index];
                     float eb = emissive[2 + index];
-                    
+
                     lightmapImage.read(x, y, lightmapColor);
-                    
+
                     lightmapColor.mul(
                             colorFloat[0 + (x * 4) + (y * output.getSize() * 4)],
                             colorFloat[1 + (x * 4) + (y * output.getSize() * 4)],
@@ -866,19 +886,19 @@ public class NMap {
                     )
                             .mul(colorFloat[3 + (x * 4) + (y * output.getSize() * 4)])
                             .add(er, eg, eb);
-                    
+
                     lightmapImage.write(x, y, lightmapColor);
                 }
             }
-            
+
             lightmapsImages[i] = new E8Image(new RGBA8Image(lightmapImage.getRGBE(), lightmapImage.getWidth(), lightmapImage.getHeight()).mipmap().mipmap());
         }
-        
+
         RGBA8Image color = new RGBA8Image(output.getSize(), output.getSize());
         for (int y = 0; y < output.getSize(); y++) {
             for (int x = 0; x < output.getSize(); x++) {
                 int index = (x * 4) + (y * output.getSize() * 4);
-                
+
                 color.write(
                         x, y,
                         (float) Math.pow(colorFloat[0 + index], 1.0 / 2.2),
@@ -889,9 +909,9 @@ public class NMap {
             }
         }
         color = color.mipmap().mipmap();
-        
+
         NLightmaps finalLightmaps = new NLightmaps(
-                "lightmap_"+this.name,
+                "lightmap_" + this.name,
                 null,
                 output.getNames(),
                 lightmapsTextures,
@@ -899,9 +919,9 @@ public class NMap {
                 color,
                 output.getAmbientCubes()
         );
-        
+
         this.lightmaps = finalLightmaps;
-        
+
         Main.MAIN_TASKS.add(() -> {
             for (N3DObject obj : this.objects) {
                 obj.setLightmaps(finalLightmaps);

@@ -35,6 +35,7 @@ import cientistavuador.cienspools.newrendering.NLight;
 import cientistavuador.cienspools.newrendering.NMap;
 import cientistavuador.cienspools.util.PhysicsSpaceDebugger;
 import cientistavuador.cienspools.world.player.Player;
+import cientistavuador.cienspools.world.trigger.TriggerController;
 import com.jme3.bullet.PhysicsSpace;
 import java.util.Collections;
 import java.util.HashSet;
@@ -55,21 +56,32 @@ public class World {
                 new com.jme3.math.Vector3f(0f, -9.8f * Main.TO_PHYSICS_ENGINE_UNITS, 0f));
     }
 
+    private final TriggerController triggerController = new TriggerController();
+    
+    {
+        this.physicsSpace.addTickListener(this.triggerController);
+    }
+    
     private final PhysicsSpaceDebugger physicsSpaceDebugger = new PhysicsSpaceDebugger(this.physicsSpace);
     private final AudioSpace audioSpace = new AudioSpace();
     private final Set<NLight> lights = new HashSet<>();
     private final Set<N3DObject> objects = new HashSet<>();
     private final N3DObjectRenderer renderer = new N3DObjectRenderer();
+    private final Set<WorldObject> worldObjects = new HashSet<>();
 
     private NMap map = null;
     private Player player = null;
 
     public World() {
-
+        
     }
 
     public PhysicsSpace getPhysicsSpace() {
         return physicsSpace;
+    }
+
+    public TriggerController getTriggerController() {
+        return triggerController;
     }
 
     public PhysicsSpaceDebugger getPhysicsSpaceDebugger() {
@@ -90,6 +102,32 @@ public class World {
 
     public N3DObjectRenderer getRenderer() {
         return renderer;
+    }
+
+    public Set<WorldObject> getWorldObjects() {
+        return Collections.unmodifiableSet(worldObjects);
+    }
+    
+    public boolean addWorldObject(WorldObject obj) {
+        if (obj == null) {
+            return false;
+        }
+        boolean success = this.worldObjects.add(obj);
+        if (success) {
+            obj.onAddedToWorld(this);
+        }
+        return success;
+    }
+    
+    public boolean removeWorldObject(WorldObject obj) {
+        if (obj == null) {
+            return false;
+        }
+        boolean success = this.worldObjects.remove(obj);
+        if (success) {
+            obj.onRemovedFromWorld(this);
+        }
+        return success;
     }
 
     public NMap getMap() {
@@ -150,15 +188,19 @@ public class World {
 
     public void setPlayer(Player player) {
         if (this.player != null) {
-            this.player.removeFromWorld();
+            this.player.onRemovedFromWorld(this);
         }
         this.player = player;
         if (this.player != null) {
-            this.player.addToWorld(this);
+            this.player.onAddedToWorld(this);
         }
     }
 
     public void update(double tpf) {
+        for (WorldObject obj:this.worldObjects) {
+            obj.onWorldUpdate(this, tpf);
+        }
+        
         if (this.player != null) {
             this.audioSpace.getListenerPosition().set(this.player.getCamera().getPosition());
             this.audioSpace.getListenerUp().set(this.player.getCamera().getUp());

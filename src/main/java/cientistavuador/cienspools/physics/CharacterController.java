@@ -249,6 +249,7 @@ public class CharacterController implements PhysicsTickListener {
         }
 
         this.rigidBody = new PhysicsRigidBody(this.collisionShape, mass);
+        this.rigidBody.setUserObject(this);
         this.rigidBody.setAngularFactor(0f);
         this.rigidBody.setEnableSleep(false);
         this.rigidBody.setFriction(0f);

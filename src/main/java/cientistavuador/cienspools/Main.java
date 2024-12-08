@@ -82,8 +82,11 @@ public class Main {
 
     public static final String APPLICATION_NAME = "Cien's Pools";
 
-    public static final float PHYSICS_ENGINE_UNITS = 10f;
+    @Deprecated
+    public static final float PHYSICS_ENGINE_UNITS = 1f;
+    @Deprecated
     public static final float TO_PHYSICS_ENGINE_UNITS = PHYSICS_ENGINE_UNITS;
+    @Deprecated
     public static final float FROM_PHYSICS_ENGINE_UNITS = 1f / PHYSICS_ENGINE_UNITS;
 
     public static final boolean USE_MSAA = false;
