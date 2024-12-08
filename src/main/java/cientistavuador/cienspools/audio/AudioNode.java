@@ -108,6 +108,14 @@ public class AudioNode implements AudioControl {
         this.audio = audio;
         stop();
     }
+    
+    public float getGain() {
+        return alGetSourcef(source(), AL_GAIN);
+    }
+    
+    public void setGain(float gain) {
+        alSourcef(source(), AL_GAIN, gain);
+    }
 
     @Override
     public boolean isLooping() {

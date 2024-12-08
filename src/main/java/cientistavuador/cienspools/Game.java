@@ -55,6 +55,7 @@ import cientistavuador.cienspools.util.bakedlighting.Scene;
 import cientistavuador.cienspools.world.World;
 import cientistavuador.cienspools.world.player.Player;
 import cientistavuador.cienspools.world.trigger.testing.CatapultTrigger;
+import cientistavuador.cienspools.world.trigger.water.WaterTrigger;
 import com.jme3.bullet.collision.shapes.CompoundCollisionShape;
 import com.jme3.bullet.collision.shapes.HullCollisionShape;
 import com.jme3.bullet.objects.PhysicsRigidBody;
@@ -154,7 +155,7 @@ public class Game {
             this.world.setMap(map);
 
             {
-                this.boomBoxModel = N3DModel.RESOURCES.get("[D48EAA8D455A4B57|A34C2F1CE3B5D2C7]BoomBox");
+                this.boomBoxModel = N3DModel.RESOURCES.get("Box");
 
                 this.acUnit = new N3DObject("AC Unit", this.boomBoxModel);
                 this.gizmo.getExtents().set(this.boomBoxModel.getAabbExtents());
@@ -189,9 +190,13 @@ public class Game {
     }
 
     public void start() {
-        CatapultTrigger catapult = new CatapultTrigger("my catapult");
-        catapult.setScale(new Vector3f(5f, 0.1f, 5f));
-        this.world.addWorldObject(catapult);
+        WaterTrigger a = new WaterTrigger("water 0");
+        a.setTransformation(
+                3.76, -0.59, -1.03,
+                6.12f, 0.49f, 4.08f,
+                0.0f, 0.0f, 0.0f, 1.0f
+        );
+        this.world.addWorldObject(a);
         
         this.gizmo.setCamera(this.player.getCamera());
         this.player.getCamera().setUBO(CameraUBO.create(UBOBindingPoints.PLAYER_CAMERA));

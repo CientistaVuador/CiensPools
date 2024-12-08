@@ -77,21 +77,29 @@ public class Trigger extends PhysicsGhostObject implements WorldObject {
         getCollisionShape().setScale(scale);
     }
     
-    public void setPositionScaleRotation(
+    public Vector3f getHalfExtents(Vector3f halfExtents) {
+        return getScale(halfExtents).multLocal(0.5f);
+    }
+    
+    public void setHalfExtents(Vector3f halfExtents) {
+        setScale(halfExtents.mult(2f));
+    }
+    
+    public void setTransformation(
             double x, double y, double z,
             float sx, float sy, float sz,
             float rx, float ry, float rz, float rw
     ) {
         setPhysicsLocationDp(new Vec3d(x, y, z));
-        setScale(new Vector3f(sx, sy, sz));
+        setHalfExtents(new Vector3f(sx, sy, sz));
         setPhysicsRotation(new Quaternion(rx, ry, rz, rw));
     }
     
-    public void setPositionScaleRotation(
+    public void setTransformation(
             org.joml.Vector3dc p,
             org.joml.Vector3fc s,
             org.joml.Quaternionfc r) {
-        setPositionScaleRotation(
+        setTransformation(
                 p.x(), p.y(), p.z(),
                 s.x(), s.y(), s.z(),
                 r.x(), r.y(), r.z(), r.w()

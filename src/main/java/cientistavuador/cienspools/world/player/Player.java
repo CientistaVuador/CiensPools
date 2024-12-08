@@ -75,9 +75,12 @@ public class Player {
     private final AudioNode stepNode = new AudioNode("step node");
     private final AudioNode flashlightNode = new AudioNode("flashlight node");
     private final AudioNode lighterNode = new AudioNode("lighter node");
+    private final AudioNode enterExitNode = new AudioNode("player enter exit node");
 
     private final Vector3d lastStepPosition = new Vector3d(Double.NaN);
     private float stepDistance = 0f;
+    
+    private boolean onWater = false;
 
     public Player() {
 
@@ -101,6 +104,7 @@ public class Player {
         world.getAudioSpace().addNode(this.stepNode);
         world.getAudioSpace().addNode(this.flashlightNode);
         world.getAudioSpace().addNode(this.lighterNode);
+        world.getAudioSpace().addNode(this.enterExitNode);
     }
 
     public void onRemovedFromWorld(World world) {
@@ -109,11 +113,31 @@ public class Player {
         world.getAudioSpace().removeNode(this.stepNode);
         world.getAudioSpace().removeNode(this.flashlightNode);
         world.getAudioSpace().removeNode(this.lighterNode);
+        world.getAudioSpace().removeNode(this.enterExitNode);
     }
 
+    public boolean isOnWater() {
+        return onWater;
+    }
+    
+    public void onEnteredWater() {
+        this.onWater = true;
+        this.enterExitNode.setAudio(NMaterialSoundEffects.RESOURCES
+                .get("default/sounds/materials/water").getRandomEnter());
+        this.enterExitNode.play();
+    }
+    
+    public void onExitedWater() {
+        this.onWater = false;
+        this.enterExitNode.setAudio(NMaterialSoundEffects.RESOURCES
+                .get("default/sounds/materials/water").getRandomExit());
+        this.enterExitNode.play();
+    }
+    
     public void update(double tpf) {
         CharacterController controller = this.playerController.getCharacterController();
         this.stepNode.getPosition().set(controller.getPosition());
+        this.enterExitNode.getPosition().set(controller.getPosition());
         this.flashlightNode.getPosition().set(controller.getPosition());
         this.flashlightNode.getPosition().add(0f, 1f, 0f);
         this.lighterNode.getPosition().set(controller.getPosition());
@@ -126,8 +150,13 @@ public class Player {
                     .distance(new Vector3d(controller.getPosition()));
             this.lastStepPosition.set(controller.getPosition());
             if (this.stepDistance > 1.5f) {
-                this.stepNode.setAudio(NMaterialSoundEffects.RESOURCES
+                if (isOnWater()) {
+                    this.stepNode.setAudio(NMaterialSoundEffects.RESOURCES
+                        .get("default/sounds/materials/water").getRandomFootstep());
+                } else {
+                    this.stepNode.setAudio(NMaterialSoundEffects.RESOURCES
                         .get("default/sounds/materials/stone").getRandomFootstep());
+                }
                 this.stepNode.play();
                 this.stepDistance = 0f;
             }

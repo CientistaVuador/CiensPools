@@ -63,6 +63,7 @@ import static org.lwjgl.glfw.GLFW.*;
 import org.lwjgl.glfw.GLFWFramebufferSizeCallbackI;
 import org.lwjgl.glfw.GLFWImage;
 import org.lwjgl.glfw.GLFWVidMode;
+import static org.lwjgl.openal.AL11.*;
 import org.lwjgl.opengl.GL;
 import static org.lwjgl.opengl.GL33C.*;
 import org.lwjgl.opengl.GLDebugMessageCallback;
@@ -223,6 +224,13 @@ public class Main {
         }
     }
 
+    public static void checkALError() {
+        int error = alGetError();
+        if (error != 0) {
+            System.out.println("OpenAL Error "+error);
+        }
+    }
+    
     public static String WINDOW_TITLE = "CienCraft - FPS: 60";
     public static int WIDTH = 800;
     public static int HEIGHT = 600;
@@ -676,7 +684,9 @@ public class Main {
         loadingPopup.dispose();
 
         glfwShowWindow(WINDOW_POINTER);
-
+        glfwIconifyWindow(WINDOW_POINTER);
+        glfwRestoreWindow(WINDOW_POINTER);
+        
         int frames = 0;
         long nextFpsUpdate = System.nanoTime() + 1_000_000_000;
         long nextTitleUpdate = System.currentTimeMillis() + 100;
@@ -738,6 +748,7 @@ public class Main {
             Game.get().loop();
             glFlush();
             Main.checkGLError();
+            Main.checkALError();
             glfwSwapBuffers(WINDOW_POINTER);
 
             frames++;
@@ -783,8 +794,6 @@ public class Main {
             }
 
             if (Main.EXIT_SIGNAL) {
-                glfwMakeContextCurrent(0);
-                glfwDestroyWindow(Main.WINDOW_POINTER);
                 break;
             }
         }

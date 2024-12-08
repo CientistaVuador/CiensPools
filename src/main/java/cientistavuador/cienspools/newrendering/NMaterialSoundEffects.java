@@ -51,10 +51,21 @@ public class NMaterialSoundEffects {
 
     public static final ResourceRW<NMaterialSoundEffects> RESOURCES = new ResourceRW<NMaterialSoundEffects>(true) {
         public static final String FOOTSTEPS_FILE_NAME = "footsteps";
-        
+        public static final String ENTER_FILE_NAME = "enter";
+        public static final String EXIT_FILE_NAME = "exit";
+
         @Override
         public String getResourceType() {
             return "materialSoundEffects";
+        }
+
+        private void readAudioList(List<Audio> list, Path p) throws IOException {
+            list
+                    .addAll(StringList
+                            .fromString(Files.readString(p, StandardCharsets.UTF_8))
+                            .stream()
+                            .map(Audio.RESOURCES::get)
+                            .toList());
         }
 
         @Override
@@ -63,19 +74,40 @@ public class NMaterialSoundEffects {
                 return NMaterialSoundEffects.EMPTY;
             }
             NMaterialSoundEffects effects = new NMaterialSoundEffects(r.getId());
-            
+
             Path footStepsPath = r.getData().get(FOOTSTEPS_FILE_NAME);
             if (footStepsPath != null) {
-                effects
-                        .getFootsteps()
-                        .addAll(StringList
-                                .fromString(Files.readString(footStepsPath, StandardCharsets.UTF_8))
-                                .stream()
-                                .map(Audio.RESOURCES::get)
-                                .toList());
+                readAudioList(effects.getFootsteps(), footStepsPath);
             }
-            
+
+            Path enterPath = r.getData().get(ENTER_FILE_NAME);
+            if (enterPath != null) {
+                readAudioList(effects.getEnter(), enterPath);
+            }
+
+            Path exitPath = r.getData().get(EXIT_FILE_NAME);
+            if (exitPath != null) {
+                readAudioList(effects.getExit(), exitPath);
+            }
+
             return effects;
+        }
+
+        private void writeAudioList(
+                String filename,
+                String path,
+                List<Audio> list,
+                ResourcePackWriter.ResourceEntry entry) {
+            entry.getData()
+                    .put(filename,
+                            new ResourcePackWriter.DataEntry(path + "footsteps.txt",
+                                    new ByteArrayInputStream(
+                                            StringList
+                                                    .toString(list
+                                                            .stream()
+                                                            .map(Audio::getId)
+                                                            .toList())
+                                                    .getBytes(StandardCharsets.UTF_8))));
         }
 
         @Override
@@ -86,17 +118,13 @@ public class NMaterialSoundEffects {
                 path += "/";
             }
             if (!obj.getFootsteps().isEmpty()) {
-                entry.getData()
-                        .put(FOOTSTEPS_FILE_NAME, 
-                                new ResourcePackWriter.DataEntry(path + "footsteps.txt",
-                                        new ByteArrayInputStream(
-                                                StringList
-                                                        .toString(obj
-                                                                .getFootsteps()
-                                                                .stream()
-                                                                .map(Audio::getId)
-                                                                .toList())
-                                                        .getBytes(StandardCharsets.UTF_8))));
+                writeAudioList(FOOTSTEPS_FILE_NAME, path + "footsteps.txt", obj.getFootsteps(), entry);
+            }
+            if (!obj.getEnter().isEmpty()) {
+                writeAudioList(ENTER_FILE_NAME, path + "enter.txt", obj.getEnter(), entry);
+            }
+            if (!obj.getExit().isEmpty()) {
+                writeAudioList(EXIT_FILE_NAME, path + "exit.txt", obj.getExit(), entry);
             }
         }
     };
@@ -105,6 +133,8 @@ public class NMaterialSoundEffects {
 
     private final String id;
     private final List<Audio> footsteps = new ArrayList<>();
+    private final List<Audio> enter = new ArrayList<>();
+    private final List<Audio> exit = new ArrayList<>();
 
     public NMaterialSoundEffects(String id) {
         this.id = id;
@@ -116,6 +146,14 @@ public class NMaterialSoundEffects {
 
     public List<Audio> getFootsteps() {
         return footsteps;
+    }
+
+    public List<Audio> getEnter() {
+        return enter;
+    }
+
+    public List<Audio> getExit() {
+        return exit;
     }
 
     private Audio randomAudio(List<Audio> list) {
@@ -130,6 +168,14 @@ public class NMaterialSoundEffects {
 
     public Audio getRandomFootstep() {
         return randomAudio(getFootsteps());
+    }
+
+    public Audio getRandomEnter() {
+        return randomAudio(getEnter());
+    }
+
+    public Audio getRandomExit() {
+        return randomAudio(getExit());
     }
 
 }

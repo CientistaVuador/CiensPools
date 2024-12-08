@@ -54,8 +54,11 @@ import java.util.regex.Pattern;
 import javax.imageio.ImageIO;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
-import static org.lwjgl.glfw.GLFW.glfwTerminate;
+import static org.lwjgl.glfw.GLFW.*;
+import org.lwjgl.openal.AL;
+import org.lwjgl.openal.ALC;
 import static org.lwjgl.openal.ALC11.*;
+import org.lwjgl.opengl.GL;
 
 /**
  *
@@ -381,10 +384,15 @@ public class MainWrapper {
         }
 
         try {
+            glfwMakeContextCurrent(0);
+            GL.setCapabilities(null);
+            glfwTerminate();
+            
             alcMakeContextCurrent(0);
+            AL.setCurrentThread(null);
+            ALC.setCapabilities(null);
             alcDestroyContext(AudioSystem.CONTEXT);
             alcCloseDevice(AudioSystem.DEVICE);
-            glfwTerminate();
         } catch (Throwable e) {
             error = true;
             e.printStackTrace(System.out);
