@@ -59,6 +59,8 @@ import org.lwjgl.openal.AL;
 import org.lwjgl.openal.ALC;
 import static org.lwjgl.openal.ALC11.*;
 import org.lwjgl.opengl.GL;
+import static org.lwjgl.opengl.KHRDebug.glDebugMessageCallback;
+import static org.lwjgl.system.MemoryUtil.NULL;
 
 /**
  *
@@ -70,7 +72,7 @@ public class MainWrapper {
         Locale.setDefault(Locale.US);
 
         System.out.println(UUID.randomUUID().toString());
-        
+
         long n = 0L;
         for (int i = 0; i < Long.SIZE; i++) {
             long a = 0x00;
@@ -80,7 +82,7 @@ public class MainWrapper {
             n = n | (a << i);
         }
         System.out.println(n);
-        
+
         System.out.println("  /$$$$$$  /$$        /$$$$$$  /$$");
         System.out.println(" /$$__  $$| $$       /$$__  $$| $$");
         System.out.println("| $$  \\ $$| $$      | $$  \\ $$| $$");
@@ -350,7 +352,7 @@ public class MainWrapper {
                 }
             }
         }
-        
+
         boolean error = false;
 
         try {
@@ -384,10 +386,19 @@ public class MainWrapper {
         }
 
         try {
+            if (GL.getCapabilities().GL_KHR_debug) {
+                glDebugMessageCallback(null, NULL);
+            }
+            if (Main.DEBUG_CALLBACK != null) {
+                Main.DEBUG_CALLBACK.free();
+                Main.DEBUG_CALLBACK = null;
+            }
+
             glfwMakeContextCurrent(0);
+            glfwDestroyWindow(Main.WINDOW_POINTER);
             GL.setCapabilities(null);
             glfwTerminate();
-            
+
             alcMakeContextCurrent(0);
             AL.setCurrentThread(null);
             ALC.setCapabilities(null);

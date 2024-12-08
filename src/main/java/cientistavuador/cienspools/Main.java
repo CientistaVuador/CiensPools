@@ -272,7 +272,7 @@ public class Main {
     public static float GAMMA = 1.4f;
     public static float EXPOSURE = 3.0f;
     private static final int[] savedWindowStatus = new int[4];
-    private static GLDebugMessageCallback DEBUG_CALLBACK = null;
+    public static GLDebugMessageCallback DEBUG_CALLBACK = null;
 
     private static String debugSource(int source) {
         return switch (source) {
@@ -796,9 +796,6 @@ public class Main {
             if (Main.EXIT_SIGNAL) {
                 break;
             }
-        }
-        if (DEBUG_CALLBACK != null) {
-            DEBUG_CALLBACK.free();
         }
     }
 
