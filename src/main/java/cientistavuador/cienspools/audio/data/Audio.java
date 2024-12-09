@@ -55,12 +55,12 @@ public interface Audio {
             if (r == null) {
                 return Audio.EMPTY;
             }
-            boolean streamingEnabled = false;
-            if (r.getMeta().containsKey("streamingEnabled")) {
-                streamingEnabled = Boolean.parseBoolean(r.getMeta().get("streamingEnabled"));
+            boolean streaming = false;
+            if (r.getMeta().containsKey("streaming")) {
+                streaming = Boolean.parseBoolean(r.getMeta().get("streaming"));
             }
             Path audioFile = r.getData().get(AUDIO_FILE_NAME);
-            if (!streamingEnabled) {
+            if (!streaming) {
                 return BufferedAudio.fromOggVorbis(r.getId(), Files.newInputStream(audioFile));
             }
             return StreamedAudio.fromInputStreamFactory(r.getId(), () -> Files.newInputStream(audioFile));

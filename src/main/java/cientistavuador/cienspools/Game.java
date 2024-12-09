@@ -26,6 +26,8 @@
  */
 package cientistavuador.cienspools;
 
+import cientistavuador.cienspools.audio.AudioNode;
+import cientistavuador.cienspools.audio.data.Audio;
 import cientistavuador.cienspools.debug.AabRender;
 import cientistavuador.cienspools.debug.LineRender;
 import cientistavuador.cienspools.editor.Gizmo;
@@ -106,7 +108,7 @@ public class Game {
         new NCubemapBox(3.7, -0.53, -1.06, 3.7, -0.53, -1.06, 0.0f, 0.0f, 0.0f, 1.0f, 6.0f, 0.5f, 4.14f),
         new NCubemapBox(4.28, 5.0, -8.6, 4.28, 5.0, -8.6, 0.0f, 0.0f, 0.0f, 1.0f, 15.41f, 5.14f, 1.26f),
         new NCubemapBox(4.25, 5.02, -14.76, 4.25, 5.02, -14.76, 0.0f, 0.0f, 0.0f, 1.0f, 15.45f, 5.2f, 4.88f),
-        new NCubemapBox(0.21, -0.39, -17.53, -11.14, -1.00, -16.03, 19.62, -0.09, -19.09),
+        new NCubemapBox(4.26, -0.56, -17.58, 4.26, -0.56, -17.58, 0.0f, 0.0f, 0.0f, 1.0f, 15.39f, 0.45f, 1.53f),
         new NCubemapBox(-15.21, 2.53, -13.18, -15.21, 2.53, -13.18, 0.0f, 0.0f, 0.0f, 1.0f, 4.06f, 2.59f, 1.13f)
     };
 
@@ -155,7 +157,7 @@ public class Game {
             this.world.setMap(map);
 
             {
-                this.boomBoxModel = N3DModel.RESOURCES.get("Box");
+                this.boomBoxModel = N3DModel.RESOURCES.get("[D48EAA8D455A4B57|A34C2F1CE3B5D2C7]BoomBox");
 
                 this.acUnit = new N3DObject("AC Unit", this.boomBoxModel);
                 this.gizmo.getExtents().set(this.boomBoxModel.getAabbExtents());
@@ -190,6 +192,14 @@ public class Game {
     }
 
     public void start() {
+        Audio ambient = Audio.RESOURCES.get("default/sounds/ambient/beach_ambient");
+        AudioNode ambientNode = new AudioNode("ambientNode");
+        ambientNode.setAudio(ambient);
+        ambientNode.setLooping(true);
+        ambientNode.setGain(0.1f);
+        ambientNode.play();
+        this.world.getAudioSpace().addNode(ambientNode);
+        
         WaterTrigger a = new WaterTrigger("water 0");
         a.setTransformation(
                 3.76, -0.59, -1.03,
@@ -459,6 +469,7 @@ public class Game {
             }
 
             this.cubemaps = new NCubemaps(this.skybox, cubemapsList);
+            this.world.getMap().setCubemaps(this.cubemaps);
         }
         if (key == GLFW_KEY_F6 && action == GLFW_PRESS) {
             this.ambientCubeDebug = !this.ambientCubeDebug;

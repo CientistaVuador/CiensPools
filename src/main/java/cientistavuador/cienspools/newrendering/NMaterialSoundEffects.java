@@ -37,7 +37,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 /**
@@ -136,6 +138,8 @@ public class NMaterialSoundEffects {
     private final List<Audio> enter = new ArrayList<>();
     private final List<Audio> exit = new ArrayList<>();
 
+    private final Map<List<Audio>, Integer> lastRandomIndex = new HashMap<>();
+    
     public NMaterialSoundEffects(String id) {
         this.id = id;
     }
@@ -163,7 +167,16 @@ public class NMaterialSoundEffects {
         if (list.size() == 1) {
             return list.get(0);
         }
-        return list.get(random.nextInt(list.size()));
+        Integer lastIndex;
+        if ((lastIndex = this.lastRandomIndex.get(list)) == null) {
+            lastIndex = -1;
+        }
+        int currentIndex;
+        do {
+            currentIndex = random.nextInt(list.size());
+        } while (currentIndex == lastIndex);
+        this.lastRandomIndex.put(list, currentIndex);
+        return list.get(currentIndex);
     }
 
     public Audio getRandomFootstep() {
