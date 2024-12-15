@@ -1,11 +1,3 @@
-package cientistavuador.cienspools.analog.sstv;
-
-import cientistavuador.cienspools.analog.FrequencyModulator;
-import java.awt.image.BufferedImage;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.Objects;
-
 /*
  * This is free and unencumbered software released into the public domain.
  *
@@ -31,6 +23,18 @@ import java.util.Objects;
  * OTHER DEALINGS IN THE SOFTWARE.
  *
  * For more information, please refer to <https://unlicense.org>
+ */
+package cientistavuador.cienspools.analog.sstv;
+
+import cientistavuador.cienspools.analog.FrequencyModulator;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.Objects;
+
+/**
+ *
+ * @author Cien
  */
 public class Martin1 extends FrequencyModulator {
 
