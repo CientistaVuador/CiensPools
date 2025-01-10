@@ -28,7 +28,6 @@ package cientistavuador.cienspools.newrendering;
 
 import cientistavuador.cienspools.Main;
 import cientistavuador.cienspools.camera.PerspectiveCamera;
-import java.util.List;
 import static org.lwjgl.opengl.GL33C.*;
 
 /**
@@ -47,7 +46,6 @@ public class NCubemapRenderer {
         
         renderer = new N3DObjectRenderer(renderer);
         renderer.setReflectionsEnabled(false);
-        renderer.setHDROutputEnabled(true);
         
         int fboSize = size * ssaaScale;
 

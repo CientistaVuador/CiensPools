@@ -126,19 +126,6 @@ public class NSkybox {
             
             layout (location = 0) out vec4 outputColor;
             
-            vec3 ACESFilm(vec3 rgb) {
-                float a = 2.51;
-                float b = 0.03;
-                float c = 2.43;
-                float d = 0.59;
-                float e = 0.14;
-                return (rgb*(a*rgb+b))/(rgb*(c*rgb+d)+e);
-           }
-            
-            vec3 gammaCorrection(vec3 rgb) {
-                return pow(rgb, vec3(1.0/2.2));
-            }
-            
             vec4 RGBEToRGBA(vec4 rgbe) {
                 return vec4(rgbe.rgb * pow(RGBE_BASE, (rgbe.a * RGBE_MAX_EXPONENT) - RGBE_BIAS), 1.0);
             }
@@ -146,9 +133,6 @@ public class NSkybox {
             void main() {
                 vec3 direction = normalize(sampleDirection);
                 vec4 color = RGBEToRGBA(texture(skybox, direction));
-                if (!hdrOutput) {
-                    color.rgb = gammaCorrection(ACESFilm(color.rgb));
-                }
                 outputColor = vec4(color.rgb, 1.0);
             }
             """;
@@ -166,7 +150,6 @@ public class NSkybox {
     public static final String UNIFORM_PROJECTION = "projection";
     public static final String UNIFORM_VIEW = "view";
     public static final String UNIFORM_SKYBOX = "skybox";
-    public static final String UNIFORM_HDR_OUTPUT = "hdrOutput";
     
     public static void init() {
         

@@ -126,21 +126,18 @@ public class NProgram {
     
     public static final String UNIFORM_ENABLE_REFLECTIONS = "enableReflections";
     public static final String UNIFORM_ENABLE_LIGHTMAPS = "enableLightmaps";
-    public static final String UNIFORM_ENABLE_TONEMAPPING = "enableTonemapping";
-    public static final String UNIFORM_ENABLE_GAMMA_CORRECTION = "enableGammaCorrection";
     public static final String UNIFORM_ENABLE_REFRACTIONS = "enableRefractions";
     public static final String UNIFORM_ENABLE_PARALLAX_MAPPING = "enableParallaxMapping";
     public static final String UNIFORM_ENABLE_WATER = "enableWater";
     public static final String UNIFORM_ENABLE_OPAQUE_TEXTURE = "enableOpaqueTexture";
     
-    public static final String UNIFORM_GAMMA = "gamma";
-    public static final String UNIFORM_EXPOSURE = "exposure";
-    public static final String UNIFORM_SCREEN_SIZE = "screenSize";
-    
-    public static final String UNIFORM_LUT = "LUT";
     public static final String UNIFORM_SPECULAR_BRDF_LOOKUP_TABLE = "specularBRDFLookupTable";
     public static final String UNIFORM_WATER_COUNTER = "waterCounter";
     public static final String UNIFORM_WATER_FRAMES = "waterFrames";
+    
+    public static final String UNIFORM_SCREEN = "screen";
+    public static final String UNIFORM_SCREEN_SIZE = "screenSize";
+    
     public static final String UNIFORM_MATERIAL_TEXTURES = "materialTextures";
     
     public static String UNIFORM_LIGHTMAP_INTENSITY(int index) {

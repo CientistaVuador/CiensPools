@@ -29,6 +29,7 @@ package cientistavuador.cienspools.newrendering;
 import cientistavuador.cienspools.util.bakedlighting.AmbientCube;
 import cientistavuador.cienspools.Main;
 import cientistavuador.cienspools.camera.Camera;
+import cientistavuador.cienspools.fbo.CopyProgram;
 import cientistavuador.cienspools.lut.LUT;
 import cientistavuador.cienspools.newrendering.NLight.NDirectionalLight;
 import cientistavuador.cienspools.newrendering.NLight.NPointLight;
@@ -116,9 +117,7 @@ public class N3DObjectRenderer {
 
     private boolean parallaxEnabled = true;
     private boolean reflectionsEnabled = true;
-    private boolean HDROutputEnabled = false;
     private boolean reflectionsDebugEnabled = false;
-    private boolean tonemappingEnabled = true;
 
     private int occlusionQueryMinimumVertices = 1024;
     private int occlusionQueryMinimumSamples = 8;
@@ -143,9 +142,7 @@ public class N3DObjectRenderer {
         }
         this.parallaxEnabled = toCopy.isParallaxEnabled();
         this.reflectionsEnabled = toCopy.isReflectionsEnabled();
-        this.HDROutputEnabled = toCopy.isHDROutputEnabled();
         this.reflectionsDebugEnabled = toCopy.isReflectionsDebugEnabled();
-        this.tonemappingEnabled = toCopy.isTonemappingEnabled();
         this.occlusionQueryMinimumVertices = toCopy.getOcclusionQueryMinimumVertices();
         this.occlusionQueryMinimumSamples = toCopy.getOcclusionQueryMinimumSamples();
         this.camera = toCopy.getCamera();
@@ -169,15 +166,7 @@ public class N3DObjectRenderer {
     public void setReflectionsEnabled(boolean reflectionsEnabled) {
         this.reflectionsEnabled = reflectionsEnabled;
     }
-
-    public boolean isHDROutputEnabled() {
-        return HDROutputEnabled;
-    }
-
-    public void setHDROutputEnabled(boolean HDROutputEnabled) {
-        this.HDROutputEnabled = HDROutputEnabled;
-    }
-
+    
     public boolean isReflectionsDebugEnabled() {
         return reflectionsDebugEnabled;
     }
@@ -185,15 +174,7 @@ public class N3DObjectRenderer {
     public void setReflectionsDebugEnabled(boolean reflectionsDebugEnabled) {
         this.reflectionsDebugEnabled = reflectionsDebugEnabled;
     }
-
-    public boolean isTonemappingEnabled() {
-        return tonemappingEnabled;
-    }
-
-    public void setTonemappingEnabled(boolean tonemappingEnabled) {
-        this.tonemappingEnabled = tonemappingEnabled;
-    }
-
+    
     public int getOcclusionQueryMinimumVertices() {
         return occlusionQueryMinimumVertices;
     }
@@ -611,7 +592,7 @@ public class N3DObjectRenderer {
                     this.blendList.add(toRender);
             }
         }
-
+        
         Comparator<ToRender> distanceComparator = (o1, o2) -> {
             return Float.compare(o1.distanceSquared, o2.distanceSquared);
         };
@@ -641,6 +622,10 @@ public class N3DObjectRenderer {
 
     public void renderAlphaBlending() {
         if (!this.blendList.isEmpty()) {
+            Main.HDR_FRAMEBUFFER.flip();
+            CopyProgram.render(Main.HDR_FRAMEBUFFER.colorBufferRead());
+            Main.HDR_FRAMEBUFFER.flip();
+            
             renderVariant(NProgram.VARIANT_ALPHA_BLENDING, this.blendList);
         }
     }
@@ -670,11 +655,7 @@ public class N3DObjectRenderer {
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_CUBE_MAP, skybox.cubemap());
         glUniform1i(program.locationOf(NSkybox.UNIFORM_SKYBOX), 0);
-
-        glUniform1i(program.locationOf(NSkybox.UNIFORM_HDR_OUTPUT),
-                (isHDROutputEnabled() ? 1 : 0)
-        );
-
+        
         glBindVertexArray(NSkybox.VAO);
         glDrawElements(GL_TRIANGLES, NSkybox.AMOUNT_OF_INDICES, GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
@@ -718,23 +699,18 @@ public class N3DObjectRenderer {
                         getCamera().getProjection())
                 .uniformMatrix4fv(NProgram.UNIFORM_VIEW,
                         getCamera().getView())
-                .uniform1i(NProgram.UNIFORM_ENABLE_GAMMA_CORRECTION,
-                        (isHDROutputEnabled() ? 0 : 1))
-                .uniform1i(NProgram.UNIFORM_ENABLE_TONEMAPPING,
-                        (isHDROutputEnabled() || !isTonemappingEnabled() ? 0 : 1))
                 .uniform1i(NProgram.UNIFORM_ENABLE_PARALLAX_MAPPING,
                         (isParallaxEnabled() ? 1 : 0))
                 .uniform1i(NProgram.UNIFORM_ENABLE_REFLECTIONS,
                         (isReflectionsEnabled() ? 1 : 0))
-                .uniform1f(NProgram.UNIFORM_GAMMA, Main.GAMMA)
-                .uniform1f(NProgram.UNIFORM_EXPOSURE, Main.EXPOSURE)
-                .uniform2f(NProgram.UNIFORM_SCREEN_SIZE, Main.WIDTH, Main.HEIGHT)
                 .uniform1f(NProgram.UNIFORM_WATER_COUNTER,
                         Water.WATER_COUNTER)
+                .uniform2f(NProgram.UNIFORM_SCREEN_SIZE, Main.WIDTH, Main.HEIGHT)
                 .uniform1i(NProgram.UNIFORM_ENABLE_OPAQUE_TEXTURE, 0)
-                .uniform1i(NProgram.UNIFORM_LUT, 0)
-                .uniform1i(NProgram.UNIFORM_SPECULAR_BRDF_LOOKUP_TABLE, 1)
-                .uniform1i(NProgram.UNIFORM_WATER_FRAMES, 2)
+                
+                .uniform1i(NProgram.UNIFORM_SPECULAR_BRDF_LOOKUP_TABLE, 0)
+                .uniform1i(NProgram.UNIFORM_WATER_FRAMES, 1)
+                .uniform1i(NProgram.UNIFORM_SCREEN, 2)
                 .uniform1i(NProgram.UNIFORM_MATERIAL_TEXTURES, 3)
                 .uniform1i(NProgram.UNIFORM_LIGHTMAPS, 4)
                 .uniform1i(NProgram.UNIFORM_REFLECTION_CUBEMAP_0, 5)
@@ -742,16 +718,14 @@ public class N3DObjectRenderer {
                 .uniform1i(NProgram.UNIFORM_REFLECTION_CUBEMAP_2, 7)
                 .uniform1i(NProgram.UNIFORM_REFLECTION_CUBEMAP_3, 8);
 
-        int neutralLut = LUT.NEUTRAL.texture();
-        
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_3D, neutralLut);
-        
-        glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, NSpecularBRDFLookupTable.SPECULAR_BRDF_TEXTURE);
         
-        glActiveTexture(GL_TEXTURE2);
+        glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D_ARRAY, Water.TEXTURE);
+        
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, Main.HDR_FRAMEBUFFER.colorBufferRead());
 
         render(variant, toRender);
 

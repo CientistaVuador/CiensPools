@@ -396,14 +396,11 @@ public class NMaterial {
     public NBlendingMode getBlendingMode() {
         NBlendingMode mode = this.textures.getBlendingMode();
         float materialAlpha = this.color.w();
-
+        
         if (materialAlpha != 1f && NBlendingMode.OPAQUE.equals(mode)) {
             mode = NBlendingMode.ALPHA_BLENDING;
         }
-        if (this.refraction != 0f) {
-            mode = NBlendingMode.OPAQUE;
-        }
-
+        
         return mode;
     }
 

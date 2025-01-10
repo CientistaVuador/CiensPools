@@ -37,6 +37,11 @@ import cientistavuador.cienspools.newrendering.NSpecularBRDFLookupTable;
 import cientistavuador.cienspools.popups.LoadingPopup;
 import cientistavuador.cienspools.resources.ResourceLoader;
 import cientistavuador.cienspools.audio.Sounds;
+import cientistavuador.cienspools.fbo.CopyProgram;
+import cientistavuador.cienspools.fbo.ForwardHDRFramebuffer;
+import cientistavuador.cienspools.fbo.OutputProgram;
+import cientistavuador.cienspools.fbo.ScreenQuad;
+import cientistavuador.cienspools.lut.LUT;
 import cientistavuador.cienspools.text.GLFonts;
 import cientistavuador.cienspools.texture.Textures;
 import cientistavuador.cienspools.ubo.UBOBindingPoints;
@@ -271,6 +276,8 @@ public class Main {
     public static final Thread MAIN_THREAD = MainTasks.MAIN_THREAD;
     public static float GAMMA = 1.4f;
     public static float EXPOSURE = 3.0f;
+    public static LUT COLOR_LUT = LUT.NEUTRAL;
+    public static final ForwardHDRFramebuffer HDR_FRAMEBUFFER = new ForwardHDRFramebuffer();
     private static final int[] savedWindowStatus = new int[4];
     public static GLDebugMessageCallback DEBUG_CALLBACK = null;
 
@@ -523,7 +530,9 @@ public class Main {
         if (GL.getCapabilities().GL_NV_multisample_filter_hint) {
             glHint(NVMultisampleFilterHint.GL_MULTISAMPLE_FILTER_HINT_NV, GL_NICEST);
         }
-
+        
+        HDR_FRAMEBUFFER.resize(Main.WIDTH, Main.HEIGHT);
+        
         Main.checkGLError();
 
         AudioSystem.init();
@@ -545,6 +554,9 @@ public class Main {
         NSkybox.init();
         AabRender.init();
         LineRender.init();
+        ScreenQuad.init();
+        OutputProgram.init();
+        CopyProgram.init();
         Game.get();
 
         Main.checkGLError();
@@ -553,6 +565,7 @@ public class Main {
             glViewport(0, 0, width, height);
             Main.WIDTH = width;
             Main.HEIGHT = height;
+            HDR_FRAMEBUFFER.resize(Main.WIDTH, Main.HEIGHT);
             Game.get().windowSizeChanged(width, height);
             Main.checkGLError();
         };
@@ -738,17 +751,29 @@ public class Main {
 
             Water.update(TPF);
 
-            glfwPollEvents();
             glViewport(0, 0, Main.WIDTH, Main.HEIGHT);
+            glfwPollEvents();
+            
+            glBindFramebuffer(GL_FRAMEBUFFER, HDR_FRAMEBUFFER.framebuffer());
             glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
+            
             MainTasks.runTasks();
-
+            
             ALSourceUtil.update();
             Game.get().loop();
-            glFlush();
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            
+            OutputProgram.render(
+                    Main.WIDTH, Main.HEIGHT,
+                    Main.EXPOSURE, Main.GAMMA,
+                    (Main.COLOR_LUT == null ? LUT.NEUTRAL.texture() : Main.COLOR_LUT.texture()),
+                    HDR_FRAMEBUFFER.colorBufferWrite()
+            );
+            
             Main.checkGLError();
             Main.checkALError();
+            
+            glFlush();
             glfwSwapBuffers(WINDOW_POINTER);
 
             frames++;

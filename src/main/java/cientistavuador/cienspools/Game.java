@@ -63,6 +63,8 @@ import com.jme3.bullet.collision.shapes.HullCollisionShape;
 import com.jme3.bullet.objects.PhysicsRigidBody;
 import com.jme3.math.Vector3f;
 import com.simsilica.mathd.Vec3d;
+import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -71,6 +73,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import javax.imageio.ImageIO;
 import org.joml.Quaternionf;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.openal.AL11.*;
@@ -158,7 +161,7 @@ public class Game {
 
             {
                 this.boomBoxModel = N3DModel.RESOURCES.get("[D48EAA8D455A4B57|A34C2F1CE3B5D2C7]BoomBox");
-
+                
                 this.acUnit = new N3DObject("AC Unit", this.boomBoxModel);
                 this.gizmo.getExtents().set(this.boomBoxModel.getAabbExtents());
                 this.world.addObject(this.acUnit);
@@ -190,7 +193,7 @@ public class Game {
     private Game() {
 
     }
-
+    
     public void start() {
         Audio ambient = Audio.RESOURCES.get("default/sounds/ambient/beach_ambient");
         AudioNode ambientNode = new AudioNode("ambientNode");
@@ -476,9 +479,6 @@ public class Game {
         }
         if (key == GLFW_KEY_F7 && action == GLFW_PRESS) {
             this.debugCollision = !this.debugCollision;
-        }
-        if (key == GLFW_KEY_F8 && action == GLFW_PRESS) {
-            this.world.getRenderer().setTonemappingEnabled(!this.world.getRenderer().isTonemappingEnabled());
         }
         if (key == GLFW_KEY_R && action == GLFW_PRESS) {
             Quaternionf rotation = new Quaternionf();

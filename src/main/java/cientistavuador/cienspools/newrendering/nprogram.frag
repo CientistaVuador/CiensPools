@@ -1,19 +1,12 @@
+uniform mat4 view;
+
 //shader configuration
 uniform bool enableReflections;
 uniform bool enableLightmaps;
-uniform bool enableTonemapping;
-uniform bool enableGammaCorrection;
 uniform bool enableRefractions;
 uniform bool enableParallaxMapping;
 uniform bool enableWater;
 uniform bool enableOpaqueTexture;
-
-uniform float gamma;
-uniform float exposure;
-uniform vec2 screenSize;
-
-//lut
-uniform sampler3D LUT;
 
 //specular brdf lookup table
 uniform sampler2D specularBRDFLookupTable;
@@ -37,6 +30,10 @@ vec3 sampleWaterNormal(vec2 uv) {
     );
     return normalize(waterNormal);
 }
+
+//opaque pass buffer
+uniform sampler2D screen;
+uniform vec2 screenSize;
 
 //material textures
 uniform sampler2DArray materialTextures;
@@ -416,12 +413,12 @@ void main() {
     vec3 vertexNormal = normalize(inVertex.worldNormal);
     float nx = (htrgmtnx[3] * 2.0) - 1.0;
     float ny = (emaowtny[3] * 2.0) - 1.0;
-    vec3 normal = normalize(vec3(nx, ny, sqrt(abs(1.0 - (nx * nx) - (ny * ny)))));
+    vec3 tangentNormal = normalize(vec3(nx, ny, sqrt(abs(1.0 - (nx * nx) - (ny * ny)))));
     float water = emaowtny[2] * material.water;
     if (enableWater) {
-        normal = mix(normal, sampleWaterNormal(uv), water);
+        tangentNormal = normalize(mix(tangentNormal, sampleWaterNormal(uv), water));
     }
-    normal = normalize(inVertex.TBN * normal);
+    vec3 normal = normalize(inVertex.TBN * tangentNormal);
     
     float ambientOcclusion = emaowtny[1] * material.ambientOcclusion;
     
@@ -491,22 +488,26 @@ void main() {
     }
 
     if (enableRefractions) {
+        //float refraction = material.refraction;
+        //vec3 refractedDirection = refract(viewDirection, normal, refraction);
+        //refractedDirection = normalize(mix(viewDirection, refractedDirection, material.refractionPower));
+        //vec3 refractedColor = computeReflection(
+        //        brdf, specularRatio,
+        //        position, viewDirection,
+        //        refractedDirection, normal,
+        //        vec3(1.0), 1.0, roughness, fresnel
+        //);
+        
         float refraction = material.refraction;
-        vec3 refractedDirection = refract(viewDirection, normal, refraction);
-        refractedDirection = normalize(mix(viewDirection, refractedDirection, material.refractionPower));
-        vec3 refractedColor = computeReflection(
-                brdf, specularRatio,
-                position, viewDirection,
-                refractedDirection, normal,
-                vec3(1.0), 1.0, roughness, fresnel
-        );
+        vec3 tangentViewDirection = vec3(0.0, 0.0, -1.0);
+        vec3 refractedDirection = refract(tangentViewDirection, tangentNormal, refraction);
+        refractedDirection = 
+                normalize(mix(tangentViewDirection, refractedDirection, 0.2));
+        
+        vec3 refractedColor = texture(screen, (gl_FragCoord.xy / screenSize) + refractedDirection.xy).rgb;
         refractedColor *= mix(vec3(1.0), color.rgb, outputColor.a);
         outputColor.rgb = mix(refractedColor, outputColor.rgb, outputColor.a);
         outputColor.a = 1.0;
-    }
-    
-    if (enableTonemapping) {
-        outputColor.rgb = vec3(1.0) - exp(-outputColor.rgb * exposure);
     }
     
     float fresnelOutline = material.fresnelOutline;
@@ -516,21 +517,6 @@ void main() {
             mix(outputColor.rgb, material.fresnelOutlineColor, fresnel),
             fresnelOutline
     );
-
-    if (enableGammaCorrection) {
-        outputColor.rgb = pow(outputColor.rgb, vec3(1.0/gamma));
-    }
-    
-    if (enableTonemapping) {
-        outputColor.rgb = texture(LUT, outputColor.rgb).rgb;
-    }
-    
-    if (enableTonemapping) {
-        const float noise = 0.5 / 255.0;
-        vec2 coords = gl_FragCoord.xy / screenSize;
-        outputColor.rgb += mix(-noise, noise,
-                            fract(sin(dot(coords, vec2(12.9898,78.233))) * 43758.5453));
-    }
     
     #if defined(VARIANT_ALPHA_TESTING) || defined(VARIANT_OPAQUE)
     outputFragColor = vec4(outputColor.rgb, 1.0);
