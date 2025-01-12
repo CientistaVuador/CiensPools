@@ -27,6 +27,7 @@
 package cientistavuador.cienspools.util;
 
 import cientistavuador.cienspools.Main;
+import cientistavuador.cienspools.libsglsl.IncludeGLSL;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -80,6 +81,10 @@ public class ProgramCompiler {
     }
 
     public static int compile(String vertexSource, String geometrySource, String fragmentSource, Map<String, String> replacements) {
+        vertexSource = IncludeGLSL.parse(vertexSource);
+        geometrySource = IncludeGLSL.parse(geometrySource);
+        fragmentSource = IncludeGLSL.parse(fragmentSource);
+        
         String shaderName = null;
         if (!ONLY_OUTPUT_ERRORS) {
             StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
@@ -194,6 +199,10 @@ public class ProgramCompiler {
     }
     
     public static Map<String, Integer> compile(String vertex, String geometry, String fragment, String[] variations, ShaderConstant[] constants) {
+        vertex = IncludeGLSL.parse(vertex);
+        geometry = IncludeGLSL.parse(geometry);
+        fragment = IncludeGLSL.parse(fragment);
+        
         StringBuilder headerBuilder = new StringBuilder();
         
         headerBuilder.append("#version ").append(Main.OPENGL_MAJOR_VERSION).append(Main.OPENGL_MINOR_VERSION).append("0 core\n\n");

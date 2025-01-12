@@ -24,7 +24,7 @@
  *
  * For more information, please refer to <https://unlicense.org>
  */
-package cientistavuador.cienspools.fbo;
+package cientistavuador.cienspools.fbo.filters;
 
 import static org.lwjgl.opengl.GL33C.*;
 
@@ -32,7 +32,7 @@ import static org.lwjgl.opengl.GL33C.*;
  *
  * @author Cien
  */
-public class ScreenQuad {
+public class ScreenTriangle {
     
     public static final int VAO;
     public static final int NUMBER_OF_VERTICES;
@@ -40,13 +40,9 @@ public class ScreenQuad {
     static {
         int stride = 4;
         float[] vertices = new float[] {
-            -1f, -1f, 0f, 0f,
-            1f, -1f, 1f, 0f,
-            -1f, 1f, 0f, 1f,
-            
-            1f, -1f, 1f, 0f,
-            1f, 1f, 1f, 1f,
-            -1f, 1f, 0f, 1f
+            -3f, -1f, -1f, 0f,
+            3f, -1f, 2f, 0f,
+            0f, 3f, 0.5f, 2f
         };
         NUMBER_OF_VERTICES = vertices.length / stride;
         
@@ -74,7 +70,7 @@ public class ScreenQuad {
         
     }
     
-    private ScreenQuad() {
+    private ScreenTriangle() {
         
     }
 }

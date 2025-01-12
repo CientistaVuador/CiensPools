@@ -29,7 +29,7 @@ package cientistavuador.cienspools.newrendering;
 import cientistavuador.cienspools.util.bakedlighting.AmbientCube;
 import cientistavuador.cienspools.Main;
 import cientistavuador.cienspools.camera.Camera;
-import cientistavuador.cienspools.fbo.CopyProgram;
+import cientistavuador.cienspools.fbo.filters.CopyFilter;
 import cientistavuador.cienspools.lut.LUT;
 import cientistavuador.cienspools.newrendering.NLight.NDirectionalLight;
 import cientistavuador.cienspools.newrendering.NLight.NPointLight;
@@ -58,7 +58,7 @@ import static org.lwjgl.opengl.GL33C.*;
 public class N3DObjectRenderer {
 
     private static final NMaterial REFLECTION_DEBUG;
-    
+
     static {
         REFLECTION_DEBUG = new NMaterial(
                 "bb318e2a-8d14-4915-bec4-bf5c7d99abde",
@@ -66,7 +66,7 @@ public class N3DObjectRenderer {
         REFLECTION_DEBUG.setMetallic(1f);
         REFLECTION_DEBUG.setRoughness(0f);
     }
-    
+
     private static class WrappedLight {
 
         int type;
@@ -130,12 +130,13 @@ public class N3DObjectRenderer {
     private final List<ToRender> opaqueList = new ArrayList<>();
     private final List<ToRender> testedList = new ArrayList<>();
     private final List<ToRender> blendList = new ArrayList<>();
+    private final List<ToRender> refractiveList = new ArrayList<>();
     private NCubemap skyboxCubemap = NCubemap.NULL_CUBEMAP;
 
     public N3DObjectRenderer() {
 
     }
-    
+
     public N3DObjectRenderer(N3DObjectRenderer toCopy) {
         if (toCopy == null) {
             return;
@@ -166,7 +167,7 @@ public class N3DObjectRenderer {
     public void setReflectionsEnabled(boolean reflectionsEnabled) {
         this.reflectionsEnabled = reflectionsEnabled;
     }
-    
+
     public boolean isReflectionsDebugEnabled() {
         return reflectionsDebugEnabled;
     }
@@ -174,7 +175,7 @@ public class N3DObjectRenderer {
     public void setReflectionsDebugEnabled(boolean reflectionsDebugEnabled) {
         this.reflectionsDebugEnabled = reflectionsDebugEnabled;
     }
-    
+
     public int getOcclusionQueryMinimumVertices() {
         return occlusionQueryMinimumVertices;
     }
@@ -214,7 +215,7 @@ public class N3DObjectRenderer {
     public List<NLight> getLights() {
         return lights;
     }
-    
+
     private List<N3DObject> filterOccluded(List<N3DObject> objects) {
         List<N3DObject> notOccludedObjects = new ArrayList<>();
 
@@ -592,7 +593,7 @@ public class N3DObjectRenderer {
                     this.blendList.add(toRender);
             }
         }
-        
+
         Comparator<ToRender> distanceComparator = (o1, o2) -> {
             return Float.compare(o1.distanceSquared, o2.distanceSquared);
         };
@@ -602,7 +603,7 @@ public class N3DObjectRenderer {
         this.blendList.sort(distanceComparator.reversed());
         this.skyboxCubemap = cbmaps.getSkybox();
     }
-    
+
     public void renderOpaque() {
         if (!this.opaqueList.isEmpty()) {
             renderVariant(NProgram.VARIANT_OPAQUE, this.opaqueList);
@@ -623,7 +624,7 @@ public class N3DObjectRenderer {
     public void renderAlphaBlending() {
         if (!this.blendList.isEmpty()) {
             Main.HDR_FRAMEBUFFER.flip();
-            CopyProgram.render(Main.HDR_FRAMEBUFFER.colorBufferRead());
+            CopyFilter.render(Main.HDR_FRAMEBUFFER.colorBufferRead());
             Main.HDR_FRAMEBUFFER.flip();
             
             renderVariant(NProgram.VARIANT_ALPHA_BLENDING, this.blendList);
@@ -637,7 +638,7 @@ public class N3DObjectRenderer {
         renderSkybox();
         renderAlphaBlending();
     }
-    
+
     private void renderSkybox(
             NCubemap skybox
     ) {
@@ -655,7 +656,7 @@ public class N3DObjectRenderer {
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_CUBE_MAP, skybox.cubemap());
         glUniform1i(program.locationOf(NSkybox.UNIFORM_SKYBOX), 0);
-        
+
         glBindVertexArray(NSkybox.VAO);
         glDrawElements(GL_TRIANGLES, NSkybox.AMOUNT_OF_INDICES, GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
@@ -707,7 +708,6 @@ public class N3DObjectRenderer {
                         Water.WATER_COUNTER)
                 .uniform2f(NProgram.UNIFORM_SCREEN_SIZE, Main.WIDTH, Main.HEIGHT)
                 .uniform1i(NProgram.UNIFORM_ENABLE_OPAQUE_TEXTURE, 0)
-                
                 .uniform1i(NProgram.UNIFORM_SPECULAR_BRDF_LOOKUP_TABLE, 0)
                 .uniform1i(NProgram.UNIFORM_WATER_FRAMES, 1)
                 .uniform1i(NProgram.UNIFORM_SCREEN, 2)
@@ -720,10 +720,10 @@ public class N3DObjectRenderer {
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, NSpecularBRDFLookupTable.SPECULAR_BRDF_TEXTURE);
-        
+
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D_ARRAY, Water.TEXTURE);
-        
+
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D, Main.HDR_FRAMEBUFFER.colorBufferRead());
 
@@ -883,7 +883,7 @@ public class N3DObjectRenderer {
             if (!textures.equals(lastTextures)) {
                 variant.uniform1i(NProgram.UNIFORM_ENABLE_OPAQUE_TEXTURE,
                         (NBlendingMode.OPAQUE.equals(textures.getBlendingMode()) ? 1 : 0));
-                
+
                 int texturesId = textures.textures();
 
                 glActiveTexture(GL_TEXTURE3);

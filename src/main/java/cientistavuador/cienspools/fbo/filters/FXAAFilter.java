@@ -24,17 +24,20 @@
  *
  * For more information, please refer to <https://unlicense.org>
  */
-package cientistavuador.cienspools.fbo;
+package cientistavuador.cienspools.fbo.filters;
 
+import cientistavuador.cienspools.fbo.filters.ScreenTriangle;
+import cientistavuador.cienspools.Main;
 import cientistavuador.cienspools.util.BetterUniformSetter;
 import cientistavuador.cienspools.util.ProgramCompiler;
-import static org.lwjgl.opengl.GL33C.*;
+import static org.lwjgl.opengl.GL33.*;
 
 /**
  *
  * @author Cien
  */
-public class CopyProgram {
+public class FXAAFilter {
+    
     public static final int SHADER_PROGRAM = ProgramCompiler.compile(
             """
             #version 330 core
@@ -52,6 +55,20 @@ public class CopyProgram {
             """
             #version 330 core
             
+            #define FXAA_PC 1
+            #define FXAA_QUALITY__PRESET 12
+            #define FXAA_GREEN_AS_LUMA 0
+            #define FXAA_GLSL_130 1
+            
+            #define FXAA_QUALITY__SUBPIX 0.75
+            #define FXAA_QUALITY__EDGE_THRESHOLD 0.333
+            #define FXAA_QUALITY__EDGE_THRESHOLD_MIN 0.0833
+            
+            #extension GL_ARB_gpu_shader5 : enable
+            
+            #include "Fxaa3_11.h"
+            
+            uniform vec2 screenSize;
             uniform sampler2D inputTexture;
             
             in vec2 UV;
@@ -59,37 +76,39 @@ public class CopyProgram {
             layout (location = 0) out vec4 outputColor;
             
             void main() {
-                outputColor = texture(inputTexture, UV);
+                outputColor = vec4(FxaaPixelShader(UV, vec4(0.0), inputTexture, inputTexture, inputTexture,  1.0 / screenSize, vec4(0.0), vec4(0.0), vec4(0.0), FXAA_QUALITY__SUBPIX, FXAA_QUALITY__EDGE_THRESHOLD, FXAA_QUALITY__EDGE_THRESHOLD_MIN, 0.0, 0.0, 0.0, vec4(0.0)).rgb, 1.0);
             }
             """
     );
     
     public static final BetterUniformSetter UNIFORMS = new BetterUniformSetter(SHADER_PROGRAM);
     
-    public static void render(int inputTexture) {
-        glDepthMask(false);
+    public static void render(int width, int height, int inputTexture) {
         glUseProgram(SHADER_PROGRAM);
-        glBindVertexArray(ScreenQuad.VAO);
+        glBindVertexArray(ScreenTriangle.VAO);
         
         UNIFORMS
+                .uniform2f("screenSize", width, height)
                 .uniform1i("inputTexture", 0)
                 ;
         
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, inputTexture);
         
-        glDrawArrays(GL_TRIANGLES, 0, ScreenQuad.NUMBER_OF_VERTICES);
+        glDrawArrays(GL_TRIANGLES, 0, ScreenTriangle.NUMBER_OF_VERTICES);
+        
+        Main.NUMBER_OF_DRAWCALLS++;
+        Main.NUMBER_OF_VERTICES += ScreenTriangle.NUMBER_OF_VERTICES;
         
         glBindVertexArray(0);
         glUseProgram(0);
-        glDepthMask(true);
     }
     
     public static void init() {
         
     }
     
-    private CopyProgram() {
+    private FXAAFilter() {
         
     }
 }

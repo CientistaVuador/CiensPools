@@ -37,10 +37,11 @@ import cientistavuador.cienspools.newrendering.NSpecularBRDFLookupTable;
 import cientistavuador.cienspools.popups.LoadingPopup;
 import cientistavuador.cienspools.resources.ResourceLoader;
 import cientistavuador.cienspools.audio.Sounds;
-import cientistavuador.cienspools.fbo.CopyProgram;
+import cientistavuador.cienspools.fbo.filters.CopyFilter;
+import cientistavuador.cienspools.fbo.filters.FXAAFilter;
 import cientistavuador.cienspools.fbo.ForwardHDRFramebuffer;
-import cientistavuador.cienspools.fbo.OutputProgram;
-import cientistavuador.cienspools.fbo.ScreenQuad;
+import cientistavuador.cienspools.fbo.filters.OutputFilter;
+import cientistavuador.cienspools.fbo.filters.ScreenTriangle;
 import cientistavuador.cienspools.lut.LUT;
 import cientistavuador.cienspools.text.GLFonts;
 import cientistavuador.cienspools.texture.Textures;
@@ -110,7 +111,7 @@ public class Main {
         if (!glfwInit()) {
             throw new IllegalStateException("Could not initialize GLFW!");
         }
-        
+
         int[] supportedVersions = {
             4, 6,
             4, 5,
@@ -232,10 +233,10 @@ public class Main {
     public static void checkALError() {
         int error = alGetError();
         if (error != 0) {
-            System.out.println("OpenAL Error "+error);
+            System.out.println("OpenAL Error " + error);
         }
     }
-    
+
     public static String WINDOW_TITLE = "CienCraft - FPS: 60";
     public static int WIDTH = 800;
     public static int HEIGHT = 600;
@@ -280,6 +281,7 @@ public class Main {
     public static final ForwardHDRFramebuffer HDR_FRAMEBUFFER = new ForwardHDRFramebuffer();
     private static final int[] savedWindowStatus = new int[4];
     public static GLDebugMessageCallback DEBUG_CALLBACK = null;
+    public static boolean USE_FXAA = true;
 
     private static String debugSource(int source) {
         return switch (source) {
@@ -521,7 +523,7 @@ public class Main {
         if (maxTextureSize < 8192) {
             throw new IllegalStateException("Max texture size must be 8192 or more! Update your drivers or buy a new GPU.");
         }
-        
+
         MAX_TEXTURE_SIZE = glGetInteger(GL_MAX_TEXTURE_SIZE);
         MAX_TEXTURE_2D_ARRAY_SIZE = glGetInteger(GL_MAX_ARRAY_TEXTURE_LAYERS);
         MAX_TEXTURE_3D_SIZE = glGetInteger(GL_MAX_3D_TEXTURE_SIZE);
@@ -530,14 +532,14 @@ public class Main {
         if (GL.getCapabilities().GL_NV_multisample_filter_hint) {
             glHint(NVMultisampleFilterHint.GL_MULTISAMPLE_FILTER_HINT_NV, GL_NICEST);
         }
-        
-        HDR_FRAMEBUFFER.resize(Main.WIDTH, Main.HEIGHT);
-        
-        Main.checkGLError();
 
+        HDR_FRAMEBUFFER.resize(Main.WIDTH, Main.HEIGHT);
+
+        Main.checkGLError();
+        
         AudioSystem.init();
         TextureCompressor.init();
-        
+
         NSpecularBRDFLookupTable.init();
         Gizmo.init();
         ResourceLoader.init();
@@ -554,9 +556,13 @@ public class Main {
         NSkybox.init();
         AabRender.init();
         LineRender.init();
-        ScreenQuad.init();
-        OutputProgram.init();
-        CopyProgram.init();
+        
+        ScreenTriangle.init();
+        OutputFilter.init();
+        CopyFilter.init();
+        FXAAFilter.init();
+        
+        Pipeline.get();
         Game.get();
 
         Main.checkGLError();
@@ -574,7 +580,7 @@ public class Main {
 
         glfwSetCursorPosCallback(WINDOW_POINTER, (window, x, y) -> {
             Game.get().mouseCursorMoved(x, y);
-            
+
             double mX = x;
             double mY = y;
             mY = Main.HEIGHT - mY;
@@ -582,7 +588,7 @@ public class Main {
             mY /= Main.HEIGHT;
             mX = (mX * 2.0) - 1.0;
             mY = (mY * 2.0) - 1.0;
-            Game.get().mouseCursorMovedNormalized((float)mX, (float)mY);
+            Game.get().mouseCursorMovedNormalized((float) mX, (float) mY);
         });
 
         glfwSetKeyCallback(WINDOW_POINTER, (window, key, scancode, action, mods) -> {
@@ -699,7 +705,7 @@ public class Main {
         glfwShowWindow(WINDOW_POINTER);
         glfwIconifyWindow(WINDOW_POINTER);
         glfwRestoreWindow(WINDOW_POINTER);
-        
+
         int frames = 0;
         long nextFpsUpdate = System.nanoTime() + 1_000_000_000;
         long nextTitleUpdate = System.currentTimeMillis() + 100;
@@ -753,26 +759,39 @@ public class Main {
 
             glViewport(0, 0, Main.WIDTH, Main.HEIGHT);
             glfwPollEvents();
-            
+
             glBindFramebuffer(GL_FRAMEBUFFER, HDR_FRAMEBUFFER.framebuffer());
             glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-            
+
             MainTasks.runTasks();
-            
+
             ALSourceUtil.update();
             Game.get().loop();
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
-            
-            OutputProgram.render(
+
+            HDR_FRAMEBUFFER.flip();
+
+            glDisable(GL_BLEND);
+            OutputFilter.render(
                     Main.WIDTH, Main.HEIGHT,
                     Main.EXPOSURE, Main.GAMMA,
                     (Main.COLOR_LUT == null ? LUT.NEUTRAL.texture() : Main.COLOR_LUT.texture()),
-                    HDR_FRAMEBUFFER.colorBufferWrite()
+                    HDR_FRAMEBUFFER.colorBufferRead()
             );
-            
+
+            if (USE_FXAA) {
+                HDR_FRAMEBUFFER.flip();
+
+                FXAAFilter.render(Main.WIDTH, Main.HEIGHT, HDR_FRAMEBUFFER.colorBufferRead());
+            }
+
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+            CopyFilter.render(HDR_FRAMEBUFFER.colorBufferWrite());
+            glEnable(GL_BLEND);
+
             Main.checkGLError();
             Main.checkALError();
-            
+
             glFlush();
             glfwSwapBuffers(WINDOW_POINTER);
 

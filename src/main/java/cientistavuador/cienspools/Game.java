@@ -56,15 +56,11 @@ import cientistavuador.cienspools.util.bakedlighting.Lightmapper;
 import cientistavuador.cienspools.util.bakedlighting.Scene;
 import cientistavuador.cienspools.world.World;
 import cientistavuador.cienspools.world.player.Player;
-import cientistavuador.cienspools.world.trigger.testing.CatapultTrigger;
 import cientistavuador.cienspools.world.trigger.water.WaterTrigger;
 import com.jme3.bullet.collision.shapes.CompoundCollisionShape;
 import com.jme3.bullet.collision.shapes.HullCollisionShape;
 import com.jme3.bullet.objects.PhysicsRigidBody;
-import com.jme3.math.Vector3f;
 import com.simsilica.mathd.Vec3d;
-import java.awt.image.BufferedImage;
-import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -73,7 +69,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
-import javax.imageio.ImageIO;
 import org.joml.Quaternionf;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.openal.AL11.*;
@@ -489,6 +484,9 @@ public class Game {
             System.out.print(rotation.x() + "f, " + rotation.y() + "f, " + rotation.z() + "f, " + rotation.w() + "f, ");
             System.out.print(this.gizmo.getScale().x() * 0.5f + "f, " + this.gizmo.getScale().y() * 0.5f + "f, " + this.gizmo.getScale().z() * 0.5f + "f");
             System.out.println(")");
+        }
+        if (key == GLFW_KEY_F12 && action == GLFW_PRESS) {
+            Main.USE_FXAA = !Main.USE_FXAA;
         }
     }
 

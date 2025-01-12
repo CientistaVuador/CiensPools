@@ -36,8 +36,8 @@ import static org.lwjgl.opengl.GL33C.*;
  */
 public class ForwardHDRFramebuffer {
 
-    private int width = 0;
-    private int height = 0;
+    private int width = 1;
+    private int height = 1;
 
     private class WrappedState {
 
@@ -193,6 +193,13 @@ public class ForwardHDRFramebuffer {
     }
 
     public void resize(int width, int height) {
+        if (width <= 0) {
+            width = 1;
+        }
+        if (height <= 0) {
+            height = 1;
+        }
+        
         this.width = width;
         this.height = height;
         updateColorBuffer(colorBufferWrite());

@@ -24,8 +24,9 @@
  *
  * For more information, please refer to <https://unlicense.org>
  */
-package cientistavuador.cienspools.fbo;
+package cientistavuador.cienspools.fbo.filters;
 
+import cientistavuador.cienspools.Main;
 import cientistavuador.cienspools.util.BetterUniformSetter;
 import cientistavuador.cienspools.util.ProgramCompiler;
 import static org.lwjgl.opengl.GL33.*;
@@ -34,7 +35,7 @@ import static org.lwjgl.opengl.GL33.*;
  *
  * @author Cien
  */
-public class OutputProgram {
+public class OutputFilter {
     public static final int SHADER_PROGRAM = ProgramCompiler.compile(
             """
             #version 330 core
@@ -64,18 +65,19 @@ public class OutputProgram {
             layout (location = 0) out vec4 outputColor;
             
             void main() {
-                vec3 color = texture(inputTexture, UV).rgb;
+                vec4 color = texture(inputTexture, UV);
                 
-                color = vec3(1.0) - exp(-color * exposure);
-                color = pow(color, vec3(1.0/gamma));
-                color = texture(LUT, color).rgb;
-            
+                color.rgb = vec3(1.0) - exp(-color.rgb * exposure);
+                color.rgb = pow(color.rgb, vec3(1.0/gamma));
+                color.rgb = texture(LUT, color.rgb).rgb;
                 const float noise = 0.5 / 255.0;
                 vec2 coords = gl_FragCoord.xy / screenSize;
-                color += mix(-noise, noise,
+                color.rgb += mix(-noise, noise,
                     fract(sin(dot(coords, vec2(12.9898,78.233))) * 43758.5453));
+                color.rgb = clamp(color.rgb, 0.0, 1.0);
+                color.a = dot(color.rgb, vec3(0.299, 0.587, 0.114));
                 
-                outputColor = vec4(color, 1.0);
+                outputColor = color;
             }
             """
     );
@@ -86,9 +88,8 @@ public class OutputProgram {
             int width, int height,
             float exposure, float gamma, int LUT,
             int inputTexture) {
-        
         glUseProgram(SHADER_PROGRAM);
-        glBindVertexArray(ScreenQuad.VAO);
+        glBindVertexArray(ScreenTriangle.VAO);
         
         UNIFORMS
                 .uniform2f("screenSize", width, height)
@@ -104,7 +105,10 @@ public class OutputProgram {
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, inputTexture);
         
-        glDrawArrays(GL_TRIANGLES, 0, ScreenQuad.NUMBER_OF_VERTICES);
+        glDrawArrays(GL_TRIANGLES, 0, ScreenTriangle.NUMBER_OF_VERTICES);
+        
+        Main.NUMBER_OF_DRAWCALLS++;
+        Main.NUMBER_OF_VERTICES += ScreenTriangle.NUMBER_OF_VERTICES;
         
         glBindVertexArray(0);
         glUseProgram(0);
@@ -114,7 +118,7 @@ public class OutputProgram {
         
     }
     
-    private OutputProgram() {
+    private OutputFilter() {
         
     }
 }
