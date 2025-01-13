@@ -34,7 +34,7 @@ import static org.lwjgl.opengl.GL33C.*;
  *
  * @author Cien
  */
-public class ForwardHDRFramebuffer {
+public class HDRFramebuffer {
 
     private int width = 1;
     private int height = 1;
@@ -51,7 +51,7 @@ public class ForwardHDRFramebuffer {
 
     private final WrappedState state = new WrappedState();
 
-    public ForwardHDRFramebuffer() {
+    public HDRFramebuffer() {
         registerForCleaning();
     }
 

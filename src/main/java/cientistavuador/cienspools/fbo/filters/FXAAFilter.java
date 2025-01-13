@@ -26,7 +26,6 @@
  */
 package cientistavuador.cienspools.fbo.filters;
 
-import cientistavuador.cienspools.fbo.filters.ScreenTriangle;
 import cientistavuador.cienspools.Main;
 import cientistavuador.cienspools.util.BetterUniformSetter;
 import cientistavuador.cienspools.util.ProgramCompiler;

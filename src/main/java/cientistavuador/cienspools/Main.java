@@ -39,10 +39,8 @@ import cientistavuador.cienspools.resources.ResourceLoader;
 import cientistavuador.cienspools.audio.Sounds;
 import cientistavuador.cienspools.fbo.filters.CopyFilter;
 import cientistavuador.cienspools.fbo.filters.FXAAFilter;
-import cientistavuador.cienspools.fbo.ForwardHDRFramebuffer;
 import cientistavuador.cienspools.fbo.filters.OutputFilter;
 import cientistavuador.cienspools.fbo.filters.ScreenTriangle;
-import cientistavuador.cienspools.lut.LUT;
 import cientistavuador.cienspools.text.GLFonts;
 import cientistavuador.cienspools.texture.Textures;
 import cientistavuador.cienspools.ubo.UBOBindingPoints;
@@ -96,7 +94,6 @@ public class Main {
     @Deprecated
     public static final float FROM_PHYSICS_ENGINE_UNITS = 1f / PHYSICS_ENGINE_UNITS;
 
-    public static final boolean USE_MSAA = false;
     public static final boolean DEBUG_ENABLED = true;
     public static final boolean SPIKE_LAG_WARNINGS = false;
     public static final int MIN_UNIFORM_BUFFER_BINDINGS = UBOBindingPoints.MIN_NUMBER_OF_UBO_BINDING_POINTS;
@@ -275,13 +272,8 @@ public class Main {
     public static final Vector3f DEFAULT_CLEAR_COLOR = new Vector3f(0.2f, 0.4f, 0.6f);
     public static final String WINDOW_ICON = "cientistavuador/newrenderingpipeline/resources/image/window_icon.png";
     public static final Thread MAIN_THREAD = MainTasks.MAIN_THREAD;
-    public static float GAMMA = 1.4f;
-    public static float EXPOSURE = 3.0f;
-    public static LUT COLOR_LUT = LUT.NEUTRAL;
-    public static final ForwardHDRFramebuffer HDR_FRAMEBUFFER = new ForwardHDRFramebuffer();
     private static final int[] savedWindowStatus = new int[4];
     public static GLDebugMessageCallback DEBUG_CALLBACK = null;
-    public static boolean USE_FXAA = true;
 
     private static String debugSource(int source) {
         return switch (source) {
@@ -351,10 +343,7 @@ public class Main {
                 exception.printStackTrace(System.err);
             }
         });
-
-        if (USE_MSAA) {
-            glfwWindowHint(GLFW_SAMPLES, 4);
-        }
+        
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, OPENGL_MAJOR_VERSION);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, OPENGL_MINOR_VERSION);
 
@@ -489,10 +478,7 @@ public class Main {
                 glDebugMessageCallback(DEBUG_CALLBACK, NULL);
             }
         }
-
-        if (USE_MSAA) {
-            glEnable(GL_MULTISAMPLE);
-        }
+        
         glEnable(GL_STENCIL_TEST);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -532,9 +518,7 @@ public class Main {
         if (GL.getCapabilities().GL_NV_multisample_filter_hint) {
             glHint(NVMultisampleFilterHint.GL_MULTISAMPLE_FILTER_HINT_NV, GL_NICEST);
         }
-
-        HDR_FRAMEBUFFER.resize(Main.WIDTH, Main.HEIGHT);
-
+        
         Main.checkGLError();
         
         AudioSystem.init();
@@ -562,7 +546,7 @@ public class Main {
         CopyFilter.init();
         FXAAFilter.init();
         
-        Pipeline.get();
+        Pipeline.init();
         Game.get();
 
         Main.checkGLError();
@@ -571,8 +555,7 @@ public class Main {
             glViewport(0, 0, width, height);
             Main.WIDTH = width;
             Main.HEIGHT = height;
-            HDR_FRAMEBUFFER.resize(Main.WIDTH, Main.HEIGHT);
-            Game.get().windowSizeChanged(width, height);
+            Pipeline.windowSizeChanged(width, height);
             Main.checkGLError();
         };
         frameBufferSizecb.invoke(WINDOW_POINTER, Main.WIDTH, Main.HEIGHT);
@@ -688,17 +671,17 @@ public class Main {
                     Main.FULLSCREEN = false;
                 }
             }
-            Game.get().keyCallback(window, key, scancode, action, mods);
+            Pipeline.keyCallback(window, key, scancode, action, mods);
         });
 
         glfwSetMouseButtonCallback(WINDOW_POINTER, (window, button, action, mods) -> {
-            Game.get().mouseCallback(window, button, action, mods);
+            Pipeline.mouseCallback(window, button, action, mods);
         });
-
-        Game.get().start();
+        
+        Pipeline.start();
 
         Main.checkGLError();
-
+        
         loadingPopup.setVisible(false);
         loadingPopup.dispose();
 
@@ -759,36 +742,13 @@ public class Main {
 
             glViewport(0, 0, Main.WIDTH, Main.HEIGHT);
             glfwPollEvents();
-
-            glBindFramebuffer(GL_FRAMEBUFFER, HDR_FRAMEBUFFER.framebuffer());
+            
             glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
-            MainTasks.runTasks();
-
+            
             ALSourceUtil.update();
-            Game.get().loop();
-
-            HDR_FRAMEBUFFER.flip();
-
-            glDisable(GL_BLEND);
-            OutputFilter.render(
-                    Main.WIDTH, Main.HEIGHT,
-                    Main.EXPOSURE, Main.GAMMA,
-                    (Main.COLOR_LUT == null ? LUT.NEUTRAL.texture() : Main.COLOR_LUT.texture()),
-                    HDR_FRAMEBUFFER.colorBufferRead()
-            );
-
-            if (USE_FXAA) {
-                HDR_FRAMEBUFFER.flip();
-
-                FXAAFilter.render(Main.WIDTH, Main.HEIGHT, HDR_FRAMEBUFFER.colorBufferRead());
-            }
-
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-            CopyFilter.render(HDR_FRAMEBUFFER.colorBufferWrite());
-            glEnable(GL_BLEND);
-
+            MainTasks.runTasks();
+            Pipeline.loop();
+            
             Main.checkGLError();
             Main.checkALError();
 

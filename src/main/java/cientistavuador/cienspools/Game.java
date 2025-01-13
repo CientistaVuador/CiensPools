@@ -155,8 +155,8 @@ public class Game {
             this.world.setMap(map);
 
             {
-                this.boomBoxModel = N3DModel.RESOURCES.get("[D48EAA8D455A4B57|A34C2F1CE3B5D2C7]BoomBox");
-                
+                this.boomBoxModel = N3DModel.RESOURCES.get("Box");
+
                 this.acUnit = new N3DObject("AC Unit", this.boomBoxModel);
                 this.gizmo.getExtents().set(this.boomBoxModel.getAabbExtents());
                 this.world.addObject(this.acUnit);
@@ -188,7 +188,7 @@ public class Game {
     private Game() {
 
     }
-    
+
     public void start() {
         Audio ambient = Audio.RESOURCES.get("default/sounds/ambient/beach_ambient");
         AudioNode ambientNode = new AudioNode("ambientNode");
@@ -197,7 +197,7 @@ public class Game {
         ambientNode.setGain(0.1f);
         ambientNode.play();
         this.world.getAudioSpace().addNode(ambientNode);
-        
+
         WaterTrigger a = new WaterTrigger("water 0");
         a.setTransformation(
                 3.76, -0.59, -1.03,
@@ -205,7 +205,7 @@ public class Game {
                 0.0f, 0.0f, 0.0f, 1.0f
         );
         this.world.addWorldObject(a);
-        
+
         this.gizmo.setCamera(this.player.getCamera());
         this.player.getCamera().setUBO(CameraUBO.create(UBOBindingPoints.PLAYER_CAMERA));
         this.world.setPlayer(this.player);
@@ -323,10 +323,10 @@ public class Game {
         this.player.keyCallback(window, key, scancode, action, mods);
         if (key == GLFW_KEY_B && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
             N3DObject boomBox = new N3DObject("boomBox", this.boomBoxModel);
-            boomBox.getScale().set(40f);
-            this.boomBoxModel.getHullCollisionShape().setScale(40f);
+            boomBox.getScale().set(1f);
+            this.boomBoxModel.getHullCollisionShape().setScale(1f);
             this.world.addObject(boomBox);
-            
+
             HullCollisionShape hull = this.boomBoxModel.getHullCollisionShape();
             com.jme3.math.Vector3f center = hull.aabbCenter(null).negate();
             CompoundCollisionShape compound = new CompoundCollisionShape();
@@ -486,7 +486,7 @@ public class Game {
             System.out.println(")");
         }
         if (key == GLFW_KEY_F12 && action == GLFW_PRESS) {
-            Main.USE_FXAA = !Main.USE_FXAA;
+            Pipeline.USE_FXAA = !Pipeline.USE_FXAA;
         }
     }
 

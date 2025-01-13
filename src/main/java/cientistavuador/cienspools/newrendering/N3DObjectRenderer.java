@@ -28,9 +28,9 @@ package cientistavuador.cienspools.newrendering;
 
 import cientistavuador.cienspools.util.bakedlighting.AmbientCube;
 import cientistavuador.cienspools.Main;
+import cientistavuador.cienspools.Pipeline;
 import cientistavuador.cienspools.camera.Camera;
 import cientistavuador.cienspools.fbo.filters.CopyFilter;
-import cientistavuador.cienspools.lut.LUT;
 import cientistavuador.cienspools.newrendering.NLight.NDirectionalLight;
 import cientistavuador.cienspools.newrendering.NLight.NPointLight;
 import cientistavuador.cienspools.newrendering.NLight.NSpotLight;
@@ -623,9 +623,9 @@ public class N3DObjectRenderer {
 
     public void renderAlphaBlending() {
         if (!this.blendList.isEmpty()) {
-            Main.HDR_FRAMEBUFFER.flip();
-            CopyFilter.render(Main.HDR_FRAMEBUFFER.colorBufferRead());
-            Main.HDR_FRAMEBUFFER.flip();
+            Pipeline.HDR_FRAMEBUFFER.flip();
+            CopyFilter.render(Pipeline.HDR_FRAMEBUFFER.colorBufferRead());
+            Pipeline.HDR_FRAMEBUFFER.flip();
             
             renderVariant(NProgram.VARIANT_ALPHA_BLENDING, this.blendList);
         }
@@ -725,7 +725,7 @@ public class N3DObjectRenderer {
         glBindTexture(GL_TEXTURE_2D_ARRAY, Water.TEXTURE);
 
         glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_2D, Main.HDR_FRAMEBUFFER.colorBufferRead());
+        glBindTexture(GL_TEXTURE_2D, Pipeline.HDR_FRAMEBUFFER.colorBufferRead());
 
         render(variant, toRender);
 

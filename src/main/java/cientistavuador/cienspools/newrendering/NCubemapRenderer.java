@@ -27,6 +27,7 @@
 package cientistavuador.cienspools.newrendering;
 
 import cientistavuador.cienspools.Main;
+import cientistavuador.cienspools.Pipeline;
 import cientistavuador.cienspools.camera.PerspectiveCamera;
 import static org.lwjgl.opengl.GL33C.*;
 
@@ -48,26 +49,6 @@ public class NCubemapRenderer {
         renderer.setReflectionsEnabled(false);
         
         int fboSize = size * ssaaScale;
-
-        int fbo = glGenFramebuffers();
-        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-
-        int rboColor = glGenRenderbuffers();
-        glBindRenderbuffer(GL_RENDERBUFFER, rboColor);
-        glRenderbufferStorage(GL_RENDERBUFFER, GL_RGB32F, fboSize, fboSize);
-
-        int rboDepthStencil = glGenRenderbuffers();
-        glBindRenderbuffer(GL_RENDERBUFFER, rboDepthStencil);
-        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, fboSize, fboSize);
-
-        glBindRenderbuffer(GL_RENDERBUFFER, 0);
-
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, rboColor);
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rboDepthStencil);
-
-        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-            throw new IllegalArgumentException("Fatal framebuffer error, could not render cubemap, framebuffer is not complete!");
-        }
         
         float[] cameraRotations = {
             0f, 0f, 180f,
@@ -84,9 +65,11 @@ public class NCubemapRenderer {
         renderer.setCamera(camera);
 
         float[][] sides = new float[NCubemap.SIDES][];
-
-        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        
+        glBindFramebuffer(GL_FRAMEBUFFER, Pipeline.HDR_FRAMEBUFFER.framebuffer());
+        Pipeline.HDR_FRAMEBUFFER.resize(fboSize, fboSize);
         glViewport(0, 0, fboSize, fboSize);
+        
         for (int i = 0; i < NCubemap.SIDES; i++) {
             float pitch = cameraRotations[(i * 3) + 0];
             float yaw = cameraRotations[(i * 3) + 1];
@@ -97,7 +80,10 @@ public class NCubemapRenderer {
 
             glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
             renderer.render();
+            
+            Pipeline.HDR_FRAMEBUFFER.flip();
             glReadPixels(0, 0, fboSize, fboSize, GL_RGB, GL_FLOAT, ssaaSide);
+            Pipeline.HDR_FRAMEBUFFER.flip();
             
             float[] side = new float[size * size * 3];
             for (int y = 0; y < size; y++) {
@@ -128,13 +114,9 @@ public class NCubemapRenderer {
             
             sides[i] = side;
         }
+        
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glViewport(0, 0, Main.WIDTH, Main.HEIGHT);
-
-        glDeleteRenderbuffers(rboColor);
-        glDeleteRenderbuffers(rboDepthStencil);
-        glDeleteFramebuffers(fbo);
-
+        
         return NCubemapImporter.create(name, null, info, size, sides);
     }
     
