@@ -26,10 +26,11 @@
  */
 package cientistavuador.cienspools;
 
-import cientistavuador.cienspools.fbo.HDRFramebuffer;
+import cientistavuador.cienspools.fbo.ForwardFramebuffer;
+import cientistavuador.cienspools.fbo.MSForwardFramebuffer;
 import cientistavuador.cienspools.fbo.filters.CopyFilter;
-import cientistavuador.cienspools.fbo.filters.FXAAFilter;
 import cientistavuador.cienspools.fbo.filters.OutputFilter;
+import cientistavuador.cienspools.fbo.filters.ResolveFilter;
 import cientistavuador.cienspools.lut.LUT;
 import static org.lwjgl.opengl.GL33C.*;
 
@@ -39,63 +40,60 @@ import static org.lwjgl.opengl.GL33C.*;
  */
 public class Pipeline {
 
-    public static final HDRFramebuffer HDR_FRAMEBUFFER = new HDRFramebuffer();
-    
+    public static final MSForwardFramebuffer MS_FRAMEBUFFER = new MSForwardFramebuffer();
+    public static final ForwardFramebuffer FRAMEBUFFER = new ForwardFramebuffer();
+
     public static float GAMMA = 1.4f;
     public static float EXPOSURE = 3.0f;
     public static LUT COLOR_LUT = LUT.NEUTRAL;
-    
-    public static boolean USE_FXAA = true;
+
     public static boolean USE_MSAA = false;
-    
+
     public static void init() {
-        
+
     }
-    
+
     public static void windowSizeChanged(int width, int height) {
-        Pipeline.HDR_FRAMEBUFFER.resize(width, height);
+        MS_FRAMEBUFFER.resize(width, height, 4);
+        FRAMEBUFFER.resize(width, height);
         Game.get().windowSizeChanged(width, height);
     }
-    
+
     public static void keyCallback(long window, int key, int scancode, int action, int mods) {
         Game.get().keyCallback(window, key, scancode, action, mods);
     }
-    
+
     public static void mouseCallback(long window, int button, int action, int mods) {
         Game.get().mouseCallback(window, button, action, mods);
     }
-    
+
     public static void start() {
-        HDR_FRAMEBUFFER.resize(Main.WIDTH, Main.HEIGHT);
-        
+        MS_FRAMEBUFFER.resize(Main.WIDTH, Main.HEIGHT, 4);
+        FRAMEBUFFER.resize(Main.WIDTH, Main.HEIGHT);
         Game.get().start();
     }
-    
+
     public static void loop() {
-        glBindFramebuffer(GL_FRAMEBUFFER, HDR_FRAMEBUFFER.framebuffer());
+        glBindFramebuffer(GL_FRAMEBUFFER, MS_FRAMEBUFFER.framebuffer());
         glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
         Game.get().loop();
 
-        HDR_FRAMEBUFFER.flip();
-
         glDisable(GL_BLEND);
-        OutputFilter.render(
-                Main.WIDTH, Main.HEIGHT,
-                Pipeline.EXPOSURE, Pipeline.GAMMA,
-                (Pipeline.COLOR_LUT == null ? LUT.NEUTRAL.texture() : Pipeline.COLOR_LUT.texture()),
-                HDR_FRAMEBUFFER.colorBufferRead()
+        
+        glBindFramebuffer(GL_FRAMEBUFFER, FRAMEBUFFER.framebuffer());
+        ResolveFilter.render(
+                MS_FRAMEBUFFER.colorBuffer(), MS_FRAMEBUFFER.depthBuffer(),
+                MS_FRAMEBUFFER.getSamples()
         );
-
-        if (USE_FXAA) {
-            HDR_FRAMEBUFFER.flip();
-
-            FXAAFilter.render(Main.WIDTH, Main.HEIGHT, HDR_FRAMEBUFFER.colorBufferRead());
-        }
         
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-        CopyFilter.render(HDR_FRAMEBUFFER.colorBufferWrite());
+        OutputFilter.render(
+                EXPOSURE, GAMMA,
+                (Pipeline.COLOR_LUT == null ? LUT.NEUTRAL.texture() : Pipeline.COLOR_LUT.texture()),
+                FRAMEBUFFER.colorBuffer()
+        );
+        
         glEnable(GL_BLEND);
     }
 

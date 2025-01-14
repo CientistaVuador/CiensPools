@@ -155,7 +155,7 @@ public class Game {
             this.world.setMap(map);
 
             {
-                this.boomBoxModel = N3DModel.RESOURCES.get("Box");
+                this.boomBoxModel = N3DModel.RESOURCES.get("[D48EAA8D455A4B57|A34C2F1CE3B5D2C7]BoomBox");
 
                 this.acUnit = new N3DObject("AC Unit", this.boomBoxModel);
                 this.gizmo.getExtents().set(this.boomBoxModel.getAabbExtents());
@@ -323,8 +323,8 @@ public class Game {
         this.player.keyCallback(window, key, scancode, action, mods);
         if (key == GLFW_KEY_B && (action == GLFW_PRESS || action == GLFW_REPEAT)) {
             N3DObject boomBox = new N3DObject("boomBox", this.boomBoxModel);
-            boomBox.getScale().set(1f);
-            this.boomBoxModel.getHullCollisionShape().setScale(1f);
+            boomBox.getScale().set(40f);
+            this.boomBoxModel.getHullCollisionShape().setScale(40f);
             this.world.addObject(boomBox);
 
             HullCollisionShape hull = this.boomBoxModel.getHullCollisionShape();
@@ -484,9 +484,6 @@ public class Game {
             System.out.print(rotation.x() + "f, " + rotation.y() + "f, " + rotation.z() + "f, " + rotation.w() + "f, ");
             System.out.print(this.gizmo.getScale().x() * 0.5f + "f, " + this.gizmo.getScale().y() * 0.5f + "f, " + this.gizmo.getScale().z() * 0.5f + "f");
             System.out.println(")");
-        }
-        if (key == GLFW_KEY_F12 && action == GLFW_PRESS) {
-            Pipeline.USE_FXAA = !Pipeline.USE_FXAA;
         }
     }
 

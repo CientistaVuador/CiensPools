@@ -26,16 +26,15 @@
  */
 package cientistavuador.cienspools.fbo.filters;
 
-import cientistavuador.cienspools.Main;
 import cientistavuador.cienspools.util.BetterUniformSetter;
 import cientistavuador.cienspools.util.ProgramCompiler;
-import static org.lwjgl.opengl.GL33.*;
+import static org.lwjgl.opengl.GL33C.*;
 
 /**
  *
  * @author Cien
  */
-public class OutputFilter {
+public class AverageFilter {
     public static final int SHADER_PROGRAM = ProgramCompiler.compile(
             """
             #version 330 core
@@ -53,69 +52,49 @@ public class OutputFilter {
             """
             #version 330 core
             
-            uniform float exposure;
-            uniform float gamma;
-            uniform sampler3D LUT;
-            uniform sampler2D inputTexture;
+            uniform sampler2D A;
+            uniform sampler2D B;
             
             in vec2 UV;
             
             layout (location = 0) out vec4 outputColor;
             
             void main() {
-                vec2 screenSize = vec2(textureSize(inputTexture, 0));
-                vec4 color = texture(inputTexture, UV);
-                
-                color.rgb = vec3(1.0) - exp(-color.rgb * exposure);
-                color.rgb = pow(color.rgb, vec3(1.0/gamma));
-                color.rgb = texture(LUT, color.rgb).rgb;
-                const float noise = 0.5 / 255.0;
-                vec2 coords = gl_FragCoord.xy / screenSize;
-                color.rgb += mix(-noise, noise,
-                    fract(sin(dot(coords, vec2(12.9898,78.233))) * 43758.5453));
-                color.rgb = clamp(color.rgb, 0.0, 1.0);
-                color.a = dot(color.rgb, vec3(0.299, 0.587, 0.114));
-                
-                outputColor = color;
+                outputColor = (texture(A, UV) + texture(B, UV)) * 0.5;
             }
             """
     );
     
     public static final BetterUniformSetter UNIFORMS = new BetterUniformSetter(SHADER_PROGRAM);
     
-    public static void render(
-            float exposure, float gamma, int LUT,
-            int inputTexture) {
+    public static void render(int A, int B) {
+        glDepthMask(false);
         glUseProgram(SHADER_PROGRAM);
         glBindVertexArray(ScreenTriangle.VAO);
         
         UNIFORMS
-                .uniform1f("exposure", exposure)
-                .uniform1f("gamma", gamma)
-                .uniform1i("LUT", 0)
-                .uniform1i("inputTexture", 1)
+                .uniform1i("A", 0)
+                .uniform1i("B", 1)
                 ;
         
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_3D, LUT);
+        glBindTexture(GL_TEXTURE_2D, A);
         
         glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, inputTexture);
+        glBindTexture(GL_TEXTURE_2D, B);
         
         glDrawArrays(GL_TRIANGLES, 0, ScreenTriangle.NUMBER_OF_VERTICES);
         
-        Main.NUMBER_OF_DRAWCALLS++;
-        Main.NUMBER_OF_VERTICES += ScreenTriangle.NUMBER_OF_VERTICES;
-        
         glBindVertexArray(0);
         glUseProgram(0);
+        glDepthMask(true);
     }
     
     public static void init() {
         
     }
     
-    private OutputFilter() {
+    private AverageFilter() {
         
     }
 }

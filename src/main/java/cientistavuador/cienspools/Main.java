@@ -37,9 +37,11 @@ import cientistavuador.cienspools.newrendering.NSpecularBRDFLookupTable;
 import cientistavuador.cienspools.popups.LoadingPopup;
 import cientistavuador.cienspools.resources.ResourceLoader;
 import cientistavuador.cienspools.audio.Sounds;
+import cientistavuador.cienspools.fbo.filters.AverageFilter;
 import cientistavuador.cienspools.fbo.filters.CopyFilter;
 import cientistavuador.cienspools.fbo.filters.FXAAFilter;
 import cientistavuador.cienspools.fbo.filters.OutputFilter;
+import cientistavuador.cienspools.fbo.filters.ResolveFilter;
 import cientistavuador.cienspools.fbo.filters.ScreenTriangle;
 import cientistavuador.cienspools.text.GLFonts;
 import cientistavuador.cienspools.texture.Textures;
@@ -249,7 +251,7 @@ public class Main {
     public static int MAX_TEXTURE_2D_ARRAY_SIZE = 256;
     public static int MAX_TEXTURE_3D_SIZE = 256;
     public static boolean FULLSCREEN = false;
-    public static int FRAMERATE_LIMIT = 240;
+    public static int FRAMERATE_LIMIT = 0;
     public static double ONE_SECOND_COUNTER = 0.0;
     public static double ONE_MINUTE_COUNTER = 0.0;
     public static int NUMBER_OF_DRAWCALLS = 0;
@@ -545,6 +547,8 @@ public class Main {
         OutputFilter.init();
         CopyFilter.init();
         FXAAFilter.init();
+        AverageFilter.init();
+        ResolveFilter.init();
         
         Pipeline.init();
         Game.get();

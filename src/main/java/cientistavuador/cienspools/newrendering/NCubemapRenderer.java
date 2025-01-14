@@ -66,8 +66,8 @@ public class NCubemapRenderer {
 
         float[][] sides = new float[NCubemap.SIDES][];
         
-        glBindFramebuffer(GL_FRAMEBUFFER, Pipeline.HDR_FRAMEBUFFER.framebuffer());
-        Pipeline.HDR_FRAMEBUFFER.resize(fboSize, fboSize);
+        glBindFramebuffer(GL_FRAMEBUFFER, Pipeline.MS_FRAMEBUFFER.framebuffer());
+        //Pipeline.HDR_FRAMEBUFFER.resize(fboSize, fboSize);
         glViewport(0, 0, fboSize, fboSize);
         
         for (int i = 0; i < NCubemap.SIDES; i++) {
@@ -81,9 +81,9 @@ public class NCubemapRenderer {
             glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
             renderer.render();
             
-            Pipeline.HDR_FRAMEBUFFER.flip();
+            //Pipeline.HDR_FRAMEBUFFER.flip();
             glReadPixels(0, 0, fboSize, fboSize, GL_RGB, GL_FLOAT, ssaaSide);
-            Pipeline.HDR_FRAMEBUFFER.flip();
+            //Pipeline.HDR_FRAMEBUFFER.flip();
             
             float[] side = new float[size * size * 3];
             for (int y = 0; y < size; y++) {

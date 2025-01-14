@@ -34,24 +34,20 @@ import static org.lwjgl.opengl.GL33C.*;
  *
  * @author Cien
  */
-public class HDRFramebuffer {
-
+public class ForwardFramebuffer {
     private int width = 1;
     private int height = 1;
 
     private class WrappedState {
-
-        boolean flipped = false;
         int framebuffer = 0;
 
-        int colorBufferWrite = 0;
-        int colorBufferRead = 0;
+        int colorBuffer = 0;
         int depthBuffer = 0;
     }
 
     private final WrappedState state = new WrappedState();
 
-    public HDRFramebuffer() {
+    public ForwardFramebuffer() {
         registerForCleaning();
     }
 
@@ -60,18 +56,16 @@ public class HDRFramebuffer {
 
         ObjectCleaner.get().register(this, () -> {
             Main.MAIN_TASKS.add(() -> {
-                if (finalState.colorBufferWrite == 0) {
+                if (finalState.colorBuffer == 0) {
                     return;
                 }
 
                 glDeleteFramebuffers(finalState.framebuffer);
-                glDeleteTextures(finalState.colorBufferWrite);
-                glDeleteTextures(finalState.colorBufferRead);
+                glDeleteTextures(finalState.colorBuffer);
                 glDeleteTextures(finalState.depthBuffer);
 
                 finalState.framebuffer = 0;
-                finalState.colorBufferWrite = 0;
-                finalState.colorBufferRead = 0;
+                finalState.colorBuffer = 0;
                 finalState.depthBuffer = 0;
             });
         });
@@ -87,7 +81,7 @@ public class HDRFramebuffer {
                 0,
                 GL_RGBA, GL_FLOAT, 0
         );
-
+        
         glBindTexture(GL_TEXTURE_2D, 0);
     }
 
@@ -101,7 +95,7 @@ public class HDRFramebuffer {
                 0,
                 GL_DEPTH_COMPONENT, GL_FLOAT, 0
         );
-
+        
         glBindTexture(GL_TEXTURE_2D, 0);
     }
 
@@ -116,7 +110,8 @@ public class HDRFramebuffer {
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         } else {
-            glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, new float[]{1f, 1f, 1f, 1f});
+            glTexParameterfv(GL_TEXTURE_2D,
+                    GL_TEXTURE_BORDER_COLOR, new float[]{1f, 1f, 1f, 1f});
 
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
@@ -126,22 +121,16 @@ public class HDRFramebuffer {
     }
 
     private void initialize() {
-        if (this.state.colorBufferWrite != 0) {
+        if (this.state.colorBuffer != 0) {
             return;
         }
 
-        int colorBufferWrite = glGenTextures();
-        this.state.colorBufferWrite = colorBufferWrite;
+        int colorBuffer = glGenTextures();
+        this.state.colorBuffer = colorBuffer;
 
-        updateColorBuffer(colorBufferWrite);
-        defaultTextureConfiguration(colorBufferWrite, false);
-
-        int colorBufferRead = glGenTextures();
-        this.state.colorBufferRead = colorBufferRead;
-
-        updateColorBuffer(colorBufferRead);
-        defaultTextureConfiguration(colorBufferRead, false);
-
+        updateColorBuffer(colorBuffer);
+        defaultTextureConfiguration(colorBuffer, false);
+        
         int depthBuffer = glGenTextures();
         this.state.depthBuffer = depthBuffer;
 
@@ -153,27 +142,20 @@ public class HDRFramebuffer {
 
         glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
 
-        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, colorBufferWrite, 0);
-        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, colorBufferRead, 0);
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, colorBuffer, 0);
         glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthBuffer, 0);
 
         glDrawBuffer(GL_COLOR_ATTACHMENT0);
-        glReadBuffer(GL_COLOR_ATTACHMENT1);
-        this.state.flipped = false;
-
+        glReadBuffer(GL_NONE);
+        
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
-    public int colorBufferWrite() {
+    public int colorBuffer() {
         initialize();
-        return this.state.colorBufferWrite;
+        return this.state.colorBuffer;
     }
-
-    public int colorBufferRead() {
-        initialize();
-        return this.state.colorBufferRead;
-    }
-
+    
     public int depthBuffer() {
         initialize();
         return this.state.depthBuffer;
@@ -191,7 +173,7 @@ public class HDRFramebuffer {
     public int getHeight() {
         return height;
     }
-
+    
     public void resize(int width, int height) {
         if (width <= 0) {
             width = 1;
@@ -202,29 +184,10 @@ public class HDRFramebuffer {
         
         this.width = width;
         this.height = height;
-        updateColorBuffer(colorBufferWrite());
-        updateColorBuffer(colorBufferRead());
+        updateColorBuffer(colorBuffer());
         updateDepthBuffer(depthBuffer());
     }
-
-    public void flip() {
-        initialize();
-        
-        int write = this.state.colorBufferWrite;
-        int read = this.state.colorBufferRead;
-        this.state.colorBufferWrite = read;
-        this.state.colorBufferRead = write;
-
-        this.state.flipped = !this.state.flipped;
-        if (this.state.flipped) {
-            glDrawBuffer(GL_COLOR_ATTACHMENT1);
-            glReadBuffer(GL_COLOR_ATTACHMENT0);
-        } else {
-            glDrawBuffer(GL_COLOR_ATTACHMENT0);
-            glReadBuffer(GL_COLOR_ATTACHMENT1);
-        }
-    }
-
+    
     public void manualFree() {
         final WrappedState finalState = this.state;
 
@@ -233,13 +196,11 @@ public class HDRFramebuffer {
         }
 
         glDeleteFramebuffers(finalState.framebuffer);
-        glDeleteTextures(finalState.colorBufferWrite);
-        glDeleteTextures(finalState.colorBufferRead);
+        glDeleteTextures(finalState.colorBuffer);
         glDeleteTextures(finalState.depthBuffer);
 
         finalState.framebuffer = 0;
-        finalState.colorBufferWrite = 0;
-        finalState.colorBufferRead = 0;
+        finalState.colorBuffer = 0;
         finalState.depthBuffer = 0;
     }
 }

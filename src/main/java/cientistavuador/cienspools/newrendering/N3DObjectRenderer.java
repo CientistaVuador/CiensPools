@@ -623,9 +623,9 @@ public class N3DObjectRenderer {
 
     public void renderAlphaBlending() {
         if (!this.blendList.isEmpty()) {
-            Pipeline.HDR_FRAMEBUFFER.flip();
-            CopyFilter.render(Pipeline.HDR_FRAMEBUFFER.colorBufferRead());
-            Pipeline.HDR_FRAMEBUFFER.flip();
+            //Pipeline.HDR_FRAMEBUFFER.flip();
+            //CopyFilter.render(Pipeline.HDR_FRAMEBUFFER.colorBufferRead());
+            //Pipeline.HDR_FRAMEBUFFER.flip();
             
             renderVariant(NProgram.VARIANT_ALPHA_BLENDING, this.blendList);
         }
@@ -725,7 +725,8 @@ public class N3DObjectRenderer {
         glBindTexture(GL_TEXTURE_2D_ARRAY, Water.TEXTURE);
 
         glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_2D, Pipeline.HDR_FRAMEBUFFER.colorBufferRead());
+        //glBindTexture(GL_TEXTURE_2D, Pipeline.HDR_FRAMEBUFFER.colorBufferRead());
+        glBindTexture(GL_TEXTURE_2D, 0);
 
         render(variant, toRender);
 
