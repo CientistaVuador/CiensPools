@@ -66,7 +66,7 @@ public class NCubemapRenderer {
 
         float[][] sides = new float[NCubemap.SIDES][];
         
-        glBindFramebuffer(GL_FRAMEBUFFER, Pipeline.MS_FRAMEBUFFER.framebuffer());
+        glBindFramebuffer(GL_FRAMEBUFFER, Pipeline.RENDERING_FRAMEBUFFER.framebuffer());
         //Pipeline.HDR_FRAMEBUFFER.resize(fboSize, fboSize);
         glViewport(0, 0, fboSize, fboSize);
         

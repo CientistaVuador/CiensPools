@@ -26,9 +26,11 @@
  */
 package cientistavuador.cienspools;
 
+import cientistavuador.cienspools.fbo.DepthlessForwardFramebuffer;
 import cientistavuador.cienspools.fbo.ForwardFramebuffer;
+import cientistavuador.cienspools.fbo.Framebuffer;
 import cientistavuador.cienspools.fbo.MSForwardFramebuffer;
-import cientistavuador.cienspools.fbo.filters.CopyFilter;
+import cientistavuador.cienspools.fbo.filters.FXAAFilter;
 import cientistavuador.cienspools.fbo.filters.OutputFilter;
 import cientistavuador.cienspools.fbo.filters.ResolveFilter;
 import cientistavuador.cienspools.lut.LUT;
@@ -40,22 +42,46 @@ import static org.lwjgl.opengl.GL33C.*;
  */
 public class Pipeline {
 
-    public static final MSForwardFramebuffer MS_FRAMEBUFFER = new MSForwardFramebuffer();
-    public static final ForwardFramebuffer FRAMEBUFFER = new ForwardFramebuffer();
+    public static final int MSAA_SAMPLES = 4;
+
+    private static MSForwardFramebuffer MS_FORWARD_FRAMEBUFFER = null;
+    private static final ForwardFramebuffer FORWARD_FRAMEBUFFER = new ForwardFramebuffer();
+
+    public static Framebuffer RENDERING_FRAMEBUFFER = FORWARD_FRAMEBUFFER;
+    public static final DepthlessForwardFramebuffer DEPTHLESS_FRAMEBUFFER = new DepthlessForwardFramebuffer();
 
     public static float GAMMA = 1.4f;
     public static float EXPOSURE = 3.0f;
     public static LUT COLOR_LUT = LUT.NEUTRAL;
 
-    public static boolean USE_MSAA = false;
+    public static boolean USE_MSAA = true;
+    public static boolean USE_FXAA = true;
+    private static boolean LAST_MSAA_STATE = USE_MSAA;
 
     public static void init() {
 
     }
 
+    private static void updateFramebuffers(int width, int height) {
+        if (RENDERING_FRAMEBUFFER instanceof ForwardFramebuffer && USE_MSAA) {
+            MS_FORWARD_FRAMEBUFFER = new MSForwardFramebuffer();
+            RENDERING_FRAMEBUFFER = MS_FORWARD_FRAMEBUFFER;
+        }
+        if (RENDERING_FRAMEBUFFER instanceof MSForwardFramebuffer && !USE_MSAA) {
+            MS_FORWARD_FRAMEBUFFER.manualFree();
+            MS_FORWARD_FRAMEBUFFER = null;
+            RENDERING_FRAMEBUFFER = FORWARD_FRAMEBUFFER;
+        }
+
+        if (MS_FORWARD_FRAMEBUFFER != null) {
+            MS_FORWARD_FRAMEBUFFER.resize(width, height, MSAA_SAMPLES);
+        }
+        FORWARD_FRAMEBUFFER.resize(width, height);
+        DEPTHLESS_FRAMEBUFFER.resize(width, height);
+    }
+
     public static void windowSizeChanged(int width, int height) {
-        MS_FRAMEBUFFER.resize(width, height, 4);
-        FRAMEBUFFER.resize(width, height);
+        updateFramebuffers(width, height);
         Game.get().windowSizeChanged(width, height);
     }
 
@@ -68,32 +94,46 @@ public class Pipeline {
     }
 
     public static void start() {
-        MS_FRAMEBUFFER.resize(Main.WIDTH, Main.HEIGHT, 4);
-        FRAMEBUFFER.resize(Main.WIDTH, Main.HEIGHT);
+        updateFramebuffers(Main.WIDTH, Main.HEIGHT);
         Game.get().start();
     }
 
     public static void loop() {
-        glBindFramebuffer(GL_FRAMEBUFFER, MS_FRAMEBUFFER.framebuffer());
+        if (LAST_MSAA_STATE != USE_MSAA) {
+            LAST_MSAA_STATE = USE_MSAA;
+            updateFramebuffers(Main.WIDTH, Main.HEIGHT);
+        }
+
+        glBindFramebuffer(GL_FRAMEBUFFER, RENDERING_FRAMEBUFFER.framebuffer());
         glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
         Game.get().loop();
 
         glDisable(GL_BLEND);
+
+        if (MS_FORWARD_FRAMEBUFFER != null) {
+            glBindFramebuffer(GL_FRAMEBUFFER, FORWARD_FRAMEBUFFER.framebuffer());
+            ResolveFilter.render(
+                    MS_FORWARD_FRAMEBUFFER.colorBuffer(), MS_FORWARD_FRAMEBUFFER.depthBuffer(),
+                    MS_FORWARD_FRAMEBUFFER.getSamples()
+            );
+        }
         
-        glBindFramebuffer(GL_FRAMEBUFFER, FRAMEBUFFER.framebuffer());
-        ResolveFilter.render(
-                MS_FRAMEBUFFER.colorBuffer(), MS_FRAMEBUFFER.depthBuffer(),
-                MS_FRAMEBUFFER.getSamples()
-        );
-        
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        if (USE_FXAA) {
+            glBindFramebuffer(GL_FRAMEBUFFER, DEPTHLESS_FRAMEBUFFER.framebuffer());
+        } else {
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        }
         OutputFilter.render(
                 EXPOSURE, GAMMA,
                 (Pipeline.COLOR_LUT == null ? LUT.NEUTRAL.texture() : Pipeline.COLOR_LUT.texture()),
-                FRAMEBUFFER.colorBuffer()
+                FORWARD_FRAMEBUFFER.colorBuffer()
         );
-        
+        if (USE_FXAA) {
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            FXAAFilter.render(DEPTHLESS_FRAMEBUFFER.colorBuffer());
+        }
+
         glEnable(GL_BLEND);
     }
 

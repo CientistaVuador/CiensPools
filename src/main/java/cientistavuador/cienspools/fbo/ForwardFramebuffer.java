@@ -34,7 +34,7 @@ import static org.lwjgl.opengl.GL33C.*;
  *
  * @author Cien
  */
-public class ForwardFramebuffer {
+public class ForwardFramebuffer implements Framebuffer {
     private int width = 1;
     private int height = 1;
 
@@ -161,15 +161,18 @@ public class ForwardFramebuffer {
         return this.state.depthBuffer;
     }
 
+    @Override
     public int framebuffer() {
         initialize();
         return this.state.framebuffer;
     }
 
+    @Override
     public int getWidth() {
         return width;
     }
 
+    @Override
     public int getHeight() {
         return height;
     }
@@ -188,6 +191,7 @@ public class ForwardFramebuffer {
         updateDepthBuffer(depthBuffer());
     }
     
+    @Override
     public void manualFree() {
         final WrappedState finalState = this.state;
 

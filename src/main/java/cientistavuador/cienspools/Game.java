@@ -475,6 +475,12 @@ public class Game {
         if (key == GLFW_KEY_F7 && action == GLFW_PRESS) {
             this.debugCollision = !this.debugCollision;
         }
+        if (key == GLFW_KEY_F8 && action == GLFW_PRESS) {
+            Pipeline.USE_FXAA = !Pipeline.USE_FXAA;
+        }
+        if (key == GLFW_KEY_F9 && action == GLFW_PRESS) {
+            Pipeline.USE_MSAA = !Pipeline.USE_MSAA;
+        }
         if (key == GLFW_KEY_R && action == GLFW_PRESS) {
             Quaternionf rotation = new Quaternionf();
             this.gizmo.rotate(rotation);

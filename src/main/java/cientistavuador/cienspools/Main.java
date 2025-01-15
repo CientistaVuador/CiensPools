@@ -174,6 +174,10 @@ public class Main {
         System.out.println("Max Texture Size: " + glGetInteger(GL_MAX_TEXTURE_SIZE));
         System.out.println("Max Texture Array Layers: " + glGetInteger(GL_MAX_ARRAY_TEXTURE_LAYERS));
         System.out.println("Max Texture 3D Size: " + glGetInteger(GL_MAX_3D_TEXTURE_SIZE));
+        System.out.println("Max MSAA Samples: " + glGetInteger(GL_MAX_SAMPLES));
+        System.out.println("Max MSAA Samples (Color): " + glGetInteger(GL_MAX_COLOR_TEXTURE_SAMPLES));
+        System.out.println("Max MSAA Samples (Depth): " + glGetInteger(GL_MAX_DEPTH_TEXTURE_SAMPLES));
+        System.out.println("Max MSAA Samples (Int): " + glGetInteger(GL_MAX_INTEGER_SAMPLES));
 
         GL.setCapabilities(null);
         glfwMakeContextCurrent(0);
@@ -251,7 +255,7 @@ public class Main {
     public static int MAX_TEXTURE_2D_ARRAY_SIZE = 256;
     public static int MAX_TEXTURE_3D_SIZE = 256;
     public static boolean FULLSCREEN = false;
-    public static int FRAMERATE_LIMIT = 0;
+    public static int FRAMERATE_LIMIT = 240;
     public static double ONE_SECOND_COUNTER = 0.0;
     public static double ONE_MINUTE_COUNTER = 0.0;
     public static int NUMBER_OF_DRAWCALLS = 0;
@@ -481,6 +485,7 @@ public class Main {
             }
         }
         
+        glEnable(GL_MULTISAMPLE);
         glEnable(GL_STENCIL_TEST);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

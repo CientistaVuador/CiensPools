@@ -55,19 +55,18 @@ public class FXAAFilter {
             #version 330 core
             
             #define FXAA_PC 1
-            #define FXAA_QUALITY__PRESET 12
+            #define FXAA_QUALITY__PRESET 23
             #define FXAA_GREEN_AS_LUMA 0
             #define FXAA_GLSL_130 1
             
-            #define FXAA_QUALITY__SUBPIX 0.75
-            #define FXAA_QUALITY__EDGE_THRESHOLD 0.333
-            #define FXAA_QUALITY__EDGE_THRESHOLD_MIN 0.0833
+            #define FXAA_QUALITY__SUBPIX 0.25
+            #define FXAA_QUALITY__EDGE_THRESHOLD 0.250
+            #define FXAA_QUALITY__EDGE_THRESHOLD_MIN 0.0625
             
             #extension GL_ARB_gpu_shader5 : enable
             
             #include "Fxaa3_11.h"
             
-            uniform vec2 screenSize;
             uniform sampler2D inputTexture;
             
             in vec2 UV;
@@ -75,6 +74,7 @@ public class FXAAFilter {
             layout (location = 0) out vec4 outputColor;
             
             void main() {
+                vec2 screenSize = vec2(textureSize(inputTexture, 0));
                 outputColor = vec4(FxaaPixelShader(UV, vec4(0.0), inputTexture, inputTexture, inputTexture,  1.0 / screenSize, vec4(0.0), vec4(0.0), vec4(0.0), FXAA_QUALITY__SUBPIX, FXAA_QUALITY__EDGE_THRESHOLD, FXAA_QUALITY__EDGE_THRESHOLD_MIN, 0.0, 0.0, 0.0, vec4(0.0)).rgb, 1.0);
             }
             """
@@ -82,12 +82,11 @@ public class FXAAFilter {
     
     public static final BetterUniformSetter UNIFORMS = new BetterUniformSetter(SHADER_PROGRAM);
     
-    public static void render(int width, int height, int inputTexture) {
+    public static void render(int inputTexture) {
         glUseProgram(SHADER_PROGRAM);
         glBindVertexArray(ScreenTriangle.VAO);
         
         UNIFORMS
-                .uniform2f("screenSize", width, height)
                 .uniform1i("inputTexture", 0)
                 ;
         
