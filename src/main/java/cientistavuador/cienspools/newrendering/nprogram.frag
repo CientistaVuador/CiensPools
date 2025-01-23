@@ -498,11 +498,12 @@ void main() {
         //        vec3(1.0), 1.0, roughness, fresnel
         //);
         
+        vec3 viewSpaceNormal = normalize(mat3(view) * normal);
+        
         float refraction = material.refraction;
         vec3 tangentViewDirection = vec3(0.0, 0.0, -1.0);
-        vec3 refractedDirection = refract(tangentViewDirection, tangentNormal, refraction);
-        refractedDirection = 
-                normalize(mix(tangentViewDirection, refractedDirection, 0.2));
+        vec3 refractedDirection = refract(tangentViewDirection, normal, refraction);
+        refractedDirection = normalize(mix(tangentViewDirection, tangentNormal, 0.05));
         
         vec3 refractedColor = texture(screen, (gl_FragCoord.xy / screenSize) + refractedDirection.xy).rgb;
         refractedColor *= mix(vec3(1.0), color.rgb, outputColor.a);

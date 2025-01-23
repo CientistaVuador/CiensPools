@@ -24,7 +24,7 @@
  *
  * For more information, please refer to <https://unlicense.org>
  */
-package cientistavuador.cienspools.fbo.filters;
+package cientistavuador.cienspools.fbo.filters.mesh;
 
 import static org.lwjgl.opengl.GL33C.*;
 

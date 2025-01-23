@@ -37,12 +37,12 @@ import cientistavuador.cienspools.newrendering.NSpecularBRDFLookupTable;
 import cientistavuador.cienspools.popups.LoadingPopup;
 import cientistavuador.cienspools.resources.ResourceLoader;
 import cientistavuador.cienspools.audio.Sounds;
-import cientistavuador.cienspools.fbo.filters.AverageFilter;
+import cientistavuador.cienspools.fbo.filters.BlurDownsample;
 import cientistavuador.cienspools.fbo.filters.CopyFilter;
 import cientistavuador.cienspools.fbo.filters.FXAAFilter;
 import cientistavuador.cienspools.fbo.filters.OutputFilter;
 import cientistavuador.cienspools.fbo.filters.ResolveFilter;
-import cientistavuador.cienspools.fbo.filters.ScreenTriangle;
+import cientistavuador.cienspools.fbo.filters.mesh.ScreenTriangle;
 import cientistavuador.cienspools.text.GLFonts;
 import cientistavuador.cienspools.texture.Textures;
 import cientistavuador.cienspools.ubo.UBOBindingPoints;
@@ -552,8 +552,8 @@ public class Main {
         OutputFilter.init();
         CopyFilter.init();
         FXAAFilter.init();
-        AverageFilter.init();
         ResolveFilter.init();
+        BlurDownsample.init();
         
         Pipeline.init();
         Game.get();

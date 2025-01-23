@@ -26,6 +26,7 @@
  */
 package cientistavuador.cienspools.fbo.filters;
 
+import cientistavuador.cienspools.Main;
 import cientistavuador.cienspools.fbo.filters.mesh.ScreenTriangle;
 import cientistavuador.cienspools.util.BetterUniformSetter;
 import cientistavuador.cienspools.util.ProgramCompiler;
@@ -35,7 +36,7 @@ import static org.lwjgl.opengl.GL33C.*;
  *
  * @author Cien
  */
-public class CopyFilter {
+public class BlurDownsample {
     public static final int SHADER_PROGRAM = ProgramCompiler.compile(
             """
             #version 330 core
@@ -59,19 +60,23 @@ public class CopyFilter {
             
             layout (location = 0) out vec4 outputColor;
             
+            #include "DualFilteringBlur.h"
+            
             void main() {
-                outputColor = texture(inputTexture, UV);
+                vec2 halfpixel = blurHalfpixel(inputTexture);
+                outputColor = blurDownsample(UV, halfpixel, inputTexture);
             }
             """
     );
     
     public static final BetterUniformSetter UNIFORMS = new BetterUniformSetter(SHADER_PROGRAM);
     
-    public static void render(int inputTexture) {
-        glDepthMask(false);
+    public static void prepare() {
         glUseProgram(SHADER_PROGRAM);
         glBindVertexArray(ScreenTriangle.VAO);
-        
+    }
+    
+    public static void render(int inputTexture) {
         UNIFORMS
                 .uniform1i("inputTexture", 0)
                 ;
@@ -81,16 +86,20 @@ public class CopyFilter {
         
         glDrawArrays(GL_TRIANGLES, 0, ScreenTriangle.NUMBER_OF_VERTICES);
         
+        Main.NUMBER_OF_DRAWCALLS++;
+        Main.NUMBER_OF_VERTICES += ScreenTriangle.NUMBER_OF_VERTICES;
+    }
+    
+    public static void done() {
         glBindVertexArray(0);
         glUseProgram(0);
-        glDepthMask(true);
     }
     
     public static void init() {
         
     }
     
-    private CopyFilter() {
+    private BlurDownsample() {
         
     }
 }

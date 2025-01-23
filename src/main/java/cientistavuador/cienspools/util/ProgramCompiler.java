@@ -41,7 +41,7 @@ import org.lwjgl.opengl.KHRDebug;
  * @author Cien
  */
 public class ProgramCompiler {
-    
+
     private static final boolean ONLY_OUTPUT_ERRORS = false;
 
     public static int compile(String vertexSource, String fragmentSource) {
@@ -63,16 +63,29 @@ public class ProgramCompiler {
         return s;
     }
 
-    private static String createOutputMessage(String prefix, String message) {
+    private static String enumerateLines(String code) {
+        if (code == null) {
+            return "null";
+        }
+        StringBuilder b = new StringBuilder();
+        int count = 1;
+        for (String line : code.lines().toList()) {
+            b.append("Line ").append(count).append(": ").append(line).append('\n');
+            count++;
+        }
+        return b.toString();
+    }
+
+    private static String createOutputMessage(String prefix, String message, String code) {
         if (message.isBlank()) {
             return prefix + " Output -> (no output)";
         }
-        return prefix + " Output -> {\n" + message + "\n}";
+        return prefix + " Output -> {\n" + message + "\n}\nShader Code Dump:\n" + enumerateLines(code);
     }
 
-    private static void checkErrors(int shader, String prefix) {
+    private static void checkErrors(int shader, String prefix, String code) {
         boolean shaderFailed = glGetShaderi(shader, GL_COMPILE_STATUS) != GL_TRUE;
-        String message = createOutputMessage(prefix, glGetShaderInfoLog(shader));
+        String message = createOutputMessage(prefix, glGetShaderInfoLog(shader), code);
         if (!ONLY_OUTPUT_ERRORS && !shaderFailed) {
             System.out.println(message);
         } else if (shaderFailed) {
@@ -84,7 +97,7 @@ public class ProgramCompiler {
         vertexSource = IncludeGLSL.parse(vertexSource);
         geometrySource = IncludeGLSL.parse(geometrySource);
         fragmentSource = IncludeGLSL.parse(fragmentSource);
-        
+
         String shaderName = null;
         if (!ONLY_OUTPUT_ERRORS) {
             StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
@@ -112,7 +125,7 @@ public class ProgramCompiler {
         glShaderSource(vertexShader, vertexSource);
         glCompileShader(vertexShader);
 
-        checkErrors(vertexShader, "Vertex Shader");
+        checkErrors(vertexShader, "Vertex Shader", vertexSource);
 
         int geometryShader = 0;
         if (geometrySource != null) {
@@ -120,14 +133,14 @@ public class ProgramCompiler {
             glShaderSource(geometryShader, geometrySource);
             glCompileShader(geometryShader);
 
-            checkErrors(geometryShader, "Geometry Shader");
+            checkErrors(geometryShader, "Geometry Shader", geometrySource);
         }
 
         int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
         glShaderSource(fragmentShader, fragmentSource);
         glCompileShader(fragmentShader);
 
-        checkErrors(fragmentShader, "Fragment Shader");
+        checkErrors(fragmentShader, "Fragment Shader", fragmentSource);
 
         int program = glCreateProgram();
 
@@ -141,49 +154,50 @@ public class ProgramCompiler {
 
         {
             boolean programLinkFailed = glGetProgrami(program, GL_LINK_STATUS) != GL_TRUE;
-            String message = createOutputMessage("Program Link", glGetProgramInfoLog(program));
+            String message = createOutputMessage("Program Link", glGetProgramInfoLog(program), null);
             if (!ONLY_OUTPUT_ERRORS && !programLinkFailed) {
                 System.out.println(message);
             } else if (programLinkFailed) {
                 throw new RuntimeException(message);
             }
         }
-        
+
         if (shaderName != null && GL.getCapabilities().GL_KHR_debug) {
             KHRDebug.glObjectLabel(KHRDebug.GL_SHADER, vertexShader,
                     StringUtils.truncateStringTo255Bytes("vertex_" + shaderName)
             );
         }
-        
+
         if (geometryShader != 0 && shaderName != null && GL.getCapabilities().GL_KHR_debug) {
             KHRDebug.glObjectLabel(KHRDebug.GL_SHADER, geometryShader,
                     StringUtils.truncateStringTo255Bytes("geometry_" + shaderName)
             );
         }
-        
+
         if (shaderName != null && GL.getCapabilities().GL_KHR_debug) {
             KHRDebug.glObjectLabel(KHRDebug.GL_SHADER, fragmentShader,
                     StringUtils.truncateStringTo255Bytes("fragment_" + shaderName)
             );
         }
-        
+
         glDeleteShader(vertexShader);
         if (geometryShader != 0) {
             glDeleteShader(geometryShader);
         }
         glDeleteShader(fragmentShader);
-        
+
         if (shaderName != null && GL.getCapabilities().GL_KHR_debug) {
             KHRDebug.glObjectLabel(KHRDebug.GL_PROGRAM, program, StringUtils.truncateStringTo255Bytes("program_" + shaderName));
         }
-        
+
         return program;
     }
-    
+
     public static class ShaderConstant {
+
         private final String name;
         private final Object constant;
-        
+
         public ShaderConstant(String name, Object constant) {
             this.name = name;
             this.constant = constant;
@@ -197,16 +211,16 @@ public class ProgramCompiler {
             return constant;
         }
     }
-    
+
     public static Map<String, Integer> compile(String vertex, String geometry, String fragment, String[] variations, ShaderConstant[] constants) {
         vertex = IncludeGLSL.parse(vertex);
         geometry = IncludeGLSL.parse(geometry);
         fragment = IncludeGLSL.parse(fragment);
-        
+
         StringBuilder headerBuilder = new StringBuilder();
-        
+
         headerBuilder.append("#version ").append(Main.OPENGL_MAJOR_VERSION).append(Main.OPENGL_MINOR_VERSION).append("0 core\n\n");
-        
+
         int[] glslVersions = {
             3, 3,
             4, 0,
@@ -217,7 +231,7 @@ public class ProgramCompiler {
             4, 5,
             4, 6
         };
-        
+
         headerBuilder.append("//The supported glsl versions by this gpu:\n");
         for (int i = 0; i < glslVersions.length; i += 2) {
             int major = glslVersions[i + 0];
@@ -226,40 +240,40 @@ public class ProgramCompiler {
                 headerBuilder.append("#define SUPPORTED_").append(major).append(minor).append("0\n");
             }
         }
-        
+
         headerBuilder.append("\n");
-        
+
         headerBuilder.append("//The shader constants:\n");
-        for (ShaderConstant constant:constants) {
+        for (ShaderConstant constant : constants) {
             headerBuilder.append("#define ").append(constant.getName()).append(" ").append(constant.getConstant()).append("\n");
         }
-        
+
         headerBuilder.append("\n");
-        
+
         String header = headerBuilder.toString();
-        
+
         Map<String, Integer> programs = new HashMap<>();
-        
-        for (String variant:variations) {
-            String variantHeader = header+"//The variant of this program:\n#define VARIANT_"+variant+"\n\n";
-            
-            String modifiedVertex = variantHeader+vertex;
+
+        for (String variant : variations) {
+            String variantHeader = header + "//The variant of this program:\n#define VARIANT_" + variant + "\n\n";
+
+            String modifiedVertex = variantHeader + vertex;
             String modifiedGeometry = null;
             if (geometry != null) {
-                modifiedGeometry = variantHeader+geometry;
+                modifiedGeometry = variantHeader + geometry;
             }
-            String modifiedFrag = variantHeader+fragment;
-            
+            String modifiedFrag = variantHeader + fragment;
+
             programs.put(variant, compile(modifiedVertex, modifiedGeometry, modifiedFrag));
         }
-        
+
         return programs;
     }
-    
+
     public static Map<String, Integer> compile(String vertex, String fragment, String[] variations, ShaderConstant[] constants) {
         return compile(vertex, null, fragment, variations, constants);
     }
-    
+
     private ProgramCompiler() {
 
     }

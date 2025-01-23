@@ -109,7 +109,7 @@ public class IncludeGLSL {
         }
         return b.toString();
     }
-
+    
     private IncludeGLSL() {
 
     }

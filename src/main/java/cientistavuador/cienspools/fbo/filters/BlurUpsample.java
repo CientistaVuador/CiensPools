@@ -26,6 +26,8 @@
  */
 package cientistavuador.cienspools.fbo.filters;
 
+import cientistavuador.cienspools.Main;
+import cientistavuador.cienspools.fbo.filters.mesh.ScreenTriangle;
 import cientistavuador.cienspools.util.BetterUniformSetter;
 import cientistavuador.cienspools.util.ProgramCompiler;
 import static org.lwjgl.opengl.GL33C.*;
@@ -34,7 +36,7 @@ import static org.lwjgl.opengl.GL33C.*;
  *
  * @author Cien
  */
-public class AverageFilter {
+public class BlurUpsample {
     public static final int SHADER_PROGRAM = ProgramCompiler.compile(
             """
             #version 330 core
@@ -52,49 +54,52 @@ public class AverageFilter {
             """
             #version 330 core
             
-            uniform sampler2D A;
-            uniform sampler2D B;
+            uniform sampler2D inputTexture;
             
             in vec2 UV;
             
             layout (location = 0) out vec4 outputColor;
             
+            #include "DualFilteringBlur.h"
+            
             void main() {
-                outputColor = (texture(A, UV) + texture(B, UV)) * 0.5;
+                vec2 halfpixel = blurHalfpixel(inputTexture);
+                outputColor = blurUpsample(UV, halfpixel, inputTexture);
             }
             """
     );
     
     public static final BetterUniformSetter UNIFORMS = new BetterUniformSetter(SHADER_PROGRAM);
     
-    public static void render(int A, int B) {
-        glDepthMask(false);
+    public static void prepare() {
         glUseProgram(SHADER_PROGRAM);
         glBindVertexArray(ScreenTriangle.VAO);
-        
+    }
+    
+    public static void render(int inputTexture) {
         UNIFORMS
-                .uniform1i("A", 0)
-                .uniform1i("B", 1)
+                .uniform1i("inputTexture", 0)
                 ;
         
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, A);
-        
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, B);
+        glBindTexture(GL_TEXTURE_2D, inputTexture);
         
         glDrawArrays(GL_TRIANGLES, 0, ScreenTriangle.NUMBER_OF_VERTICES);
         
+        Main.NUMBER_OF_DRAWCALLS++;
+        Main.NUMBER_OF_VERTICES += ScreenTriangle.NUMBER_OF_VERTICES;
+    }
+    
+    public static void done() {
         glBindVertexArray(0);
         glUseProgram(0);
-        glDepthMask(true);
     }
     
     public static void init() {
         
     }
     
-    private AverageFilter() {
+    private BlurUpsample() {
         
     }
 }

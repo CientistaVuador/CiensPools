@@ -26,6 +26,7 @@
  */
 package cientistavuador.cienspools.fbo.filters;
 
+import cientistavuador.cienspools.fbo.filters.mesh.ScreenTriangle;
 import cientistavuador.cienspools.util.BetterUniformSetter;
 import cientistavuador.cienspools.util.ProgramCompiler;
 import static org.lwjgl.opengl.GL33C.*;
