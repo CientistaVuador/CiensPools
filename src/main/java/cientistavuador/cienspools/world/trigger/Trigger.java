@@ -36,6 +36,10 @@ import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
 import com.simsilica.mathd.Vec3d;
 import cientistavuador.cienspools.world.WorldObject;
+import org.joml.Matrix4d;
+import org.joml.Quaternionf;
+import org.joml.Vector3d;
+import org.joml.Vector3dc;
 
 /**
  *
@@ -44,9 +48,9 @@ import cientistavuador.cienspools.world.WorldObject;
 public class Trigger extends PhysicsGhostObject implements WorldObject {
 
     private World world = null;
-    
+
     private final String name;
-    
+
     public Trigger(String name) {
         super(new BoxCollisionShape(0.5f));
         this.name = name;
@@ -62,29 +66,32 @@ public class Trigger extends PhysicsGhostObject implements WorldObject {
         this.world = world;
         world.getPhysicsSpace().add(this);
     }
-    
+
     @Override
     public void onRemovedFromWorld(World world) {
         this.world = null;
         world.getPhysicsSpace().remove(this);
     }
-    
+
     public String getName() {
         return name;
     }
-    
+
     public void setScale(Vector3f scale) {
         getCollisionShape().setScale(scale);
     }
-    
+
     public Vector3f getHalfExtents(Vector3f halfExtents) {
+        if (halfExtents == null) {
+            halfExtents = new Vector3f();
+        }
         return getScale(halfExtents).multLocal(0.5f);
     }
-    
+
     public void setHalfExtents(Vector3f halfExtents) {
         setScale(halfExtents.mult(2f));
     }
-    
+
     public void setTransformation(
             double x, double y, double z,
             float sx, float sy, float sz,
@@ -94,7 +101,7 @@ public class Trigger extends PhysicsGhostObject implements WorldObject {
         setHalfExtents(new Vector3f(sx, sy, sz));
         setPhysicsRotation(new Quaternion(rx, ry, rz, rw));
     }
-    
+
     public void setTransformation(
             org.joml.Vector3dc p,
             org.joml.Vector3fc s,
@@ -105,22 +112,45 @@ public class Trigger extends PhysicsGhostObject implements WorldObject {
                 r.x(), r.y(), r.z(), r.w()
         );
     }
-    
+
     @Override
     public void setCollisionShape(CollisionShape collisionShape) {
         throw new UnsupportedOperationException("Trigger cannot change collision shape.");
     }
-    
+
     public void onBeforeInside(PhysicsSpace space, float timestep) {
-        
+
     }
-    
+
     public void onInside(PhysicsSpace space, float timestep, PhysicsRigidBody body) {
-        
+
+    }
+
+    public void onAfterInside(PhysicsSpace space, float timestep) {
+
+    }
+
+    public boolean isPointInside(Vector3dc point) {
+        return isPointInside(point.x(), point.y(), point.z());
     }
     
-    public void onAfterInside(PhysicsSpace space, float timestep) {
+    public boolean isPointInside(double x, double y, double z) {
+        Vec3d translation = getPhysicsLocationDp(null);
+        Quaternion rotation = getPhysicsRotation(null);
+        Vector3f scale = getHalfExtents(null);
         
+        Matrix4d matrix = new Matrix4d()
+                .translate(translation.x, translation.y, translation.z)
+                .rotate(new Quaternionf(
+                        rotation.getX(), rotation.getY(), rotation.getZ(), rotation.getW()
+                ))
+                .scale(scale.x, scale.y, scale.z)
+                .invert()
+                ;
+        
+        Vector3d transformed = matrix.transformProject(new Vector3d(x, y, z)).absolute();
+        
+        return transformed.get(transformed.maxComponent()) <= 1.0;
     }
     
 }

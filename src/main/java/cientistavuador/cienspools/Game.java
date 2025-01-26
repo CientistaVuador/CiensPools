@@ -38,10 +38,12 @@ import cientistavuador.cienspools.newrendering.NCubemapBox;
 import cientistavuador.cienspools.newrendering.NCubemapRenderer;
 import cientistavuador.cienspools.newrendering.NCubemapStore;
 import cientistavuador.cienspools.newrendering.NCubemaps;
+import cientistavuador.cienspools.newrendering.NGeometry;
 import cientistavuador.cienspools.newrendering.NLight;
 import cientistavuador.cienspools.newrendering.NLightmaps;
 import cientistavuador.cienspools.newrendering.NLightmapsStore;
 import cientistavuador.cienspools.newrendering.NMap;
+import cientistavuador.cienspools.newrendering.NMaterial;
 import cientistavuador.cienspools.newrendering.NTextures;
 import cientistavuador.cienspools.popups.BakePopup;
 import cientistavuador.cienspools.popups.ContinuePopup;
@@ -152,6 +154,15 @@ public class Game {
             NMap map = new NMap("map", mapObjects, NMap.DEFAULT_LIGHTMAP_MARGIN, 45f);
             map.setLightmaps(NLightmapsStore
                     .readLightmaps("cientistavuador/cienspools/resources/lightmaps/lightmap.lit"));
+            
+            N3DModel mainModel = map.getObject(0).getN3DModel();
+            for (int i = 0; i < mainModel.getNumberOfGeometries(); i++) {
+                NGeometry geo = mainModel.getGeometry(i);
+                if (geo.getMaterial().equals(NMaterial.RESOURCES.get("Water"))) {
+                    geo.setFaceCullingEnabled(false);
+                }
+            }
+            
             this.world.setMap(map);
 
             {

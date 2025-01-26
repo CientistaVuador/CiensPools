@@ -26,16 +26,24 @@
  */
 package cientistavuador.cienspools.world.trigger.water;
 
+import cientistavuador.cienspools.world.World;
+import cientistavuador.cienspools.world.WorldEntity;
 import cientistavuador.cienspools.world.player.Player;
 import cientistavuador.cienspools.world.trigger.EnterExitTrigger;
 import com.jme3.bullet.PhysicsSpace;
 import com.jme3.bullet.objects.PhysicsRigidBody;
+import com.jme3.math.Quaternion;
+import com.jme3.math.Vector3f;
+import com.simsilica.mathd.Vec3d;
+import org.joml.Matrix4d;
+import org.joml.Vector3d;
+import org.joml.Vector4d;
 
 /**
  *
  * @author Cien
  */
-public class WaterTrigger extends EnterExitTrigger {
+public class WaterTrigger extends EnterExitTrigger implements WorldEntity {
     
     public WaterTrigger(String name) {
         super(name);
@@ -57,6 +65,18 @@ public class WaterTrigger extends EnterExitTrigger {
         if (player != null) {
             if (body.equals(player.getPlayerController().getCharacterController().getRigidBody())) {
                 player.onExitedWater();
+            }
+        }
+    }
+
+    @Override
+    public void onWorldUpdate(World world, double tpf) {
+        Player player = world.getPlayer();
+        if (player != null) {
+            if (isPointInside(player.getCamera().getPosition())) {
+                //System.out.println("inside!");
+            } else {
+                //System.out.println("not inside!");
             }
         }
     }

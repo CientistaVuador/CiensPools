@@ -46,6 +46,8 @@ public class NGeometry {
     private final NMesh mesh;
     private NMaterial material = NMaterial.ERROR_MATERIAL;
 
+    private boolean faceCullingEnabled = true;
+    
     private final Vector3f animatedAabbMin = new Vector3f();
     private final Vector3f animatedAabbMax = new Vector3f();
     
@@ -124,6 +126,14 @@ public class NGeometry {
         this.material = material;
     }
 
+    public boolean isFaceCullingEnabled() {
+        return faceCullingEnabled;
+    }
+
+    public void setFaceCullingEnabled(boolean faceCullingEnabled) {
+        this.faceCullingEnabled = faceCullingEnabled;
+    }
+    
     public void generateAnimatedAabb(N3DModel originalModel) {
         if (originalModel.getNumberOfAnimations() == 0) {
             this.animatedAabbGenerated = true;

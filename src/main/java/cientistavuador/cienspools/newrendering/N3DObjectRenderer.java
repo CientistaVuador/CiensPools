@@ -743,6 +743,7 @@ public class N3DObjectRenderer {
         Matrix4fc lastTransformation = null;
         NMesh lastMesh = null;
         NAnimator lastAnimator = null;
+        boolean faceCulling = true;
 
         Matrix3f normalMatrix = new Matrix3f();
 
@@ -994,13 +995,26 @@ public class N3DObjectRenderer {
                 glBindVertexArray(mesh.getVAO());
                 lastMesh = mesh;
             }
-
+            
+            if (render.geometry.isFaceCullingEnabled() != faceCulling) {
+                faceCulling = render.geometry.isFaceCullingEnabled();
+                if (faceCulling) {
+                    glEnable(GL_CULL_FACE);
+                } else {
+                    glDisable(GL_CULL_FACE);
+                }
+            }
+            
             glDrawElements(GL_TRIANGLES, mesh.getIndices().length, GL_UNSIGNED_INT, 0);
 
             Main.NUMBER_OF_DRAWCALLS++;
             Main.NUMBER_OF_VERTICES += mesh.getIndices().length;
         }
-
+        
+        if (!faceCulling) {
+            glEnable(GL_CULL_FACE);
+        }
+        
         glBindVertexArray(0);
     }
 

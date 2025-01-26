@@ -56,9 +56,7 @@ public class Pipeline {
     public static final DepthlessForwardFramebuffer DEPTHLESS_FRAMEBUFFER = new DepthlessForwardFramebuffer();
     public static final MipFramebuffer[] MIP_FRAMEBUFFERS = new MipFramebuffer[]{
         new MipFramebuffer(1),
-        new MipFramebuffer(2),
-        new MipFramebuffer(3),
-        new MipFramebuffer(4)
+        new MipFramebuffer(2)
     };
 
     public static float GAMMA = 1.4f;
@@ -170,6 +168,7 @@ public class Pipeline {
             glViewport(0, 0, MIP_FRAMEBUFFERS[i - 1].getWidth(), MIP_FRAMEBUFFERS[i - 1].getHeight());
             BlurUpsample.render(MIP_FRAMEBUFFERS[i].colorBuffer());
         }
+        BlurUpsample.done();
         
         
         if (USE_FXAA) {
@@ -181,11 +180,11 @@ public class Pipeline {
 
         if (USE_FXAA) {
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
-            //FXAAFilter.render(DEPTHLESS_FRAMEBUFFER.colorBuffer());
-            BlurUpsample.render(MIP_FRAMEBUFFERS[0].colorBuffer());
+            FXAAFilter.render(DEPTHLESS_FRAMEBUFFER.colorBuffer());
+            //BlurUpsample.render(MIP_FRAMEBUFFERS[0].colorBuffer());
         }
         
-        BlurUpsample.done();
+        //BlurUpsample.done();
 
         glEnable(GL_BLEND);
         glEnable(GL_DEPTH_TEST);

@@ -419,6 +419,9 @@ void main() {
         tangentNormal = normalize(mix(tangentNormal, sampleWaterNormal(uv), water));
     }
     vec3 normal = normalize(inVertex.TBN * tangentNormal);
+    if (!gl_FrontFacing) {
+        normal = -normal;
+    }
     
     float ambientOcclusion = emaowtny[1] * material.ambientOcclusion;
     

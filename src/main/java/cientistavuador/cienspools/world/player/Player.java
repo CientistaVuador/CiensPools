@@ -134,6 +134,10 @@ public class Player {
         this.enterExitNode.play();
     }
     
+    public void onCameraInsideWater() {
+        
+    }
+    
     public void update(double tpf) {
         CharacterController controller = this.playerController.getCharacterController();
         this.stepNode.getPosition().set(controller.getPosition());
