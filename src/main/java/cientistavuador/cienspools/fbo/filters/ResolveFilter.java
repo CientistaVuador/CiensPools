@@ -82,7 +82,6 @@ public class ResolveFilter {
     public static final BetterUniformSetter UNIFORMS = new BetterUniformSetter(SHADER_PROGRAM);
     
     public static void render(int colorTexture, int depthTexture, int samples) {
-        glClear(GL_DEPTH_BUFFER_BIT);
         glUseProgram(SHADER_PROGRAM);
         glBindVertexArray(ScreenTriangle.VAO);
         

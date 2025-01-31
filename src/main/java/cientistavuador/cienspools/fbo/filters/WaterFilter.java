@@ -26,17 +26,18 @@
  */
 package cientistavuador.cienspools.fbo.filters;
 
-import cientistavuador.cienspools.fbo.filters.mesh.ScreenTriangle;
 import cientistavuador.cienspools.Main;
+import cientistavuador.cienspools.fbo.filters.mesh.ScreenTriangle;
 import cientistavuador.cienspools.util.BetterUniformSetter;
 import cientistavuador.cienspools.util.ProgramCompiler;
-import static org.lwjgl.opengl.GL33.*;
+import cientistavuador.cienspools.water.Water;
+import static org.lwjgl.opengl.GL33C.*;
 
 /**
  *
  * @author Cien
  */
-public class OutputFilter {
+public class WaterFilter {
     public static final int SHADER_PROGRAM = ProgramCompiler.compile(
             """
             #version 330 core
@@ -54,30 +55,27 @@ public class OutputFilter {
             """
             #version 330 core
             
-            uniform float exposure;
-            uniform float gamma;
-            uniform sampler3D LUT;
             uniform sampler2D inputTexture;
+            
+            uniform sampler2DArray waterFrames;
+            uniform float waterCounter;
+            
+            uniform vec2 uvScale;
+            uniform vec2 uvOffset;
+            uniform float refractionPower;
+            
+            #include "WaterNormalSampling.h"
             
             in vec2 UV;
             
             layout (location = 0) out vec4 outputColor;
             
             void main() {
-                vec2 screenSize = vec2(textureSize(inputTexture, 0));
-                vec4 color = texture(inputTexture, UV);
-                
-                color.rgb = vec3(1.0) - exp(-color.rgb * exposure);
-                color.rgb = pow(color.rgb, vec3(1.0/gamma));
-                color.rgb = texture(LUT, color.rgb).rgb;
-                const float noise = 0.5 / 255.0;
-                vec2 coords = gl_FragCoord.xy / screenSize;
-                color.rgb += mix(-noise, noise,
-                    fract(sin(dot(coords, vec2(12.9898,78.233))) * 43758.5453));
-                color.rgb = clamp(color.rgb, 0.0, 1.0);
-                color.a = dot(color.rgb, vec3(0.299, 0.587, 0.114));
-                
-                outputColor = color;
+                vec3 waterNormal = sampleWaterNormal(UV * uvScale + uvOffset, waterFrames, waterCounter);
+                vec3 tangentViewDirection = vec3(0.0, 0.0, -1.0);
+                vec3 refractedDirection = refract(tangentViewDirection, waterNormal, 0.75);
+                vec3 resultDirection = normalize(mix(tangentViewDirection, refractedDirection, refractionPower));
+                outputColor = texture(inputTexture, UV + resultDirection.xy);
             }
             """
     );
@@ -85,23 +83,30 @@ public class OutputFilter {
     public static final BetterUniformSetter UNIFORMS = new BetterUniformSetter(SHADER_PROGRAM);
     
     public static void render(
-            float exposure, float gamma, int LUT,
-            int inputTexture) {
+            int inputTexture,
+            float scaleX, float scaleY,
+            float x, float y,
+            float power
+    ) {
         glUseProgram(SHADER_PROGRAM);
         glBindVertexArray(ScreenTriangle.VAO);
         
         UNIFORMS
-                .uniform1f("exposure", exposure)
-                .uniform1f("gamma", gamma)
-                .uniform1i("LUT", 0)
-                .uniform1i("inputTexture", 1)
+                .uniform1i("inputTexture", 0)
+                
+                .uniform1i("waterFrames", 1)
+                .uniform1f("waterCounter", Water.WATER_COUNTER)
+                
+                .uniform2f("uvScale", scaleX, scaleY)
+                .uniform2f("uvOffset", x, y)
+                .uniform1f("refractionPower", power)
                 ;
         
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_3D, LUT);
+        glBindTexture(GL_TEXTURE_2D, inputTexture);
         
         glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, inputTexture);
+        glBindTexture(GL_TEXTURE_2D_ARRAY, Water.TEXTURE);
         
         glDrawArrays(GL_TRIANGLES, 0, ScreenTriangle.NUMBER_OF_VERTICES);
         
@@ -116,7 +121,7 @@ public class OutputFilter {
         
     }
     
-    private OutputFilter() {
+    private WaterFilter() {
         
     }
 }

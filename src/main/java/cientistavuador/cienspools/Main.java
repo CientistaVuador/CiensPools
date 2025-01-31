@@ -40,8 +40,9 @@ import cientistavuador.cienspools.audio.Sounds;
 import cientistavuador.cienspools.fbo.filters.BlurDownsample;
 import cientistavuador.cienspools.fbo.filters.CopyFilter;
 import cientistavuador.cienspools.fbo.filters.FXAAFilter;
-import cientistavuador.cienspools.fbo.filters.OutputFilter;
+import cientistavuador.cienspools.fbo.filters.TonemappingFilter;
 import cientistavuador.cienspools.fbo.filters.ResolveFilter;
+import cientistavuador.cienspools.fbo.filters.WaterFilter;
 import cientistavuador.cienspools.fbo.filters.mesh.ScreenTriangle;
 import cientistavuador.cienspools.text.GLFonts;
 import cientistavuador.cienspools.texture.Textures;
@@ -549,11 +550,12 @@ public class Main {
         LineRender.init();
         
         ScreenTriangle.init();
-        OutputFilter.init();
+        TonemappingFilter.init();
         CopyFilter.init();
         FXAAFilter.init();
         ResolveFilter.init();
         BlurDownsample.init();
+        WaterFilter.init();
         
         Pipeline.init();
         Game.get();

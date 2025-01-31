@@ -27,16 +27,18 @@
 package cientistavuador.cienspools.fbo.filters;
 
 import cientistavuador.cienspools.fbo.filters.mesh.ScreenTriangle;
+import cientistavuador.cienspools.Main;
 import cientistavuador.cienspools.util.BetterUniformSetter;
 import cientistavuador.cienspools.util.ProgramCompiler;
 import java.util.Map;
-import static org.lwjgl.opengl.GL33C.*;
+import static org.lwjgl.opengl.GL33.*;
 
 /**
  *
  * @author Cien
  */
-public class CopyFilter {
+public class TonemappingFilter {
+
     public static final String VERTEX_SHADER = 
             """
             layout (location = 0) in vec2 vertexPosition;
@@ -47,82 +49,125 @@ public class CopyFilter {
             void main() {
                 UV = vertexUV;
                 gl_Position = vec4(vertexPosition.x, vertexPosition.y, -1.0, 1.0);
-            }
+            }                   
             """;
-    
-    public static final String FRAGMENT_SHADER =
+
+    public static final String FRAGMENT_SHADER = 
             """
-            uniform sampler2D colorTexture;
-            #ifdef VARIANT_DEPTH
-            uniform sampler2D depthTexture;
+            uniform float exposure;
+            uniform float gamma;
+            uniform sampler3D LUT;
+            
+            #ifdef VARIANT_NO_MSAA
+            uniform sampler2D inputTexture;
             #endif
+            
+            #ifdef VARIANT_MSAA
+            uniform sampler2DMS inputTexture;
+            uniform int inputSamples;
+            #endif
+            
+            #include "Tonemapping.h"
             
             in vec2 UV;
             
             layout (location = 0) out vec4 outputColor;
             
             void main() {
-                outputColor = texture(colorTexture, UV);
-                #ifdef VARIANT_DEPTH
-                gl_FragDepth = texture(depthTexture, UV).r;
+                vec4 color = vec4(0.0);
+                
+                #ifdef VARIANT_NO_MSAA
+                color = texture(inputTexture, UV);
+                color = applyTonemapping(UV, exposure, gamma, LUT, color);
                 #endif
+                
+                #ifdef VARIANT_MSAA
+                ivec2 inputPos = ivec2(floor(vec2(textureSize(inputTexture)) * UV));
+                float weight = 1.0 / float(inputSamples);
+                for (int i = 0; i < inputSamples; i++) {
+                    vec4 hdrColor = texelFetch(inputTexture, inputPos, i);
+                    color += applyTonemapping(UV, exposure, gamma, LUT, hdrColor) * weight;
+                }
+                #endif
+                
+                outputColor = color;
             }
             """;
     
     private static final Map<String, Integer> SHADERS = ProgramCompiler.compile(
             VERTEX_SHADER, FRAGMENT_SHADER,
-            new String[] {"DEPTH", "NO_DEPTH"},
+            new String[] {
+                "NO_MSAA", "MSAA"
+            },
             new ProgramCompiler.ShaderConstant[] {}
     );
-    
+
     public static final BetterUniformSetter SHADER_PROGRAM =
-            new BetterUniformSetter(SHADERS.get("DEPTH"));
-    public static final BetterUniformSetter SHADER_PROGRAM_NO_DEPTH =
-            new BetterUniformSetter(SHADERS.get("NO_DEPTH"));
-    
-    public static void render(int colorTexture, int depthTexture) {
+            new BetterUniformSetter(SHADERS.get("NO_MSAA"));
+    public static final BetterUniformSetter SHADER_PROGRAM_MSAA =
+            new BetterUniformSetter(SHADERS.get("MSAA"));
+
+    public static void render(
+            float exposure, float gamma, int LUT,
+            int inputTexture) {
         glUseProgram(SHADER_PROGRAM.getProgram());
         glBindVertexArray(ScreenTriangle.VAO);
         
         SHADER_PROGRAM
-                .uniform1i("colorTexture", 0)
-                .uniform1i("depthTexture", 1)
-                ;
+                .uniform1f("exposure", exposure)
+                .uniform1f("gamma", gamma)
+                .uniform1i("LUT", 0)
+                .uniform1i("inputTexture", 1);
         
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, colorTexture);
-        
+        glBindTexture(GL_TEXTURE_3D, LUT);
+
         glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, depthTexture);
-        
+        glBindTexture(GL_TEXTURE_2D, inputTexture);
+
         glDrawArrays(GL_TRIANGLES, 0, ScreenTriangle.NUMBER_OF_VERTICES);
-        
+
+        Main.NUMBER_OF_DRAWCALLS++;
+        Main.NUMBER_OF_VERTICES += ScreenTriangle.NUMBER_OF_VERTICES;
+
         glBindVertexArray(0);
         glUseProgram(0);
     }
     
-    public static void render(int colorTexture) {
-        glUseProgram(SHADER_PROGRAM_NO_DEPTH.getProgram());
+    public static void renderMSAA(
+            float exposure, float gamma, int LUT,
+            int samples, int inputTexture) {
+        glUseProgram(SHADER_PROGRAM_MSAA.getProgram());
         glBindVertexArray(ScreenTriangle.VAO);
         
-        SHADER_PROGRAM_NO_DEPTH
-                .uniform1i("colorTexture", 0)
+        SHADER_PROGRAM_MSAA
+                .uniform1f("exposure", exposure)
+                .uniform1f("gamma", gamma)
+                .uniform1i("LUT", 0)
+                .uniform1i("inputTexture", 1)
+                .uniform1i("inputSamples", samples)
                 ;
         
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, colorTexture);
-        
+        glBindTexture(GL_TEXTURE_3D, LUT);
+
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, inputTexture);
+
         glDrawArrays(GL_TRIANGLES, 0, ScreenTriangle.NUMBER_OF_VERTICES);
-        
+
+        Main.NUMBER_OF_DRAWCALLS++;
+        Main.NUMBER_OF_VERTICES += ScreenTriangle.NUMBER_OF_VERTICES;
+
         glBindVertexArray(0);
         glUseProgram(0);
     }
-    
+
     public static void init() {
-        
+
     }
-    
-    private CopyFilter() {
-        
+
+    private TonemappingFilter() {
+
     }
 }

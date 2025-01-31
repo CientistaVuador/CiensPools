@@ -35,8 +35,9 @@ import cientistavuador.cienspools.fbo.filters.BlurDownsample;
 import cientistavuador.cienspools.fbo.filters.BlurUpsample;
 import cientistavuador.cienspools.fbo.filters.CopyFilter;
 import cientistavuador.cienspools.fbo.filters.FXAAFilter;
-import cientistavuador.cienspools.fbo.filters.OutputFilter;
+import cientistavuador.cienspools.fbo.filters.TonemappingFilter;
 import cientistavuador.cienspools.fbo.filters.ResolveFilter;
+import cientistavuador.cienspools.fbo.filters.WaterFilter;
 import cientistavuador.cienspools.lut.LUT;
 import static org.lwjgl.opengl.GL33C.*;
 
@@ -49,11 +50,13 @@ public class Pipeline {
     public static final int MSAA_SAMPLES = 4;
 
     private static MSForwardFramebuffer MS_FORWARD_FRAMEBUFFER = null;
-    private static final ForwardFramebuffer FORWARD_FRAMEBUFFER = new ForwardFramebuffer();
-
+    private static ForwardFramebuffer FORWARD_FRAMEBUFFER = new ForwardFramebuffer();
     public static Framebuffer RENDERING_FRAMEBUFFER = FORWARD_FRAMEBUFFER;
-    public static final DepthlessForwardFramebuffer OPAQUE_FRAMEBUFFER = new DepthlessForwardFramebuffer();
-    public static final DepthlessForwardFramebuffer DEPTHLESS_FRAMEBUFFER = new DepthlessForwardFramebuffer();
+
+    public static final ForwardFramebuffer OPAQUE_FRAMEBUFFER = new ForwardFramebuffer();
+
+    public static final DepthlessForwardFramebuffer TONEMAP_FRAMEBUFFER = new DepthlessForwardFramebuffer();
+    
     public static final MipFramebuffer[] MIP_FRAMEBUFFERS = new MipFramebuffer[]{
         new MipFramebuffer(1),
         new MipFramebuffer(2)
@@ -67,26 +70,33 @@ public class Pipeline {
     public static boolean USE_FXAA = true;
     private static boolean LAST_MSAA_STATE = USE_MSAA;
 
+    public static boolean WATER_EFFECT = true;
+
     public static void init() {
 
     }
 
     private static void updateFramebuffers(int width, int height) {
         if (RENDERING_FRAMEBUFFER instanceof ForwardFramebuffer && USE_MSAA) {
+            FORWARD_FRAMEBUFFER.manualFree();
+            FORWARD_FRAMEBUFFER = null;
             MS_FORWARD_FRAMEBUFFER = new MSForwardFramebuffer();
             RENDERING_FRAMEBUFFER = MS_FORWARD_FRAMEBUFFER;
         }
         if (RENDERING_FRAMEBUFFER instanceof MSForwardFramebuffer && !USE_MSAA) {
             MS_FORWARD_FRAMEBUFFER.manualFree();
             MS_FORWARD_FRAMEBUFFER = null;
+            FORWARD_FRAMEBUFFER = new ForwardFramebuffer();
             RENDERING_FRAMEBUFFER = FORWARD_FRAMEBUFFER;
         }
 
         if (MS_FORWARD_FRAMEBUFFER != null) {
             MS_FORWARD_FRAMEBUFFER.resize(width, height, MSAA_SAMPLES);
         }
-        FORWARD_FRAMEBUFFER.resize(width, height);
-        DEPTHLESS_FRAMEBUFFER.resize(width, height);
+        if (FORWARD_FRAMEBUFFER != null) {
+            FORWARD_FRAMEBUFFER.resize(width, height);
+        }
+        TONEMAP_FRAMEBUFFER.resize(width, height);
         for (int i = 0; i < MIP_FRAMEBUFFERS.length; i++) {
             MIP_FRAMEBUFFERS[i].resize(width, height);
         }
@@ -95,10 +105,11 @@ public class Pipeline {
 
     public static void copyColorBufferToOpaque() {
         glBindFramebuffer(GL_FRAMEBUFFER, OPAQUE_FRAMEBUFFER.framebuffer());
+        glClear(GL_DEPTH_BUFFER_BIT);
         if (RENDERING_FRAMEBUFFER instanceof MSForwardFramebuffer msaa) {
             ResolveFilter.render(msaa.colorBuffer(), msaa.depthBuffer(), msaa.getSamples());
         } else if (RENDERING_FRAMEBUFFER instanceof ForwardFramebuffer forward) {
-            CopyFilter.render(forward.colorBuffer());
+            CopyFilter.render(forward.colorBuffer(), forward.depthBuffer());
         }
         glBindFramebuffer(GL_FRAMEBUFFER, RENDERING_FRAMEBUFFER.framebuffer());
     }
@@ -134,57 +145,57 @@ public class Pipeline {
 
         glDisable(GL_BLEND);
         glDisable(GL_DEPTH_TEST);
-        
-        if (MS_FORWARD_FRAMEBUFFER != null) {
-            glBindFramebuffer(GL_FRAMEBUFFER, FORWARD_FRAMEBUFFER.framebuffer());
-            ResolveFilter.render(
-                    MS_FORWARD_FRAMEBUFFER.colorBuffer(), MS_FORWARD_FRAMEBUFFER.depthBuffer(),
-                    MS_FORWARD_FRAMEBUFFER.getSamples()
+
+        glBindFramebuffer(GL_FRAMEBUFFER, TONEMAP_FRAMEBUFFER.framebuffer());
+        int lut = (Pipeline.COLOR_LUT == null ? LUT.NEUTRAL.texture() : Pipeline.COLOR_LUT.texture());
+        if (MS_FORWARD_FRAMEBUFFER == null) {
+            TonemappingFilter.render(
+                    EXPOSURE, GAMMA, lut,
+                    FORWARD_FRAMEBUFFER.colorBuffer()
+            );
+        } else {
+            TonemappingFilter.renderMSAA(
+                    EXPOSURE, GAMMA, lut,
+                    MS_FORWARD_FRAMEBUFFER.getSamples(), MS_FORWARD_FRAMEBUFFER.colorBuffer()
             );
         }
 
-        if (USE_FXAA) {
-            glBindFramebuffer(GL_FRAMEBUFFER, DEPTHLESS_FRAMEBUFFER.framebuffer());
+        if (WATER_EFFECT) {
+            BlurDownsample.prepare();
+            for (int i = 0; i < MIP_FRAMEBUFFERS.length; i++) {
+                glBindFramebuffer(GL_FRAMEBUFFER, MIP_FRAMEBUFFERS[i].framebuffer());
+                glViewport(0, 0, MIP_FRAMEBUFFERS[i].getWidth(), MIP_FRAMEBUFFERS[i].getHeight());
+
+                int tex = i == 0
+                        ? TONEMAP_FRAMEBUFFER.colorBuffer()
+                        : MIP_FRAMEBUFFERS[i - 1].colorBuffer();
+                BlurDownsample.render(tex);
+            }
+            BlurDownsample.done();
+
+            BlurUpsample.prepare();
+            for (int i = MIP_FRAMEBUFFERS.length - 1; i >= 0; i--) {
+                int fbo = i == 0
+                        ? TONEMAP_FRAMEBUFFER.framebuffer()
+                        : MIP_FRAMEBUFFERS[i - 1].framebuffer();
+                glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+                int width = i == 0 ? RENDERING_FRAMEBUFFER.getWidth() : MIP_FRAMEBUFFERS[i - 1].getWidth();
+                int height = i == 0 ? RENDERING_FRAMEBUFFER.getHeight() : MIP_FRAMEBUFFERS[i - 1].getHeight();
+                glViewport(0, 0, width, height);
+                BlurUpsample.render(MIP_FRAMEBUFFERS[i].colorBuffer());
+            }
+            BlurUpsample.done();
+
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            WaterFilter.render(TONEMAP_FRAMEBUFFER.colorBuffer(), 0.5f, 0.5f, -0.5f, -0.5f, 0.05f);
         } else {
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            if (USE_FXAA) {
+                FXAAFilter.render(TONEMAP_FRAMEBUFFER.colorBuffer());
+            } else {
+                CopyFilter.render(TONEMAP_FRAMEBUFFER.colorBuffer());
+            }
         }
-        OutputFilter.render(
-                EXPOSURE, GAMMA,
-                (Pipeline.COLOR_LUT == null ? LUT.NEUTRAL.texture() : Pipeline.COLOR_LUT.texture()),
-                FORWARD_FRAMEBUFFER.colorBuffer()
-        );
-
-        BlurDownsample.prepare();
-        for (int i = 0; i < MIP_FRAMEBUFFERS.length; i++) {
-            glBindFramebuffer(GL_FRAMEBUFFER, MIP_FRAMEBUFFERS[i].framebuffer());
-            glViewport(0, 0, MIP_FRAMEBUFFERS[i].getWidth(), MIP_FRAMEBUFFERS[i].getHeight());
-            BlurDownsample.render(i == 0 ? DEPTHLESS_FRAMEBUFFER.colorBuffer() : MIP_FRAMEBUFFERS[i - 1].colorBuffer());
-        }
-        BlurDownsample.done();
-        
-        BlurUpsample.prepare();
-        for (int i = MIP_FRAMEBUFFERS.length - 1; i > 0; i--) {
-            glBindFramebuffer(GL_FRAMEBUFFER, MIP_FRAMEBUFFERS[i - 1].framebuffer());
-            glViewport(0, 0, MIP_FRAMEBUFFERS[i - 1].getWidth(), MIP_FRAMEBUFFERS[i - 1].getHeight());
-            BlurUpsample.render(MIP_FRAMEBUFFERS[i].colorBuffer());
-        }
-        BlurUpsample.done();
-        
-        
-        if (USE_FXAA) {
-            glBindFramebuffer(GL_FRAMEBUFFER, DEPTHLESS_FRAMEBUFFER.framebuffer());
-        } else {
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        }
-        glViewport(0, 0, RENDERING_FRAMEBUFFER.getWidth(), RENDERING_FRAMEBUFFER.getHeight());
-
-        if (USE_FXAA) {
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
-            FXAAFilter.render(DEPTHLESS_FRAMEBUFFER.colorBuffer());
-            //BlurUpsample.render(MIP_FRAMEBUFFERS[0].colorBuffer());
-        }
-        
-        //BlurUpsample.done();
 
         glEnable(GL_BLEND);
         glEnable(GL_DEPTH_TEST);
