@@ -35,10 +35,20 @@ import cientistavuador.cienspools.fbo.filters.BlurDownsample;
 import cientistavuador.cienspools.fbo.filters.BlurUpsample;
 import cientistavuador.cienspools.fbo.filters.CopyFilter;
 import cientistavuador.cienspools.fbo.filters.FXAAFilter;
+import cientistavuador.cienspools.fbo.filters.FXAAQuality;
 import cientistavuador.cienspools.fbo.filters.TonemappingFilter;
 import cientistavuador.cienspools.fbo.filters.ResolveFilter;
 import cientistavuador.cienspools.fbo.filters.WaterFilter;
 import cientistavuador.cienspools.lut.LUT;
+import cientistavuador.cienspools.util.RasterUtils;
+import java.awt.Color;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import javax.imageio.ImageIO;
+import org.joml.Matrix4f;
+import org.joml.Vector3f;
+import org.joml.Vector4f;
 import static org.lwjgl.opengl.GL33C.*;
 
 /**
@@ -67,13 +77,27 @@ public class Pipeline {
     public static LUT COLOR_LUT = LUT.NEUTRAL;
 
     public static boolean USE_MSAA = true;
-    public static boolean USE_FXAA = true;
+    public static FXAAQuality FXAA_QUALITY = FXAAQuality.MEDIUM;
     private static boolean LAST_MSAA_STATE = USE_MSAA;
 
-    public static boolean WATER_EFFECT = true;
+    public static boolean WATER_EFFECT = false;
 
+    private static boolean testPixel(float x, float y) {
+        Vector3f p = new Vector3f(x, y, 0f);
+        Vector3f a = new Vector3f(128f, 164f, 0f);
+        Vector3f b = new Vector3f(384f, 296f, 0f);
+        Vector3f c = new Vector3f(256f, 428f, 0f);
+        Vector3f w = new Vector3f();
+        RasterUtils.barycentricWeights(p, a, b, c, w);
+        return !(w.x() < 0f || w.y() < 0f || w.z() < 0f);
+    }
+    
+    private static float testPixelFloat(float x, float y) {
+        return (testPixel(x, y) ? 0f : 1f);
+    }
+    
     public static void init() {
-
+        
     }
 
     private static void updateFramebuffers(int width, int height) {
@@ -190,13 +214,9 @@ public class Pipeline {
             WaterFilter.render(TONEMAP_FRAMEBUFFER.colorBuffer(), 0.5f, 0.5f, -0.5f, -0.5f, 0.05f);
         } else {
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
-            if (USE_FXAA) {
-                FXAAFilter.render(TONEMAP_FRAMEBUFFER.colorBuffer());
-            } else {
-                CopyFilter.render(TONEMAP_FRAMEBUFFER.colorBuffer());
-            }
+            FXAAFilter.render(FXAA_QUALITY, TONEMAP_FRAMEBUFFER.colorBuffer());
         }
-
+        
         glEnable(GL_BLEND);
         glEnable(GL_DEPTH_TEST);
     }

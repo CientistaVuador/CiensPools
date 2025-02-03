@@ -213,10 +213,6 @@ public class ProgramCompiler {
     }
 
     public static Map<String, Integer> compile(String vertex, String geometry, String fragment, String[] variations, ShaderConstant[] constants) {
-        vertex = IncludeGLSL.parse(vertex);
-        geometry = IncludeGLSL.parse(geometry);
-        fragment = IncludeGLSL.parse(fragment);
-
         StringBuilder headerBuilder = new StringBuilder();
 
         headerBuilder.append("#version ").append(Main.OPENGL_MAJOR_VERSION).append(Main.OPENGL_MINOR_VERSION).append("0 core\n\n");

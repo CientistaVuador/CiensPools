@@ -31,6 +31,7 @@ import cientistavuador.cienspools.audio.data.Audio;
 import cientistavuador.cienspools.debug.AabRender;
 import cientistavuador.cienspools.debug.LineRender;
 import cientistavuador.cienspools.editor.Gizmo;
+import cientistavuador.cienspools.fbo.filters.FXAAQuality;
 import cientistavuador.cienspools.newrendering.N3DModel;
 import cientistavuador.cienspools.newrendering.N3DObject;
 import cientistavuador.cienspools.newrendering.NCubemap;
@@ -487,7 +488,7 @@ public class Game {
             this.debugCollision = !this.debugCollision;
         }
         if (key == GLFW_KEY_F8 && action == GLFW_PRESS) {
-            Pipeline.USE_FXAA = !Pipeline.USE_FXAA;
+            Pipeline.FXAA_QUALITY = FXAAQuality.next(Pipeline.FXAA_QUALITY);
         }
         if (key == GLFW_KEY_F9 && action == GLFW_PRESS) {
             Pipeline.USE_MSAA = !Pipeline.USE_MSAA;
