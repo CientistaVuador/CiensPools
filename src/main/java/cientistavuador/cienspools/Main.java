@@ -532,6 +532,7 @@ public class Main {
         AudioSystem.init();
         TextureCompressor.init();
 
+        MSAAQuality.init();
         NSpecularBRDFLookupTable.init();
         Gizmo.init();
         ResourceLoader.init();

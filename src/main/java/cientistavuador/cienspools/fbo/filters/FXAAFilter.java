@@ -62,7 +62,7 @@ public class FXAAFilter {
                 #define FXAA_GLSL_130 1
                 
                 #ifdef VARIANT_LOW
-                    #define FXAA_QUALITY__PRESET 12
+                    #define FXAA_QUALITY__PRESET 13
                     #define FXAA_QUALITY__SUBPIX 0.25
                     #define FXAA_QUALITY__EDGE_THRESHOLD 0.250
                     #define FXAA_QUALITY__EDGE_THRESHOLD_MIN 0.0833
@@ -121,9 +121,6 @@ public class FXAAFilter {
     public static final BetterUniformSetter ULTRA = new BetterUniformSetter(SHADERS.get("ULTRA"));
     
     public static void render(FXAAQuality quality, int inputTexture) {
-        if (quality == null) {
-            quality = FXAAQuality.OFF;
-        }
         BetterUniformSetter shader;
         switch (quality) {
             case LOW -> {

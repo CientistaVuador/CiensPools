@@ -491,7 +491,7 @@ public class Game {
             Pipeline.FXAA_QUALITY = FXAAQuality.next(Pipeline.FXAA_QUALITY);
         }
         if (key == GLFW_KEY_F9 && action == GLFW_PRESS) {
-            Pipeline.USE_MSAA = !Pipeline.USE_MSAA;
+            Pipeline.MSAA_QUALITY = MSAAQuality.next(Pipeline.MSAA_QUALITY);
         }
         if (key == GLFW_KEY_R && action == GLFW_PRESS) {
             Quaternionf rotation = new Quaternionf();

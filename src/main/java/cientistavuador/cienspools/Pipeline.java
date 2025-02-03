@@ -41,14 +41,8 @@ import cientistavuador.cienspools.fbo.filters.ResolveFilter;
 import cientistavuador.cienspools.fbo.filters.WaterFilter;
 import cientistavuador.cienspools.lut.LUT;
 import cientistavuador.cienspools.util.RasterUtils;
-import java.awt.Color;
-import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
-import javax.imageio.ImageIO;
-import org.joml.Matrix4f;
+import java.util.Objects;
 import org.joml.Vector3f;
-import org.joml.Vector4f;
 import static org.lwjgl.opengl.GL33C.*;
 
 /**
@@ -56,9 +50,7 @@ import static org.lwjgl.opengl.GL33C.*;
  * @author Cien
  */
 public class Pipeline {
-
-    public static final int MSAA_SAMPLES = 4;
-
+    
     private static MSForwardFramebuffer MS_FORWARD_FRAMEBUFFER = null;
     private static ForwardFramebuffer FORWARD_FRAMEBUFFER = new ForwardFramebuffer();
     public static Framebuffer RENDERING_FRAMEBUFFER = FORWARD_FRAMEBUFFER;
@@ -76,38 +68,24 @@ public class Pipeline {
     public static float EXPOSURE = 3.0f;
     public static LUT COLOR_LUT = LUT.NEUTRAL;
 
-    public static boolean USE_MSAA = true;
+    public static MSAAQuality MSAA_QUALITY = MSAAQuality.MEDIUM_4X;
     public static FXAAQuality FXAA_QUALITY = FXAAQuality.MEDIUM;
-    private static boolean LAST_MSAA_STATE = USE_MSAA;
-
-    public static boolean WATER_EFFECT = false;
-
-    private static boolean testPixel(float x, float y) {
-        Vector3f p = new Vector3f(x, y, 0f);
-        Vector3f a = new Vector3f(128f, 164f, 0f);
-        Vector3f b = new Vector3f(384f, 296f, 0f);
-        Vector3f c = new Vector3f(256f, 428f, 0f);
-        Vector3f w = new Vector3f();
-        RasterUtils.barycentricWeights(p, a, b, c, w);
-        return !(w.x() < 0f || w.y() < 0f || w.z() < 0f);
-    }
+    private static MSAAQuality LAST_MSAA_QUALITY = MSAA_QUALITY;
     
-    private static float testPixelFloat(float x, float y) {
-        return (testPixel(x, y) ? 0f : 1f);
-    }
+    public static boolean WATER_EFFECT = false;
     
     public static void init() {
         
     }
 
     private static void updateFramebuffers(int width, int height) {
-        if (RENDERING_FRAMEBUFFER instanceof ForwardFramebuffer && USE_MSAA) {
+        if (RENDERING_FRAMEBUFFER instanceof ForwardFramebuffer && !MSAAQuality.OFF_1X.equals(MSAA_QUALITY)) {
             FORWARD_FRAMEBUFFER.manualFree();
             FORWARD_FRAMEBUFFER = null;
             MS_FORWARD_FRAMEBUFFER = new MSForwardFramebuffer();
             RENDERING_FRAMEBUFFER = MS_FORWARD_FRAMEBUFFER;
         }
-        if (RENDERING_FRAMEBUFFER instanceof MSForwardFramebuffer && !USE_MSAA) {
+        if (RENDERING_FRAMEBUFFER instanceof MSForwardFramebuffer && MSAAQuality.OFF_1X.equals(MSAA_QUALITY)) {
             MS_FORWARD_FRAMEBUFFER.manualFree();
             MS_FORWARD_FRAMEBUFFER = null;
             FORWARD_FRAMEBUFFER = new ForwardFramebuffer();
@@ -115,7 +93,7 @@ public class Pipeline {
         }
 
         if (MS_FORWARD_FRAMEBUFFER != null) {
-            MS_FORWARD_FRAMEBUFFER.resize(width, height, MSAA_SAMPLES);
+            MS_FORWARD_FRAMEBUFFER.resize(width, height, MSAA_QUALITY.getSamples());
         }
         if (FORWARD_FRAMEBUFFER != null) {
             FORWARD_FRAMEBUFFER.resize(width, height);
@@ -157,8 +135,8 @@ public class Pipeline {
     }
 
     public static void loop() {
-        if (LAST_MSAA_STATE != USE_MSAA) {
-            LAST_MSAA_STATE = USE_MSAA;
+        if (!Objects.equals(LAST_MSAA_QUALITY, MSAA_QUALITY)) {
+            LAST_MSAA_QUALITY = MSAA_QUALITY;
             updateFramebuffers(Main.WIDTH, Main.HEIGHT);
         }
 
