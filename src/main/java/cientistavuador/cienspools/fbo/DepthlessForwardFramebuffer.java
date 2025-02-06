@@ -38,6 +38,7 @@ public class DepthlessForwardFramebuffer implements Framebuffer {
 
     private int width = 1;
     private int height = 1;
+    private final boolean rgba8;
 
     private class WrappedState {
 
@@ -47,10 +48,19 @@ public class DepthlessForwardFramebuffer implements Framebuffer {
 
     private final WrappedState state = new WrappedState();
 
-    public DepthlessForwardFramebuffer() {
+    public DepthlessForwardFramebuffer(boolean rgba8) {
         registerForCleaning();
+        this.rgba8 = rgba8;
+    }
+    
+    public DepthlessForwardFramebuffer() {
+        this(false);
     }
 
+    public boolean isRGBA8() {
+        return rgba8;
+    }
+    
     private void registerForCleaning() {
         final WrappedState finalState = this.state;
 
@@ -75,7 +85,7 @@ public class DepthlessForwardFramebuffer implements Framebuffer {
 
         glTexImage2D(
                 GL_TEXTURE_2D, 0,
-                GL_RGBA16F, this.width, this.height,
+                (isRGBA8() ? GL_RGBA8 : GL_RGBA16F), this.width, this.height,
                 0,
                 GL_RGBA, GL_FLOAT, 0
         );

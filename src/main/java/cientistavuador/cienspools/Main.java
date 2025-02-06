@@ -40,6 +40,7 @@ import cientistavuador.cienspools.audio.Sounds;
 import cientistavuador.cienspools.fbo.filters.BlurDownsample;
 import cientistavuador.cienspools.fbo.filters.CopyFilter;
 import cientistavuador.cienspools.fbo.filters.FXAAFilter;
+import cientistavuador.cienspools.fbo.filters.KernelFilter;
 import cientistavuador.cienspools.fbo.filters.TonemappingFilter;
 import cientistavuador.cienspools.fbo.filters.ResolveFilter;
 import cientistavuador.cienspools.fbo.filters.WaterFilter;
@@ -531,7 +532,7 @@ public class Main {
         
         AudioSystem.init();
         TextureCompressor.init();
-
+        
         MSAAQuality.init();
         NSpecularBRDFLookupTable.init();
         Gizmo.init();
@@ -557,6 +558,7 @@ public class Main {
         ResolveFilter.init();
         BlurDownsample.init();
         WaterFilter.init();
+        KernelFilter.init();
         
         Pipeline.init();
         Game.get();

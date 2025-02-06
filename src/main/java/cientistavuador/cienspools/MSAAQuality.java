@@ -33,11 +33,7 @@ import static org.lwjgl.opengl.GL33C.*;
  * @author Cien
  */
 public enum MSAAQuality {
-    OFF_1X(1, checkSupport(1)),
-    LOW_2X(2, checkSupport(2)),
-    MEDIUM_4X(4, checkSupport(4)),
-    HIGH_8X(8, checkSupport(8)),
-    ULTRA_16X(16, checkSupport(16));
+    OFF_1X(1), LOW_2X(2), MEDIUM_4X(4), HIGH_8X(8), ULTRA_16X(16);
     
     private static boolean checkSupport(int samples) {
         if (samples <= 1) {
@@ -53,9 +49,9 @@ public enum MSAAQuality {
     private final int samples;
     private final boolean supported;
     
-    private MSAAQuality(int samples, boolean supported) {
+    private MSAAQuality(int samples) {
         this.samples = samples;
-        this.supported = supported;
+        this.supported = checkSupport(samples);
     }
 
     public int getSamples() {

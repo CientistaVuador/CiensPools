@@ -34,10 +34,13 @@ import cientistavuador.cienspools.fbo.MipFramebuffer;
 import cientistavuador.cienspools.fbo.filters.BlurDownsample;
 import cientistavuador.cienspools.fbo.filters.BlurUpsample;
 import cientistavuador.cienspools.fbo.filters.CopyFilter;
+import cientistavuador.cienspools.fbo.filters.DefaultKernelFilters;
 import cientistavuador.cienspools.fbo.filters.FXAAFilter;
 import cientistavuador.cienspools.fbo.filters.FXAAQuality;
+import cientistavuador.cienspools.fbo.filters.KernelFilter;
 import cientistavuador.cienspools.fbo.filters.TonemappingFilter;
 import cientistavuador.cienspools.fbo.filters.ResolveFilter;
+import cientistavuador.cienspools.fbo.filters.SharpenQuality;
 import cientistavuador.cienspools.fbo.filters.WaterFilter;
 import cientistavuador.cienspools.lut.LUT;
 import cientistavuador.cienspools.util.RasterUtils;
@@ -58,6 +61,7 @@ public class Pipeline {
     public static final ForwardFramebuffer OPAQUE_FRAMEBUFFER = new ForwardFramebuffer();
 
     public static final DepthlessForwardFramebuffer TONEMAP_FRAMEBUFFER = new DepthlessForwardFramebuffer();
+    public static final DepthlessForwardFramebuffer FXAA_OUTPUT = new DepthlessForwardFramebuffer(true);
     
     public static final MipFramebuffer[] MIP_FRAMEBUFFERS = new MipFramebuffer[]{
         new MipFramebuffer(1),
@@ -69,7 +73,9 @@ public class Pipeline {
     public static LUT COLOR_LUT = LUT.NEUTRAL;
 
     public static MSAAQuality MSAA_QUALITY = MSAAQuality.MEDIUM_4X;
-    public static FXAAQuality FXAA_QUALITY = FXAAQuality.MEDIUM;
+    public static FXAAQuality FXAA_QUALITY = FXAAQuality.HIGH;
+    public static SharpenQuality SHARPEN_QUALITY = SharpenQuality.LOW;
+    
     private static MSAAQuality LAST_MSAA_QUALITY = MSAA_QUALITY;
     
     public static boolean WATER_EFFECT = false;
@@ -103,6 +109,7 @@ public class Pipeline {
             MIP_FRAMEBUFFERS[i].resize(width, height);
         }
         OPAQUE_FRAMEBUFFER.resize(width, height);
+        FXAA_OUTPUT.resize(width, height);
     }
 
     public static void copyColorBufferToOpaque() {
@@ -191,8 +198,11 @@ public class Pipeline {
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
             WaterFilter.render(TONEMAP_FRAMEBUFFER.colorBuffer(), 0.5f, 0.5f, -0.5f, -0.5f, 0.05f);
         } else {
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glBindFramebuffer(GL_FRAMEBUFFER, FXAA_OUTPUT.framebuffer());
             FXAAFilter.render(FXAA_QUALITY, TONEMAP_FRAMEBUFFER.colorBuffer());
+            
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            KernelFilter.render(FXAA_OUTPUT.colorBuffer(), SHARPEN_QUALITY.getKernel());
         }
         
         glEnable(GL_BLEND);

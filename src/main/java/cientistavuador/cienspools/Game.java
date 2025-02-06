@@ -32,6 +32,7 @@ import cientistavuador.cienspools.debug.AabRender;
 import cientistavuador.cienspools.debug.LineRender;
 import cientistavuador.cienspools.editor.Gizmo;
 import cientistavuador.cienspools.fbo.filters.FXAAQuality;
+import cientistavuador.cienspools.fbo.filters.SharpenQuality;
 import cientistavuador.cienspools.newrendering.N3DModel;
 import cientistavuador.cienspools.newrendering.N3DObject;
 import cientistavuador.cienspools.newrendering.NCubemap;
@@ -155,7 +156,7 @@ public class Game {
             NMap map = new NMap("map", mapObjects, NMap.DEFAULT_LIGHTMAP_MARGIN, 45f);
             map.setLightmaps(NLightmapsStore
                     .readLightmaps("cientistavuador/cienspools/resources/lightmaps/lightmap.lit"));
-            
+
             N3DModel mainModel = map.getObject(0).getN3DModel();
             for (int i = 0; i < mainModel.getNumberOfGeometries(); i++) {
                 NGeometry geo = mainModel.getGeometry(i);
@@ -163,14 +164,15 @@ public class Game {
                     geo.setFaceCullingEnabled(false);
                 }
             }
-            
+
             this.world.setMap(map);
 
             {
                 this.boomBoxModel = N3DModel.RESOURCES.get("[D48EAA8D455A4B57|A34C2F1CE3B5D2C7]BoomBox");
 
-                this.acUnit = new N3DObject("AC Unit", this.boomBoxModel);
-                this.gizmo.getExtents().set(this.boomBoxModel.getAabbExtents());
+                N3DModel box = N3DModel.RESOURCES.get("Box");
+                this.acUnit = new N3DObject("AC Unit", box);
+                this.gizmo.getExtents().set(box.getAabbExtents());
                 this.world.addObject(this.acUnit);
             }
 
@@ -217,6 +219,14 @@ public class Game {
                 0.0f, 0.0f, 0.0f, 1.0f
         );
         this.world.addWorldObject(a);
+
+        WaterTrigger b = new WaterTrigger("water 1");
+        b.setTransformation(
+                4.22, -0.58, -17.63,
+                15.75f, 0.5f, 1.7f,
+                0.0f, 0.0f, 0.0f, 1.0f
+        );
+        this.world.addWorldObject(b);
 
         this.gizmo.setCamera(this.player.getCamera());
         this.player.getCamera().setUBO(CameraUBO.create(UBOBindingPoints.PLAYER_CAMERA));
@@ -309,6 +319,14 @@ public class Game {
                 }
                 this.status = null;
             }
+        }
+
+        {
+            String text = String.format("%,.2f", this.player.getFlashlightCharge())
+                    + "\n"
+                    + String.format("%,.2f", this.player.getLighterCharge());
+            GLFontRenderer.render(0.85f, 0.89f, GLFontSpecifications.SPACE_MONO_REGULAR_0_035_BLACK, text);
+            GLFontRenderer.render(0.86f, 0.90f, GLFontSpecifications.SPACE_MONO_REGULAR_0_035_WHITE, text);
         }
 
         Main.WINDOW_TITLE += " (DrawCalls: " + Main.NUMBER_OF_DRAWCALLS + ", Vertices: " + Main.NUMBER_OF_VERTICES + ")";
@@ -492,6 +510,9 @@ public class Game {
         }
         if (key == GLFW_KEY_F9 && action == GLFW_PRESS) {
             Pipeline.MSAA_QUALITY = MSAAQuality.next(Pipeline.MSAA_QUALITY);
+        }
+        if (key == GLFW_KEY_F10 && action == GLFW_PRESS) {
+            Pipeline.SHARPEN_QUALITY = SharpenQuality.next(Pipeline.SHARPEN_QUALITY);
         }
         if (key == GLFW_KEY_R && action == GLFW_PRESS) {
             Quaternionf rotation = new Quaternionf();

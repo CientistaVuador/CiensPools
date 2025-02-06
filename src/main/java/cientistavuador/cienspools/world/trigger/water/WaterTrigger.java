@@ -45,6 +45,8 @@ import org.joml.Vector4d;
  */
 public class WaterTrigger extends EnterExitTrigger implements WorldEntity {
     
+    private boolean cameraOnWater = false;
+    
     public WaterTrigger(String name) {
         super(name);
     }
@@ -73,11 +75,19 @@ public class WaterTrigger extends EnterExitTrigger implements WorldEntity {
     public void onWorldUpdate(World world, double tpf) {
         Player player = world.getPlayer();
         if (player != null) {
+            boolean camWater = false;
             if (isPointInside(player.getCamera().getPosition())) {
-                //System.out.println("inside!");
-            } else {
-                //System.out.println("not inside!");
+                camWater = true;
             }
+            if (this.cameraOnWater && !camWater) {
+                player.onCameraExitedWater();
+            }
+            if (!this.cameraOnWater && camWater) {
+                player.onCameraEnteredWater();
+            }
+            this.cameraOnWater = camWater;
+        } else {
+            this.cameraOnWater = false;
         }
     }
     

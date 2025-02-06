@@ -26,6 +26,7 @@
  */
 package cientistavuador.cienspools.world.player;
 
+import cientistavuador.cienspools.Pipeline;
 import cientistavuador.cienspools.audio.AudioNode;
 import cientistavuador.cienspools.audio.data.Audio;
 import cientistavuador.cienspools.camera.FreeCamera;
@@ -43,6 +44,15 @@ import static org.lwjgl.glfw.GLFW.*;
  * @author Cien
  */
 public class Player {
+
+    public static final float FLASHLIGHT_CHARGE = 80f;
+    public static final float LIGHTER_CHARGE = 120f;
+
+    public static final float FLASHLIGHT_CHARGE_RATE = 1f;
+    public static final float LIGHTER_CHARGE_RATE = 10f;
+    
+    public static final float FLASHLIGHT_DISCHARGE_RATE = 2f;
+    public static final float LIGHTER_DISCHARGE_RATE = 1f;
 
     private World world = null;
 
@@ -79,8 +89,12 @@ public class Player {
 
     private final Vector3d lastStepPosition = new Vector3d(Double.NaN);
     private float stepDistance = 0f;
-    
+
     private boolean onWater = false;
+    private boolean cameraOnWater = false;
+
+    private float flashlightCharge = FLASHLIGHT_CHARGE;
+    private float lighterCharge = LIGHTER_CHARGE;
 
     public Player() {
 
@@ -119,25 +133,89 @@ public class Player {
     public boolean isOnWater() {
         return onWater;
     }
-    
+
     public void onEnteredWater() {
         this.onWater = true;
         this.enterExitNode.setAudio(NMaterialSoundEffects.RESOURCES
                 .get("default/sounds/materials/water").getRandomEnter());
         this.enterExitNode.play();
     }
-    
+
     public void onExitedWater() {
         this.onWater = false;
         this.enterExitNode.setAudio(NMaterialSoundEffects.RESOURCES
                 .get("default/sounds/materials/water").getRandomExit());
         this.enterExitNode.play();
     }
-    
-    public void onCameraInsideWater() {
-        
+
+    public boolean isFlashlightOn() {
+        return this.world.getLights().contains(this.flashlight);
+    }
+
+    public boolean isLighterOn() {
+        return this.world.getLights().contains(this.lighter);
+    }
+
+    public void setFlashlightOn(boolean on) {
+        if (!isFlashlightOn()) {
+            if (on) {
+                this.world.getLights().add(this.flashlight);
+                this.flashlightNode.setAudio(Audio.RESOURCES
+                        .get("default/sounds/flashlight/flashlight_on"));
+                this.flashlightNode.play();
+            }
+        } else {
+            if (!on) {
+                this.world.getLights().remove(this.flashlight);
+                this.flashlightNode.setAudio(Audio.RESOURCES
+                        .get("default/sounds/flashlight/flashlight_off"));
+                this.flashlightNode.play();
+            }
+        }
+    }
+
+    public void setLighterOn(boolean on) {
+        if (!isLighterOn()) {
+            if (on) {
+                this.world.getLights().add(this.lighter);
+                this.lighterNode.setAudio(Audio.RESOURCES
+                        .get("default/sounds/lighter/lighter_on"));
+                this.lighterNode.play();
+            }
+        } else {
+            if (!on) {
+                this.world.getLights().remove(this.lighter);
+            }
+        }
+    }
+
+    public float getFlashlightCharge() {
+        return flashlightCharge;
     }
     
+    public float getLighterCharge() {
+        return lighterCharge;
+    }
+    
+    public void onCameraEnteredWater() {
+        Pipeline.WATER_EFFECT = true;
+        this.cameraOnWater = true;
+        if (isLighterOn()) {
+            setLighterOn(false);
+        }
+        this.enterExitNode.setAudio(NMaterialSoundEffects.RESOURCES
+                .get("default/sounds/materials/water").getRandomEnter());
+        this.enterExitNode.play();
+    }
+
+    public void onCameraExitedWater() {
+        Pipeline.WATER_EFFECT = false;
+        this.cameraOnWater = false;
+        this.enterExitNode.setAudio(NMaterialSoundEffects.RESOURCES
+                .get("default/sounds/materials/water").getRandomExit());
+        this.enterExitNode.play();
+    }
+
     public void update(double tpf) {
         CharacterController controller = this.playerController.getCharacterController();
         this.stepNode.getPosition().set(controller.getPosition());
@@ -156,10 +234,10 @@ public class Player {
             if (this.stepDistance > 1.5f) {
                 if (isOnWater()) {
                     this.stepNode.setAudio(NMaterialSoundEffects.RESOURCES
-                        .get("default/sounds/materials/water").getRandomFootstep());
+                            .get("default/sounds/materials/water").getRandomFootstep());
                 } else {
                     this.stepNode.setAudio(NMaterialSoundEffects.RESOURCES
-                        .get("default/sounds/materials/stone").getRandomFootstep());
+                            .get("default/sounds/materials/stone").getRandomFootstep());
                 }
                 this.stepNode.play();
                 this.stepDistance = 0f;
@@ -175,30 +253,41 @@ public class Player {
 
         this.lighter.getPosition().set(this.camera.getRight()).negate()
                 .mul(0.05f).add(this.camera.getPosition());
+
+        if (!isLighterOn()) {
+            this.lighterCharge += tpf * LIGHTER_CHARGE_RATE;
+            if (this.lighterCharge > LIGHTER_CHARGE) {
+                this.lighterCharge = LIGHTER_CHARGE;
+            }
+        } else {
+            this.lighterCharge -= tpf * LIGHTER_DISCHARGE_RATE;
+            if (this.lighterCharge < 0f) {
+                this.lighterCharge = 0f;
+                setLighterOn(false);
+            }
+        }
+
+        if (!isFlashlightOn()) {
+            this.flashlightCharge += tpf * FLASHLIGHT_CHARGE_RATE;
+            if (this.flashlightCharge > FLASHLIGHT_CHARGE) {
+                this.flashlightCharge = FLASHLIGHT_CHARGE;
+            }
+        } else {
+            this.flashlightCharge -= tpf * FLASHLIGHT_DISCHARGE_RATE;
+            if (this.flashlightCharge < 0f) {
+                this.flashlightCharge = 0f;
+                setFlashlightOn(false);
+            }
+        }
     }
 
     public void keyCallback(long window, int key, int scancode, int action, int mods) {
         if (key == GLFW_KEY_F && action == GLFW_PRESS) {
-            if (this.world.getLights().contains(this.flashlight)) {
-                this.world.getLights().remove(this.flashlight);
-                this.flashlightNode.setAudio(Audio.RESOURCES
-                        .get("default/sounds/flashlight/flashlight_off"));
-                this.flashlightNode.play();
-            } else {
-                this.world.getLights().add(this.flashlight);
-                this.flashlightNode.setAudio(Audio.RESOURCES
-                        .get("default/sounds/flashlight/flashlight_on"));
-                this.flashlightNode.play();
-            }
+            setFlashlightOn(!isFlashlightOn());
         }
         if (key == GLFW_KEY_L && action == GLFW_PRESS) {
-            if (this.world.getLights().contains(this.lighter)) {
-                this.world.getLights().remove(this.lighter);
-            } else {
-                this.world.getLights().add(this.lighter);
-                this.lighterNode.setAudio(Audio.RESOURCES
-                        .get("default/sounds/lighter/lighter_on"));
-                this.lighterNode.play();
+            if (!this.cameraOnWater) {
+                setLighterOn(!isLighterOn());
             }
         }
         if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
