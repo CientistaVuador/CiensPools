@@ -58,12 +58,6 @@ public class KernelFilter {
             uniform sampler2D inputTexture;
             uniform float kernel[9];
             
-            const ivec2 offsets[9] = ivec2[9](
-                ivec2(-1, 1), ivec2(0, 1), ivec2(1, 1),
-                ivec2(-1, 0), ivec2(0, 0), ivec2(1, 0),
-                ivec2(-1, -1), ivec2(0, -1), ivec2(1, -1)
-            );
-            
             in vec2 UV;
             
             layout (location = 0) out vec4 outputColor;
@@ -73,13 +67,19 @@ public class KernelFilter {
             }
             
             void main() {
+                const ivec2 minValue = ivec2(0, 0);
+                const ivec2 offsets[9] = ivec2[](
+                    ivec2(-1, 1), ivec2(0, 1), ivec2(1, 1),
+                    ivec2(-1, 0), ivec2(0, 0), ivec2(1, 0),
+                    ivec2(-1, -1), ivec2(0, -1), ivec2(1, -1)
+                );
+                
                 ivec2 texSize = textureSize(inputTexture, 0).xy;
-                ivec2 minValue = ivec2(0, 0);
                 ivec2 maxValue = texSize - ivec2(1, 1);
                 ivec2 pos = ivec2(UV * vec2(texSize));
                 
                 vec4 sum = vec4(0.0);
-                for (int i = 0; i < kernel.length; i++) {
+                for (int i = 0; i < kernel.length(); i++) {
                     sum += fetchPixel(inputTexture, pos + offsets[i], minValue, maxValue) * kernel[i];
                 }
                 
