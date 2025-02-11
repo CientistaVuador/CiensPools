@@ -27,11 +27,12 @@
 package cientistavuador.cienspools.util;
 
 import cientistavuador.cienspools.Main;
-import cientistavuador.cienspools.libsglsl.IncludeGLSL;
+import cientistavuador.cienspools.libsglsl.Include;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import org.lwjgl.opengl.GL;
 import static org.lwjgl.opengl.GL33C.*;
 import org.lwjgl.opengl.KHRDebug;
@@ -94,9 +95,14 @@ public class ProgramCompiler {
     }
 
     public static int compile(String vertexSource, String geometrySource, String fragmentSource, Map<String, String> replacements) {
-        vertexSource = IncludeGLSL.parse(vertexSource);
-        geometrySource = IncludeGLSL.parse(geometrySource);
-        fragmentSource = IncludeGLSL.parse(fragmentSource);
+        Objects.requireNonNull(vertexSource, "vertex source is null.");
+        Objects.requireNonNull(fragmentSource, "fragment source is null.");
+        
+        vertexSource = Include.parse(vertexSource);
+        if (geometrySource != null) {
+            geometrySource = Include.parse(geometrySource);
+        }
+        fragmentSource = Include.parse(fragmentSource);
 
         String shaderName = null;
         if (!ONLY_OUTPUT_ERRORS) {

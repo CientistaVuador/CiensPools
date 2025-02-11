@@ -126,9 +126,7 @@ public class NSkybox {
             
             layout (location = 0) out vec4 outputColor;
             
-            vec4 RGBEToRGBA(vec4 rgbe) {
-                return vec4(rgbe.rgb * pow(RGBE_BASE, (rgbe.a * RGBE_MAX_EXPONENT) - RGBE_BIAS), 1.0);
-            }
+            #include "dynamic/RGBEToRGBA.h"
             
             void main() {
                 vec3 direction = normalize(sampleDirection);
@@ -139,12 +137,7 @@ public class NSkybox {
     
     public static final BetterUniformSetter SKYBOX_PROGRAM = new BetterUniformSetter(ProgramCompiler.compile(
             VERTEX_SHADER,
-            FRAGMENT_SHADER,
-            new HashMap<>() {{
-                put("RGBE_BASE", Double.toString(E8Image.BASE));
-                put("RGBE_MAX_EXPONENT", Integer.toString(E8Image.MAX_EXPONENT));
-                put("RGBE_BIAS", Integer.toString(E8Image.BIAS));
-            }}
+            FRAGMENT_SHADER
     ));
     
     public static final String UNIFORM_PROJECTION = "projection";

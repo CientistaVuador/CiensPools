@@ -45,6 +45,7 @@ import cientistavuador.cienspools.fbo.filters.TonemappingFilter;
 import cientistavuador.cienspools.fbo.filters.ResolveFilter;
 import cientistavuador.cienspools.fbo.filters.WaterFilter;
 import cientistavuador.cienspools.fbo.filters.mesh.ScreenTriangle;
+import cientistavuador.cienspools.libsglsl.IncludeRegistry;
 import cientistavuador.cienspools.text.GLFonts;
 import cientistavuador.cienspools.texture.Textures;
 import cientistavuador.cienspools.ubo.UBOBindingPoints;
@@ -54,6 +55,7 @@ import cientistavuador.cienspools.util.Aab;
 import cientistavuador.cienspools.util.ConvexPolygonRenderer;
 import cientistavuador.cienspools.util.Cursors;
 import cientistavuador.cienspools.util.DebugRenderer;
+import cientistavuador.cienspools.util.E8Image;
 import cientistavuador.cienspools.util.GPUOcclusion;
 import cientistavuador.cienspools.water.Water;
 import java.io.IOException;
@@ -530,6 +532,8 @@ public class Main {
         
         Main.checkGLError();
         
+        IncludeRegistry.init();
+        
         AudioSystem.init();
         TextureCompressor.init();
         
@@ -711,7 +715,7 @@ public class Main {
         while (!glfwWindowShouldClose(WINDOW_POINTER)) {
             Main.TPF = (System.nanoTime() - timeFrameBegin) / 1E9d;
             timeFrameBegin = System.nanoTime();
-
+            
             Main.NUMBER_OF_DRAWCALLS = 0;
             Main.NUMBER_OF_VERTICES = 0;
             Main.WINDOW_TITLE = Main.APPLICATION_NAME + " - FPS: " + Main.FPS;

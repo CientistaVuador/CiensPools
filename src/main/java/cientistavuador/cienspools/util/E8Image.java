@@ -26,6 +26,7 @@
  */
 package cientistavuador.cienspools.util;
 
+import cientistavuador.cienspools.libsglsl.Include;
 import java.awt.image.BufferedImage;
 import java.util.Objects;
 import org.joml.Vector3f;

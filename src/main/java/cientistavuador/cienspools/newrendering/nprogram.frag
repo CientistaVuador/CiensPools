@@ -66,9 +66,7 @@ vec4 em_ao_wt_ny(vec2 uv) {
 uniform float lightmapIntensity[MAX_AMOUNT_OF_LIGHTMAPS];
 uniform sampler2DArray lightmaps;
 
-vec4 RGBEToRGBA(vec4 rgbe) {
-    return vec4(rgbe.rgb * pow(RGBE_BASE, (rgbe.a * RGBE_MAX_EXPONENT) - RGBE_BIAS), 1.0);
-}
+#include "dynamic/RGBEToRGBA.h"
 
 vec4 sampleLightmaps(vec2 uv, int index, float intensity) {
     if (intensity == 0.0) return vec4(0.0, 0.0, 0.0, 1.0);
@@ -184,42 +182,9 @@ in VertexData {
 
 layout (location = 0) out vec4 outputFragColor;
 
-vec2 parallaxMapping(
-    vec2 uv,
-    vec3 tangentPosition,
-    float minLayers,
-    float maxLayers,
-    float heightScale
-) {
-    vec3 tangentViewDirection = normalize(-tangentPosition);
-
-    float numLayers = mix(maxLayers, minLayers, max(dot(vec3(0.0, 0.0, 1.0), tangentViewDirection), 0.0));
-
-    float layerDepth = 1.0 / numLayers;
-    float currentLayerDepth = 0.0;
-
-    vec2 scaledViewDirection = tangentViewDirection.xy * heightScale;
-    vec2 deltaUv = scaledViewDirection / numLayers;
-
-    vec2 currentUv = uv;
-    float currentDepth = 1.0 - ht_rg_mt_nx(currentUv)[0];
-
-    while (currentLayerDepth < currentDepth) {
-        currentUv -= deltaUv;
-        currentDepth = 1.0 - ht_rg_mt_nx(currentUv)[0];
-        currentLayerDepth += layerDepth;
-    }
-
-    vec2 previousUv = currentUv + deltaUv;
-
-    float afterDepth = currentDepth - currentLayerDepth;
-    float beforeDepth = (1.0 - ht_rg_mt_nx(previousUv)[0]) - currentLayerDepth + layerDepth;
-
-    float weight = afterDepth / (afterDepth - beforeDepth);
-    vec2 finalUv = (previousUv * weight) + (currentUv * (1.0 - weight));
-
-    return finalUv;
-}
+#define PARALLAX_MAPPING_SAMPLER_TYPE float
+#define PARALLAX_MAPPING_HEIGHT(tex, uv) ht_rg_mt_nx(uv)[0]
+#include "ParallaxMapping.h"
 
 struct BlinnPhongMaterial {
     float shininess;
@@ -310,21 +275,7 @@ vec3 calculateLight(
             + (light.ambient * mat.ambient * ambientFactor);
 }
 
-//P is rayOrigin + (rayDirection * t)
-//where t is the return value
-//returns -1.0 if the ray is outside the box
-float intersectRayInsideBox(vec3 rayOrigin, vec3 rayDirection, mat4 worldToLocal) {
-    vec3 localOrigin = (worldToLocal * vec4(rayOrigin, 1.0)).xyz;
-    vec3 aabbCheck = abs(localOrigin);
-    if (max(aabbCheck.x, max(aabbCheck.y, aabbCheck.z)) > 1.0) {
-        return -1.0;
-    }
-    vec3 localDirection = mat3(worldToLocal) * rayDirection;
-    vec3 firstPlane = (vec3(-1.0) - localOrigin) / localDirection;
-    vec3 secondPlane = (vec3(1.0) - localOrigin) / localDirection;
-    vec3 furthestPlane = max(firstPlane, secondPlane);
-    return min(furthestPlane.x, min(furthestPlane.y, furthestPlane.z));
-}
+#include "RayInsideBoxIntersection.h"
 
 vec3 computeReflection(
     vec2 brdf,
@@ -382,8 +333,9 @@ void main() {
 
     if (enableParallaxMapping) {
         uv = parallaxMapping(
+                0.0,
                 uv,
-                inVertex.tangentPosition,
+                normalize(-inVertex.tangentPosition),
                 material.heightMinLayers, material.heightMaxLayers, material.height
             );
     }
@@ -481,16 +433,6 @@ void main() {
     }
 
     if (enableRefractions) {
-        //float refraction = material.refraction;
-        //vec3 refractedDirection = refract(viewDirection, normal, refraction);
-        //refractedDirection = normalize(mix(viewDirection, refractedDirection, material.refractionPower));
-        //vec3 refractedColor = computeReflection(
-        //        brdf, specularRatio,
-        //        position, viewDirection,
-        //        refractedDirection, normal,
-        //        vec3(1.0), 1.0, roughness, fresnel
-        //);
-        
         vec3 viewSpaceNormal = normalize(mat3(view) * normal);
         
         float refraction = material.refraction;
