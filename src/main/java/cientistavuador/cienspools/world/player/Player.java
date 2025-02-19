@@ -26,6 +26,7 @@
  */
 package cientistavuador.cienspools.world.player;
 
+import cientistavuador.cienspools.Main;
 import cientistavuador.cienspools.Pipeline;
 import cientistavuador.cienspools.audio.AudioNode;
 import cientistavuador.cienspools.audio.data.Audio;
@@ -50,7 +51,7 @@ public class Player {
 
     public static final float FLASHLIGHT_CHARGE_RATE = 1f;
     public static final float LIGHTER_CHARGE_RATE = 10f;
-    
+
     public static final float FLASHLIGHT_DISCHARGE_RATE = 2f;
     public static final float LIGHTER_DISCHARGE_RATE = 1f;
 
@@ -192,11 +193,11 @@ public class Player {
     public float getFlashlightCharge() {
         return flashlightCharge;
     }
-    
+
     public float getLighterCharge() {
         return lighterCharge;
     }
-    
+
     public void onCameraEnteredWater() {
         Pipeline.WATER_EFFECT = true;
         this.cameraOnWater = true;

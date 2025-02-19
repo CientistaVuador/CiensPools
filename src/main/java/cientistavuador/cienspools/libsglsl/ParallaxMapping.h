@@ -1,11 +1,13 @@
 #ifndef PARALLAX_MAPPING_NAME
-    #define PARALLAX_MAPPING_NAME parallaxMapping
+#define PARALLAX_MAPPING_NAME parallaxMapping
 #endif
+
 #ifndef PARALLAX_MAPPING_SAMPLER_TYPE
-    #define PARALLAX_MAPPING_SAMPLER_TYPE sampler2D
+#define PARALLAX_MAPPING_SAMPLER_TYPE sampler2D
 #endif
+
 #ifndef PARALLAX_MAPPING_HEIGHT
-    #define PARALLAX_MAPPING_HEIGHT(tex, uv) texture(tex, uv).r
+#define PARALLAX_MAPPING_HEIGHT(tex, uv) texture(tex, uv).r
 #endif
 
 vec2 PARALLAX_MAPPING_NAME(

@@ -26,8 +26,6 @@
  */
 package cientistavuador.cienspools.libsglsl;
 
-import cientistavuador.cienspools.util.E8Image;
-
 /**
  *
  * @author Cien
@@ -35,17 +33,7 @@ import cientistavuador.cienspools.util.E8Image;
 public class IncludeRegistry {
     
     static {
-        Include.DYNAMIC_FILES.put("RGBEToRGBA.h", () -> {
-            return """
-                   vec4 RGBEToRGBA(vec4 rgbe) {
-                       return vec4(rgbe.rgb * pow(RGBE_BASE, (rgbe.a * RGBE_MAX_EXPONENT) - RGBE_BIAS), 1.0);
-                   }
-                   """
-                    .replace("RGBE_BASE", Double.toString(E8Image.BASE))
-                    .replace("RGBE_MAX_EXPONENT", Double.toString(E8Image.MAX_EXPONENT))
-                    .replace("RGBE_BIAS", Double.toString(E8Image.BIAS))
-                    ;
-        });
+        
     }
     
     public static void init() {

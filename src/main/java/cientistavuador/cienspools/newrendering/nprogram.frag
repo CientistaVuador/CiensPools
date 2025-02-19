@@ -66,7 +66,7 @@ vec4 em_ao_wt_ny(vec2 uv) {
 uniform float lightmapIntensity[MAX_AMOUNT_OF_LIGHTMAPS];
 uniform sampler2DArray lightmaps;
 
-#include "dynamic/RGBEToRGBA.h"
+#include "RGBEToRGBA.h"
 
 vec4 sampleLightmaps(vec2 uv, int index, float intensity) {
     if (intensity == 0.0) return vec4(0.0, 0.0, 0.0, 1.0);
@@ -155,18 +155,7 @@ struct Material {
 
 uniform Material material;
 
-struct Light {
-    int type;
-    float size;
-    vec3 position;
-    vec3 direction;
-    float range;
-    float innerCone;
-    float outerCone;
-    vec3 diffuse;
-    vec3 specular;
-    vec3 ambient;
-};
+#include "Lighting.h"
 
 uniform Light lights[MAX_AMOUNT_OF_LIGHTS];
 
@@ -185,96 +174,6 @@ layout (location = 0) out vec4 outputFragColor;
 #define PARALLAX_MAPPING_SAMPLER_TYPE float
 #define PARALLAX_MAPPING_HEIGHT(tex, uv) ht_rg_mt_nx(uv)[0]
 #include "ParallaxMapping.h"
-
-struct BlinnPhongMaterial {
-    float shininess;
-    float metallic;
-    float roughness;
-    vec3 diffuse;
-    vec3 specular;
-    vec3 ambient;
-};
-
-float fresnelFactor(float viewDirectionDot, float roughness) {
-    return FRESNEL_F0
-            + (max(1.0 - roughness, FRESNEL_F0) - FRESNEL_F0) 
-            * pow(clamp(1.0 - viewDirectionDot, 0.0, 1.0), 5.0);
-}
-
-BlinnPhongMaterial convertPBRMaterialToBlinnPhong(
-    float diffuseSpecularRatio, vec3 color,
-    float metallic, float roughness, float ambientOcclusion
-) {
-    float shininess = pow(65535.0, 1.0 - roughness);
-    float specular = ((shininess + 2.0) * (shininess + 4.0))
-                        / (8.0 * PI * (pow(2.0, -shininess * 0.5) + shininess));
-    return BlinnPhongMaterial(
-        shininess,
-        metallic,
-        roughness,
-        mix(
-            (color * diffuseSpecularRatio) / PI,
-            vec3(0.0),
-            metallic
-        ),
-        mix(
-            vec3(specular) * (1.0 - diffuseSpecularRatio),
-            vec3(specular) * color,
-            metallic
-        ),
-        mix(
-            vec3(ambientOcclusion) * color,
-            vec3(0.0),
-            metallic
-        )
-    );
-}
-
-float calculateSpotlightIntensity(float theta, float innerCone, float outerCone) {
-    float epsilon = innerCone - outerCone;
-    return pow(clamp((theta - outerCone) / epsilon, 0.0, 1.0), 2.0);
-}
-
-vec3 calculateLight(
-    Light light,
-    BlinnPhongMaterial mat,
-    vec3 fragPosition,
-    vec3 viewDirection,
-    vec3 normal
-) {
-    vec3 lightDirection = (light.type == DIRECTIONAL_LIGHT_TYPE
-                        ? normalize(light.direction)
-                        : normalize(fragPosition - light.position));
-    vec3 halfwayDirection = -normalize(lightDirection + viewDirection);
-    
-    float normalDotHalfway = max(dot(normal, halfwayDirection), 0.0);
-    float fresnel = mix(fresnelFactor(normalDotHalfway, mat.roughness), 1.0, mat.metallic);
-    
-    float diffuseFactor = clamp(dot(normal, -lightDirection), 0.0, 1.0);
-    float specularFactor = pow(normalDotHalfway, mat.shininess) * diffuseFactor * fresnel;
-    
-    float ambientFactor = 1.0;
-    if (light.type != DIRECTIONAL_LIGHT_TYPE) {
-        float distance = length(light.position - fragPosition);
-        float pointAttenuation = clamp(1.0 - pow(distance / light.range, 4.0), 0.0, 1.0)
-                                / ((distance * distance) + light.size);
-
-        diffuseFactor *= pointAttenuation;
-        specularFactor *= pointAttenuation;
-        ambientFactor *= pointAttenuation;
-
-        if (light.type == SPOT_LIGHT_TYPE) {
-            float theta = dot(lightDirection, normalize(light.direction));
-            diffuseFactor *= calculateSpotlightIntensity(theta, light.innerCone, light.outerCone);
-            specularFactor *= calculateSpotlightIntensity(theta, light.innerCone, cos(radians(90.0)));
-        }
-    }
-
-    return (light.diffuse * mat.diffuse * diffuseFactor)
-            + (light.specular * mat.specular * specularFactor)
-            + (light.ambient * mat.ambient * ambientFactor);
-}
-
 #include "RayInsideBoxIntersection.h"
 
 vec3 computeReflection(
@@ -401,8 +300,8 @@ void main() {
     float viewDirectionDot = clamp(dot(normal, -viewDirection), 0.0, 1.0);
     float fresnel = fresnelFactor(viewDirectionDot, roughness);
     
-    BlinnPhongMaterial bpMaterial = convertPBRMaterialToBlinnPhong(
-        diffuseSpecularRatio, color.rgb, metallic, roughness, ambientOcclusion
+    BPMaterial bpMaterial = computeBPMaterial(
+        color.rgb, metallic, roughness, ambientOcclusion
     );
     if (!enableReflections) {
         bpMaterial.specular = vec3(0.0);

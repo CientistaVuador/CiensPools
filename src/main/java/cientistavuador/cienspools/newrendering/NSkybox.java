@@ -126,7 +126,7 @@ public class NSkybox {
             
             layout (location = 0) out vec4 outputColor;
             
-            #include "dynamic/RGBEToRGBA.h"
+            #include "RGBEToRGBA.h"
             
             void main() {
                 vec3 direction = normalize(sampleDirection);

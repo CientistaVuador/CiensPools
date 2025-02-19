@@ -43,6 +43,7 @@ import cientistavuador.cienspools.fbo.filters.ResolveFilter;
 import cientistavuador.cienspools.fbo.filters.SharpenQuality;
 import cientistavuador.cienspools.fbo.filters.WaterFilter;
 import cientistavuador.cienspools.lut.LUT;
+import cientistavuador.cienspools.util.E8Image;
 import cientistavuador.cienspools.util.RasterUtils;
 import java.util.Objects;
 import org.joml.Vector3f;
